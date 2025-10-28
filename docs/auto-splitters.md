@@ -339,6 +339,7 @@ end
     10. `double`: 64 bit floating point number
     11. `bool`: Boolean (true or false)
     12. `stringX`, A string of characters. Its usage is different compared the rest, you type "stringX" where the X is how long the string can be plus 1, this is to allocate the NULL terminator which defines when the string ends, for example, if the longest possible string to return is "cheese", you would define it as "string7". Setting X lower can result in the string terminating incorrectly and getting an incorrect result, setting it higher doesnt have any difference (aside from wasting memory).
+    13. `byteX`: An array of bytes, functions the same as `stringX`, but it reads bytes instead, the result is given in the form of an "array", also known as just a table that you can access with indexes, like `result[10]` will give you the 10th byte of whatever array you read
 
 * The second argument can be 2 things, a string or a number.
     * If its a number: The value in that memory address of the main process will be used.

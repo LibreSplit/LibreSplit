@@ -194,6 +194,32 @@ int read_address(lua_State* L)
         char* value = read_memory_string(address, buffer_size, &error);
         lua_pushstring(L, value != NULL ? value : "");
         free(value);
+    } else if (strstr(value_type, "byte")) {
+        int array_size = atoi(value_type + 4);
+        if (array_size < 1) {
+            printf("Invalid byte array size, please read documentation");
+            exit(1);
+        }
+        uint8_t* results = malloc(array_size * sizeof(uint8_t));
+        for (int j = 0; j < array_size; j++) {
+            uint8_t value = read_memory_uint8_t(address + j, &error);
+            if (memory_error)
+                break;
+            results[j] = value;
+        }
+
+        // Now that we have the results, push them to Lua table
+        // This is because if the read_memory fails midway, we don't want to push partial data
+        // And also want to avoid pushing the fallback result as part of the table
+        if (!memory_error) {
+            lua_createtable(L, array_size, 0);
+            for (int j = 0; j < array_size; j++) {
+                uint8_t value = results[j];
+                lua_pushinteger(L, (int)value);
+                lua_rawseti(L, -2, j + 1);
+            }
+        }
+        free(results);
     } else {
         printf("Invalid value type: %s\n", value_type);
         exit(1);
