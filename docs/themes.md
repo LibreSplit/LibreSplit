@@ -28,6 +28,7 @@ See the [GtkCssProvider documentation](https://docs.gtk.org/gtk3/css-properties.
 | `.attempt-count`              |                                                 |
 | `.time`                       |                                                 |
 | `.delta`                      |                                                 |
+| `.time`                       |                                                 |
 | `.timer`                      |                                                 |
 | `.timer-seconds`              |                                                 |
 | `.timer-millis`               |                                                 |
@@ -49,6 +50,11 @@ See the [GtkCssProvider documentation](https://docs.gtk.org/gtk3/css-properties.
 | `.footer`                     |                                                 |
 | `.prev-segment-label`         |                                                 |
 | `.prev-segment`               |                                                 |
+| `.segment`                    |                                                 |
+| `.segment-best`               |                                                 |
+| `.segment-pb`                 |                                                 |
+| `.segment-seconds`            |                                                 |
+| `.segment-millis`             |                                                 |
 | `.sum-of-bests-label`         |                                                 |
 | `.sum-of-bests`               |                                                 |
 | `.split-icon`                 |                                                 |
