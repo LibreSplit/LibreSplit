@@ -11,7 +11,7 @@
         * This means you can run external functions outside of the ones LibreSplit executes.
     * Support for the entire Lua language, including the importing of libraries for tasks such as performance monitoring.
 
-# How to make LibreSplit auto splitters 
+# How to make LibreSplit auto splitters
 
 * It's somewhat easy if you know what you are doing or are porting an already existing one.
 
@@ -362,7 +362,7 @@ end
     * `2`: Enabled for the current cycle and the next one
     * `3`: Enabled for the current cycle and the 2 next ones
     * You get the idea
-  
+
 ### Performance
 * Every uncached map finding takes around 1ms (depends a lot on your ram and cpu)
 * Every cached map finding takes around 100us
@@ -376,7 +376,7 @@ function startup()
     mapsCacheCycles = 1;
 end
 
--- Assume all this readAddresses are different, 
+-- Assume all this readAddresses are different,
 -- Instead of taking near 10ms it will instead take 1-2ms, because only this cycle is cached and the first readAddress is a cache miss, if the mapsCacheCycles were higher than 1 then a cycle could take less than half a millisecond
 function state()
     current.isLoading = readAddress("bool", "UnityPlayer.dll", 0x019B4878, 0xD0, 0x8, 0x60, 0xA0, 0x18, 0xA0);
@@ -391,4 +391,14 @@ function state()
     current.isLoading = readAddress("bool", "UnityPlayer.dll", 0x019B4878, 0xD0, 0x8, 0x60, 0xA0, 0x18, 0xA0);
 end
 
+```
+
+## getModuleSize
+
+Given a certain module name (or nothing/nil), returns the size of the module.
+
+```lua
+local main_module_size = getModuleSize();
+local main_module_size_2 = getModuleSize(nil);
+local other_module_size = getModuleSize("other_module");
 ```
