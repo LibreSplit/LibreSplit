@@ -10,3 +10,6 @@
 * To revert back this capability run:
 * `sudo setcap -r /path/to/libresplit`
     * Replace `path/to/libresplit` with the actual path of the libresplit binary
+
+## Global hotkeys on wayland
+* Global hotkeys on wayland are disabled by default when the `WAYLAND_DISPLAY` environment variable is set, if you want to enable them regardless of it, you can set `LIBRESPLIT_FORCE_GLOBAL_HOTKEYS` to `1` or anything and they will be enabled, expect it to be somewhat unreliable

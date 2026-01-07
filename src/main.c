@@ -683,7 +683,12 @@ static void ls_app_window_init(LSAppWindow* win)
         G_CALLBACK(ls_app_window_resize), win);
 
     // As a crash workaround, only enable global hotkeys if not on Wayland
-    if (win->global_hotkeys && !getenv("WAYLAND_DISPLAY")) {
+    const bool is_wayland = getenv("WAYLAND_DISPLAY");
+    const bool force_global_hotkeys = getenv("LIBRESPLIT_FORCE_GLOBAL_HOTKEYS");
+
+    const bool enable_global_hotkeys = win->global_hotkeys && (force_global_hotkeys || !is_wayland);
+
+    if (enable_global_hotkeys) {
         keybinder_init();
         keybinder_bind(
             json_string_value(get_setting_value("keybinds", "start_split")),
