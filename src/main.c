@@ -1,23 +1,18 @@
-#include <jansson.h>
-#include <linux/limits.h>
-#include <pwd.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
-
-#include <gtk/gtk.h>
-
-#include "auto-splitter.h"
 #include "bind.h"
 #include "component/components.h"
-#include "gtk/gtkcssprovider.h"
+#include "lasr/auto-splitter.h"
 #include "server.h"
 #include "settings.h"
 #include "shared.h"
 #include "timer.h"
+
+#include <gtk/gtk.h>
+#include <jansson.h>
+#include <linux/limits.h>
+#include <stdatomic.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <sys/stat.h>
 
 #define LS_APP_TYPE (ls_app_get_type())
 #define LS_APP(obj) \

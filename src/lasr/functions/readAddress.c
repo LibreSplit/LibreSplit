@@ -1,25 +1,15 @@
-/** \file memory.c
- *
- * Implementation of the memory reading functions
- */
+#include "readAddress.h"
+
+#include "../utils.h"
+
 #include <errno.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/uio.h>
 
-#include <luajit.h>
-
-#include "glib.h"
-#include "lua.h"
-#include "memory.h"
-#include "process.h"
-
-bool memory_error;
-extern game_process process;
-gboolean display_non_capable_mem_read_dialog(void* data);
+bool memory_error = false;
 
 /**
  * Reads an address from memory and interprets it as value_type, creating the relative
@@ -30,7 +20,7 @@ gboolean display_non_capable_mem_read_dialog(void* data);
 #define READ_MEMORY_FUNCTION(value_type)                                                         \
     value_type read_memory_##value_type(uint64_t mem_address, int32_t* err)                      \
     {                                                                                            \
-        value_type value;                                                                        \
+        value_type value = 0;                                                                    \
                                                                                                  \
         struct iovec mem_local;                                                                  \
         struct iovec mem_remote;                                                                 \
@@ -46,7 +36,6 @@ gboolean display_non_capable_mem_read_dialog(void* data);
             memory_error = true;                                                                 \
         } else if (mem_n_read != (ssize_t)mem_remote.iov_len) {                                  \
             printf("Error reading process memory: short read of %ld bytes\n", (long)mem_n_read); \
-            exit(1);                                                                             \
         }                                                                                        \
                                                                                                  \
         return value;                                                                            \
@@ -103,138 +92,11 @@ char* read_memory_string(uint64_t mem_address, int buffer_size, int32_t* err)
 }
 
 /**
- * Prints a memory error to stdout.
- *
- * @param err The error code to print.
- *
- * @return True if the error was printed, false if the error is unknown.
- */
-bool handle_memory_error(uint32_t err)
-{
-    static bool shownDialog = false;
-    if (err == 0)
-        return false;
-    switch (err) {
-        case EFAULT:
-            printf("[readAddress] EFAULT: Invalid memory space/address\n");
-            break;
-        case EINVAL:
-            printf("[readAddress] EINVAL: An error ocurred while reading memory\n");
-            break;
-        case ENOMEM:
-            printf("[readAddress] ENOMEM: Please get more memory\n");
-            break;
-        case EPERM:
-            printf("[readAddress] EPERM: Permission denied\n");
-
-            if (!shownDialog) {
-                shownDialog = true;
-                g_idle_add(display_non_capable_mem_read_dialog, NULL);
-            }
-
-            break;
-        case ESRCH:
-            printf("[readAddress] ESRCH: No process with specified PID exists\n");
-            break;
-    }
-    return true;
-}
-
-/**
- * The Lua "getBaseAddress" Auto Splitter function.
- *
- * Takes an optional module name and returns its base address.
- * If the argument passed is absent or nil, defaults to the main module.
- *
- * @param L The Lua State
- */
-int get_base_address(lua_State* L)
-{
-    uintptr_t address;
-    if (lua_gettop(L) == 0 || lua_isnil(L, 1)) {
-        // No arguments passed or first argument is nil, search for process base address
-        address = find_base_address(NULL);
-        lua_pushnumber(L, address);
-        return 1;
-    }
-    if (lua_isstring(L, 1)) {
-        // Module name passed, search for its base address
-        const char* module_name = lua_tostring(L, 1);
-        address = find_base_address(module_name);
-        lua_pushnumber(L, address);
-        return 1;
-    }
-    printf("Cannot search for base address: module name must be a string or nil (for main module)");
-    return 0;
-}
-
-/**
- * The "sizeOf" Lua AutoSplitter Runtime function
- *
- * Takes the type and returns the size it occupies, in bytes.
- *
- * @param L The Lua State
- */
-int size_of(lua_State* L)
-{
-    if (!lua_isstring(L, 1)) {
-        printf("The first argument must be a string defining the type to size");
-        return 0;
-    }
-    const char* type_to_size = lua_tostring(L, 1);
-    int size_of_type = 0;
-    if (strcmp(type_to_size, "sbyte") == 0) {
-        size_of_type = sizeof(int8_t);
-    } else if (strcmp(type_to_size, "byte") == 0) {
-        size_of_type = sizeof(uint8_t);
-    } else if (strcmp(type_to_size, "short") == 0) {
-        size_of_type = sizeof(int16_t);
-    } else if (strcmp(type_to_size, "ushort") == 0) {
-        size_of_type = sizeof(uint16_t);
-    } else if (strcmp(type_to_size, "int") == 0) {
-        size_of_type = sizeof(int32_t);
-    } else if (strcmp(type_to_size, "uint") == 0) {
-        size_of_type = sizeof(uint32_t);
-    } else if (strcmp(type_to_size, "long") == 0) {
-        size_of_type = sizeof(int64_t);
-    } else if (strcmp(type_to_size, "ulong") == 0) {
-        size_of_type = sizeof(uint64_t);
-    } else if (strcmp(type_to_size, "float") == 0) {
-        size_of_type = sizeof(float);
-    } else if (strcmp(type_to_size, "double") == 0) {
-        size_of_type = sizeof(double);
-    } else if (strcmp(type_to_size, "bool") == 0) {
-        size_of_type = sizeof(bool);
-    } else if (strstr(type_to_size, "string") != NULL) {
-        int buffer_size = atoi(type_to_size + 6);
-        if (buffer_size < 2) {
-            printf("Invalid string size, please read documentation");
-            return 0;
-        }
-        size_of_type = sizeof(char) * buffer_size;
-    } else if (strstr(type_to_size, "byte")) {
-        int array_size = atoi(type_to_size + 4);
-        if (array_size < 1) {
-            printf("Invalid byte array size, please read documentation");
-            return 0;
-        }
-        size_of_type = sizeof(uint8_t) * array_size;
-    } else {
-        // Error handling
-        printf("Cannot find size of type %s", type_to_size);
-        lua_pushnil(L);
-        return 1;
-    }
-    lua_pushinteger(L, size_of_type);
-    return 1;
-}
-
-/**
  * Reads a memory address given by the Lua Auto Splitter.
  *
  * @param L The Lua state.
  */
-int read_address(lua_State* L)
+int readAddress(lua_State* L)
 {
     memory_error = false;
     uint64_t address;

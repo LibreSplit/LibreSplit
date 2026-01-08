@@ -1,21 +1,15 @@
 #include "signature.h"
-#include <errno.h>
+
+#include "../utils.h"
+
 #include <fcntl.h>
 #include <inttypes.h>
+#include <lua.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/uio.h>
 #include <unistd.h>
-
-#include "lua.h"
-#include "memory.h"
-#include "process.h"
-
-#include <luajit.h>
-
-extern game_process process;
 
 // Error handling macro
 #define HANDLE_ERROR(msg) \

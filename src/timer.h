@@ -1,5 +1,4 @@
-#ifndef __TIMER_H__
-#define __TIMER_H__
+#pragma once
 
 #define LS_INFO_BEHIND_TIME (1)
 #define LS_INFO_LOSING_TIME (2)
@@ -92,5 +91,3 @@ void ls_timer_stop(ls_timer* timer);
 int ls_timer_reset(ls_timer* timer);
 
 int ls_timer_cancel(ls_timer* timer);
-
-#endif /* __TIMER_H__ */

@@ -2,9 +2,15 @@
  *
  * Implementation of the auto splitter Lua Runtime
  */
-#include <linux/limits.h>
-#include <pthread.h>
-#include <pwd.h>
+#include "auto-splitter.h"
+
+#include "functions.h"
+#include "utils.h"
+
+#include <lauxlib.h>
+#include <lua.h>
+#include <lualib.h>
+#include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -12,42 +18,26 @@
 #include <time.h>
 #include <unistd.h>
 
-#include <lauxlib.h>
-#include <luajit.h>
-#include <lualib.h>
-
-#include "auto-splitter.h"
-#include "lua.h"
-#include "lua_utils.h"
-#include "memory.h"
-#include "process.h"
-#include "settings.h"
-#include "signature.h"
-
 char auto_splitter_file[PATH_MAX]; /*!< The loaded auto splitter file path */
 int refresh_rate = 60; /*!< The Auto Splitter's refresh rate applied */
 bool use_game_time = false; /*!< Enables IGT */
-atomic_bool update_game_time = false;
-atomic_llong game_time_value = 0;
+atomic_bool update_game_time = false; /*!< True if the auto splitter is requesting the game time to be updated */
+atomic_llong game_time_value = 0; /*!< The in-game time value, in milliseconds */
+
 /**
  * Defines the behaviour of the map cache.
  *
  * 0=off, 1=current cycle, +1=multiple cycles
  */
 int maps_cache_cycles = 1;
-/**
- * Same as `maps_cache_cycles` but this one represents the current value
- * that changes on each cycle rather than the reference from the script
- */
-int maps_cache_cycles_value = 1;
-atomic_bool auto_splitter_enabled = true;
-atomic_bool auto_splitter_running = false;
-atomic_bool call_start = false;
-atomic_bool run_started = false;
+atomic_bool auto_splitter_enabled = true; /*!< Defines if the auto splitter is enabled */
+atomic_bool auto_splitter_running = false; /*!< Defines if the auto splitter is running */
+atomic_bool call_start = false; /*!< True if the auto splitter is requesting for a run to start */
+atomic_bool run_started = false; /*!< Defines if a run is started */
 atomic_bool run_finished = false; // Disallows starting the timer again after finishing until reset
-atomic_bool call_split = false;
+atomic_bool call_split = false; /*!< True if the auto splitter is requesting to split */
 atomic_bool toggle_loading = false;
-atomic_bool call_reset = false;
+atomic_bool call_reset = false; /*!< True if the auto splitter is requesting a run reset */
 bool prev_is_loading; /*!< The previous frame "is_loading" state */
 
 /**
@@ -72,80 +62,15 @@ static const char* disabled_functions[] = {
     NULL
 };
 
-extern game_process process;
-
 /**
- * Creates a directory tree recursively.
+ * Check if the game process exists and is running.
  *
- * Works like the "mkdir -p" command on shell, creating
- * a directory and all its parents if necessary.
- *
- * Taken from https://stackoverflow.com/a/2336245
- *
- * @param dir The path describing the resulting directory tree.
- * @param permissions The attributes used to create the directories.
+ * @returns Zero if the process is not running, non-zero if it is.
  */
-// I have no idea how this works
-static void mkdir_p(const char* dir, __mode_t permissions)
+int process_exists()
 {
-    char tmp[256] = { 0 };
-    char* p = NULL;
-    size_t len;
-
-    snprintf(tmp, sizeof(tmp), "%s", dir);
-    len = strlen(tmp);
-    if (tmp[len - 1] == '/')
-        tmp[len - 1] = 0;
-    for (p = tmp + 1; *p; p++)
-        if (*p == '/') {
-            *p = 0;
-            mkdir(tmp, permissions);
-            *p = '/';
-        }
-    mkdir(tmp, permissions);
-}
-
-/**
- * Checks and creates libresplit config directories.
- *
- * Performs a directory check, creating the libresplit
- * config directory if necessary.
- */
-void check_directories()
-{
-    char libresplit_directory[PATH_MAX] = { 0 };
-    get_libresplit_folder_path(libresplit_directory);
-
-    char auto_splitters_directory[PATH_MAX];
-    char themes_directory[PATH_MAX];
-    char splits_directory[PATH_MAX];
-
-    strcpy(auto_splitters_directory, libresplit_directory);
-    strcat(auto_splitters_directory, "/auto-splitters");
-
-    strcpy(themes_directory, libresplit_directory);
-    strcat(themes_directory, "/themes");
-
-    strcpy(splits_directory, libresplit_directory);
-    strcat(splits_directory, "/splits");
-
-    // Make the libresplit directory if it doesn't exist
-    mkdir_p(libresplit_directory, 0755);
-
-    // Make the autosplitters directory if it doesn't exist
-    if (mkdir(auto_splitters_directory, 0755) == -1) {
-        // Directory already exists or there was an error
-    }
-
-    // Make the themes directory if it doesn't exist
-    if (mkdir(themes_directory, 0755) == -1) {
-        // Directory already exists or there was an error
-    }
-
-    // Make the splits directory if it doesn't exist
-    if (mkdir(splits_directory, 0755) == -1) {
-        // Directory already exists or there was an error
-    }
+    int result = kill(process.pid, 0);
+    return result == 0;
 }
 
 /**
@@ -167,12 +92,12 @@ static const luaL_Reg lj_lib_load[] = {
  */
 static const lasr_function luac_functions[] = {
     { "process", find_process_id },
-    { "getBaseAddress", get_base_address },
-    { "readAddress", read_address },
+    { "getBaseAddress", getBaseAddress },
+    { "readAddress", readAddress },
     { "sizeOf", size_of },
     { "sig_scan", perform_sig_scan },
-    { "getPID", getPid },
-    { "getModuleSize", lua_get_module_size },
+    { "getPID", getPID },
+    { "getModuleSize", getModuleSize },
     { "shallow_copy_tbl", shallow_copy_tbl },
     { "print_tbl", print_tbl },
     { "b_and", b_and },

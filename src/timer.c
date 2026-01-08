@@ -3,7 +3,9 @@
  * Implementation of the timer
  */
 #include "timer.h"
-#include "auto-splitter.h"
+
+#include "lasr/auto-splitter.h"
+
 #include <jansson.h>
 #include <limits.h>
 #include <stdatomic.h>
