@@ -13,6 +13,7 @@
 #include "auto-splitter.h"
 #include "bind.h"
 #include "component/components.h"
+#include "gtk/gtkcssprovider.h"
 #include "server.h"
 #include "settings.h"
 #include "shared.h"
@@ -279,6 +280,79 @@ static int ls_app_window_find_theme(const LSAppWindow* win,
 }
 
 /**
+ * Loads a specific theme, with a fallback to the default theme
+ *
+ * @param win The LibreSplit window.
+ * @param name The name of the theme to load.
+ * @param variant The variant of the theme to load.
+ * @param provider The CSS provider to use for the theme. If null, a new one will be created.
+ */
+static void ls_app_load_theme_with_fallback(LSAppWindow* win, const char* name, const char* variant, GtkCssProvider** provider)
+{
+    char path[PATH_MAX];
+
+    GtkCssProvider* provider_to_use = nullptr;
+    const bool shouldCreateProvider = provider == nullptr;
+
+    if (!shouldCreateProvider) {
+        provider_to_use = *provider;
+        if (provider_to_use == nullptr) {
+            provider_to_use = gtk_css_provider_new();
+            *provider = provider_to_use;
+        }
+    } else
+        provider_to_use = gtk_css_provider_new();
+
+    GError* gerror = nullptr;
+
+    const bool found = ls_app_window_find_theme(win, name, variant, path);
+    bool error = false;
+
+    if (!found) {
+        printf("Theme not found: %s (variant: %s)\n", name, variant);
+    }
+
+    if (found) {
+        GdkScreen* screen = gdk_display_get_default_screen(win->display);
+        gtk_style_context_add_provider_for_screen(
+            screen,
+            GTK_STYLE_PROVIDER(provider_to_use),
+            GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+        gtk_css_provider_load_from_path(
+            GTK_CSS_PROVIDER(provider_to_use),
+            path, &gerror);
+        if (gerror != nullptr) {
+            g_printerr("Error loading theme CSS: %s\n", gerror->message);
+            error = true;
+            g_error_free(gerror);
+            gerror = nullptr;
+        }
+    }
+
+    if (!found || error) {
+        // Load default theme from embedded CSS as fallback
+        GdkScreen* screen = gdk_display_get_default_screen(win->display);
+        gtk_style_context_add_provider_for_screen(
+            screen,
+            GTK_STYLE_PROVIDER(provider_to_use),
+            GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+        gtk_css_provider_load_from_data(
+            GTK_CSS_PROVIDER(provider_to_use),
+            (const char*)css_data,
+            css_data_len, &gerror);
+        if (gerror != nullptr) {
+            g_printerr("Error loading theme CSS: %s\n", gerror->message);
+            error = true;
+            g_error_free(gerror);
+            gerror = nullptr;
+        }
+    }
+
+    if (shouldCreateProvider)
+        g_object_unref(provider_to_use);
+}
+
+/**
  * Prepares the LibreSplit window to be shown, using the data
  * from the loaded split file.
  *
@@ -286,8 +360,6 @@ static int ls_app_window_find_theme(const LSAppWindow* win,
  */
 static void ls_app_window_show_game(LSAppWindow* win)
 {
-    GdkScreen* screen;
-    char str[PATH_MAX];
     GList* l;
 
     // set dimensions
@@ -298,20 +370,7 @@ static void ls_app_window_show_game(LSAppWindow* win)
     }
 
     // set game theme
-    if (ls_app_window_find_theme(win,
-            win->game->theme,
-            win->game->theme_variant,
-            str)) {
-        win->style = gtk_css_provider_new();
-        screen = gdk_display_get_default_screen(win->display);
-        gtk_style_context_add_provider_for_screen(
-            screen,
-            GTK_STYLE_PROVIDER(win->style),
-            GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
-        gtk_css_provider_load_from_path(
-            GTK_CSS_PROVIDER(win->style),
-            str, NULL);
-    }
+    ls_app_load_theme_with_fallback(win, win->game->theme, win->game->theme_variant, &win->style);
 
     for (l = win->components; l != NULL; l = l->next) {
         LSComponent* component = l->data;
@@ -662,9 +721,6 @@ static gboolean ls_app_window_draw(gpointer data)
 
 static void ls_app_window_init(LSAppWindow* win)
 {
-    GtkCssProvider* provider;
-    GdkScreen* screen;
-    char str[PATH_MAX];
     const char* theme;
     const char* theme_variant;
     int i;
@@ -698,33 +754,10 @@ static void ls_app_window_init(LSAppWindow* win)
     win->win_on_top = json_boolean_value(get_setting_value("libresplit", "start_on_top"));
     gtk_window_set_keep_above(GTK_WINDOW(win), win->win_on_top);
 
-    // Load CSS defaults
-    provider = gtk_css_provider_new();
-    screen = gdk_display_get_default_screen(win->display);
-    gtk_style_context_add_provider_for_screen(
-        screen,
-        GTK_STYLE_PROVIDER(provider),
-        GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
-    gtk_css_provider_load_from_data(
-        GTK_CSS_PROVIDER(provider),
-        (char*)css_data, css_data_len, NULL);
-    g_object_unref(provider);
-
     // Load theme
     theme = json_string_value(get_setting_value("libresplit", "theme"));
     theme_variant = json_string_value(get_setting_value("libresplit", "theme_variant"));
-    if (ls_app_window_find_theme(win, theme, theme_variant, str)) {
-        provider = gtk_css_provider_new();
-        screen = gdk_display_get_default_screen(win->display);
-        gtk_style_context_add_provider_for_screen(
-            screen,
-            GTK_STYLE_PROVIDER(provider),
-            GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
-        gtk_css_provider_load_from_path(
-            GTK_CSS_PROVIDER(provider),
-            str, NULL);
-        g_object_unref(provider);
-    }
+    ls_app_load_theme_with_fallback(win, theme, theme_variant, nullptr);
 
     // Load window junk
     add_class(GTK_WIDGET(win), "window");
