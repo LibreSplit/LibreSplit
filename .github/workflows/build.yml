@@ -91,7 +91,6 @@ jobs:
                   chmod +x AppDir/usr/bin/libresplit
                   chmod +x AppDir/usr/bin/libresplit-ctl
 
-                  cp assets/default_settings.json AppDir/usr/share/libresplit/
                   cp assets/libresplit.desktop AppDir/usr/share/applications/
 
                   cp assets/icons/libresplit-256.png AppDir/usr/share/pixmaps/libresplit.png

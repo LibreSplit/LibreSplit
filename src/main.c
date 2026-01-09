@@ -2,7 +2,8 @@
 #include "component/components.h"
 #include "lasr/auto-splitter.h"
 #include "server.h"
-#include "settings.h"
+#include "settings/settings.h"
+#include "settings/utils.h"
 #include "shared.h"
 #include "timer.h"
 
@@ -12,6 +13,7 @@
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/stat.h>
 
 #define LS_APP_TYPE (ls_app_get_type())
@@ -304,7 +306,7 @@ static void ls_app_load_theme_with_fallback(LSAppWindow* win, const char* name, 
     bool error = false;
 
     if (!found) {
-        printf("Theme not found: %s (variant: %s)\n", name, variant);
+        printf("Theme not found: \"%s\" (variant: \"%s\")\n", name, variant);
     }
 
     if (found) {
@@ -728,30 +730,23 @@ static void ls_app_window_init(LSAppWindow* win)
     get_libresplit_folder_path(win->data_path);
 
     // load settings
-    win->hide_cursor = json_boolean_value(get_setting_value("libresplit", "hide_cursor"));
-    win->global_hotkeys = json_boolean_value(get_setting_value("libresplit", "global_hotkeys"));
-    win->keybind_start_split = parse_keybind(
-        json_string_value(get_setting_value("keybinds", "start_split")));
-    win->keybind_stop_reset = parse_keybind(
-        json_string_value(get_setting_value("keybinds", "stop_reset")));
-    win->keybind_cancel = parse_keybind(
-        json_string_value(get_setting_value("keybinds", "cancel")));
-    win->keybind_unsplit = parse_keybind(
-        json_string_value(get_setting_value("keybinds", "unsplit")));
-    win->keybind_skip_split = parse_keybind(
-        json_string_value(get_setting_value("keybinds", "skip_split")));
-    win->keybind_toggle_decorations = parse_keybind(
-        json_string_value(get_setting_value("keybinds", "toggle_decorations")));
-    win->decorated = json_boolean_value(get_setting_value("libresplit", "start_decorated"));
+    win->hide_cursor = cfg.libresplit.hide_cursor.value.b;
+    win->global_hotkeys = cfg.libresplit.global_hotkeys.value.b;
+    win->keybind_start_split = parse_keybind(cfg.keybinds.start_split.value.s);
+    win->keybind_stop_reset = parse_keybind(cfg.keybinds.stop_reset.value.s);
+    win->keybind_cancel = parse_keybind(cfg.keybinds.cancel.value.s);
+    win->keybind_unsplit = parse_keybind(cfg.keybinds.unsplit.value.s);
+    win->keybind_skip_split = parse_keybind(cfg.keybinds.skip_split.value.s);
+    win->keybind_toggle_decorations = parse_keybind(cfg.keybinds.toggle_decorations.value.s);
+    win->decorated = cfg.libresplit.start_decorated.value.b;
     gtk_window_set_decorated(GTK_WINDOW(win), win->decorated);
-    win->keybind_toggle_win_on_top = parse_keybind(
-        json_string_value(get_setting_value("keybinds", "toggle_win_on_top")));
-    win->win_on_top = json_boolean_value(get_setting_value("libresplit", "start_on_top"));
+    win->keybind_toggle_win_on_top = parse_keybind(cfg.keybinds.toggle_win_on_top.value.s);
+    win->win_on_top = cfg.libresplit.start_on_top.value.b;
     gtk_window_set_keep_above(GTK_WINDOW(win), win->win_on_top);
 
     // Load theme
-    theme = json_string_value(get_setting_value("libresplit", "theme"));
-    theme_variant = json_string_value(get_setting_value("libresplit", "theme_variant"));
+    theme = cfg.libresplit.theme.value.s;
+    theme_variant = cfg.libresplit.theme_variant.value.s;
     ls_app_load_theme_with_fallback(win, theme, theme_variant, nullptr);
 
     // Load window junk
@@ -773,31 +768,31 @@ static void ls_app_window_init(LSAppWindow* win)
     if (enable_global_hotkeys) {
         keybinder_init();
         keybinder_bind(
-            json_string_value(get_setting_value("keybinds", "start_split")),
+            cfg.keybinds.start_split.value.s,
             (KeybinderHandler)keybind_start_split,
             win);
         keybinder_bind(
-            json_string_value(get_setting_value("keybinds", "stop_reset")),
+            cfg.keybinds.stop_reset.value.s,
             (KeybinderHandler)keybind_stop_reset,
             win);
         keybinder_bind(
-            json_string_value(get_setting_value("keybinds", "cancel")),
+            cfg.keybinds.cancel.value.s,
             (KeybinderHandler)keybind_cancel,
             win);
         keybinder_bind(
-            json_string_value(get_setting_value("keybinds", "unsplit")),
+            cfg.keybinds.unsplit.value.s,
             (KeybinderHandler)keybind_unsplit,
             win);
         keybinder_bind(
-            json_string_value(get_setting_value("keybinds", "skip_split")),
+            cfg.keybinds.skip_split.value.s,
             (KeybinderHandler)keybind_skip,
             win);
         keybinder_bind(
-            json_string_value(get_setting_value("keybinds", "toggle_decorations")),
+            cfg.keybinds.toggle_decorations.value.s,
             (KeybinderHandler)keybind_toggle_decorations,
             win);
         keybinder_bind(
-            json_string_value(get_setting_value("keybinds", "toggle_win_on_top")),
+            cfg.keybinds.toggle_win_on_top.value.s,
             (KeybinderHandler)keybind_toggle_win_on_top,
             win);
     } else {
@@ -938,7 +933,7 @@ static void open_activated(GSimpleAction* action,
     struct stat st = { 0 };
     gint res;
     // Load the last used split folder, if present
-    const char* last_split_folder = json_string_value(get_setting_value("history", "last_split_folder"));
+    const char* last_split_folder = cfg.history.last_split_folder.value.s;
     if (parameter != NULL) {
         app = parameter;
     }
@@ -982,14 +977,15 @@ static void open_activated(GSimpleAction* action,
         char last_folder[PATH_MAX];
         filename = gtk_file_chooser_get_filename(chooser);
         strcpy(last_folder, gtk_file_chooser_get_current_folder(chooser));
-        ls_update_setting("history", "last_split_folder", json_string(last_folder));
+        CFG_SET_STR(cfg.history.last_split_folder.value.s, last_folder);
         ls_app_window_open(win, filename);
-        ls_update_setting("history", "split_file", json_string(filename));
+        CFG_SET_STR(cfg.history.split_file.value.s, filename);
         g_free(filename);
     } else {
         gtk_widget_show_all(win->welcome);
     }
     gtk_widget_destroy(dialog);
+    config_save();
 }
 
 /**
@@ -1013,7 +1009,7 @@ static void open_auto_splitter(GSimpleAction* action,
     struct stat st = { 0 };
     gint res;
     // Load the last used auto splitter folder, if present
-    const char* last_auto_splitter_folder = json_string_value(get_setting_value("history", "last_auto_splitter_folder"));
+    const char* last_auto_splitter_folder = cfg.history.last_auto_splitter_folder.value.s;
     if (parameter != NULL) {
         app = parameter;
     }
@@ -1053,9 +1049,10 @@ static void open_auto_splitter(GSimpleAction* action,
         char* filename = gtk_file_chooser_get_filename(chooser);
         char last_folder[PATH_MAX];
         strcpy(last_folder, gtk_file_chooser_get_current_folder(chooser));
-        ls_update_setting("history", "last_auto_splitter_folder", json_string(last_folder));
+        CFG_SET_STR(cfg.history.last_auto_splitter_folder.value.s, last_folder);
+        CFG_SET_STR(cfg.history.auto_splitter_file.value.s, filename);
         strcpy(auto_splitter_file, filename);
-        ls_update_setting("history", "auto_splitter_file", json_string(filename));
+        config_save();
 
         // Restart auto-splitter if it was running
         const bool was_asl_enabled = atomic_load(&auto_splitter_enabled);
@@ -1197,13 +1194,9 @@ static void quit_activated(GSimpleAction* action,
 static void toggle_auto_splitter(GtkCheckMenuItem* menu_item, gpointer user_data)
 {
     gboolean active = gtk_check_menu_item_get_active(menu_item);
-    if (active) {
-        atomic_store(&auto_splitter_enabled, 1);
-        ls_update_setting("libresplit", "auto_splitter_enabled", json_true());
-    } else {
-        atomic_store(&auto_splitter_enabled, 0);
-        ls_update_setting("libresplit", "auto_splitter_enabled", json_false());
-    }
+    atomic_store(&auto_splitter_enabled, active);
+    cfg.libresplit.auto_splitter_enabled.value.b = active;
+    config_save();
 }
 
 /**
@@ -1295,14 +1288,19 @@ static gboolean button_right_click(GtkWidget* widget, GdkEventButton* event, gpo
  */
 static void ls_app_activate(GApplication* app)
 {
+    if (!config_init()) {
+        printf("Configuration failed to load, will use defaults\n");
+    }
+
     LSAppWindow* win;
     win = ls_app_window_new(LS_APP(app));
     gtk_window_present(GTK_WINDOW(win));
-    if (get_setting_value("history", "split_file") != NULL) {
+
+    if (cfg.history.split_file.value.s[0] != '\0') {
         // Check if split file exists
         struct stat st = { 0 };
         char splits_path[PATH_MAX];
-        strcpy(splits_path, json_string_value(get_setting_value("history", "split_file")));
+        strcpy(splits_path, cfg.history.split_file.value.s);
         if (stat(splits_path, &st) == -1) {
             printf("Split JSON %s does not exist\n", splits_path);
             open_activated(NULL, NULL, app);
@@ -1312,23 +1310,17 @@ static void ls_app_activate(GApplication* app)
     } else {
         open_activated(NULL, NULL, app);
     }
-    if (get_setting_value("history", "auto_splitter_file") != NULL) {
+    if (cfg.history.auto_splitter_file.value.s[0] != '\0') {
         struct stat st = { 0 };
         char auto_splitters_path[PATH_MAX];
-        strcpy(auto_splitters_path, json_string_value(get_setting_value("history", "auto_splitter_file")));
+        strcpy(auto_splitters_path, cfg.history.auto_splitter_file.value.s);
         if (stat(auto_splitters_path, &st) == -1) {
             printf("Auto Splitter %s does not exist\n", auto_splitters_path);
         } else {
             strcpy(auto_splitter_file, auto_splitters_path);
         }
     }
-    if (get_setting_value("libresplit", "auto_splitter_enabled") != NULL) {
-        if (json_is_false(get_setting_value("libresplit", "auto_splitter_enabled"))) {
-            atomic_store(&auto_splitter_enabled, 0);
-        } else {
-            atomic_store(&auto_splitter_enabled, 1);
-        }
-    }
+    atomic_store(&auto_splitter_enabled, cfg.libresplit.auto_splitter_enabled.value.b);
     g_signal_connect(win, "button_press_event", G_CALLBACK(button_right_click), app);
 }
 

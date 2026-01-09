@@ -16,23 +16,19 @@ luajit = dependency('luajit')
 x11 = dependency('x11')
 jansson = dependency('jansson')
 
-configure_file(
-    input: 'src/config.h.in',
-    output: 'config.h',
-    configuration: {
-        'DEFAULT_CONFIG_PATH': get_option('prefix') / get_option('datadir') / meson.project_name() / 'default_settings.json',
-    },
-)
-
 executable(
     'libresplit',
     [
         'src/main.c',
         'src/bind.c',
         'src/server.c',
-        'src/settings.c',
         'src/shared.c',
         'src/timer.c',
+
+        # Settings
+        'src/settings/definitions.c',
+        'src/settings/settings.c',
+        'src/settings/utils.c',
 
         # LASR
         'src/lasr/auto-splitter.c',
@@ -86,10 +82,6 @@ message('buildtype: ' + get_option('buildtype'))
 install_data(
     'assets/libresplit.desktop',
     install_dir: get_option('prefix') / get_option('datadir') / 'applications',
-)
-install_data(
-    'assets/default_settings.json',
-    install_dir: get_option('prefix') / get_option('datadir') / meson.project_name(),
 )
 install_data(
     'README.md',
