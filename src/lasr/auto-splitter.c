@@ -4,6 +4,7 @@
  */
 #include "auto-splitter.h"
 
+#include "./maps/maps.h"
 #include "functions.h"
 #include "utils.h"
 
@@ -30,6 +31,12 @@ atomic_llong game_time_value = 0; /*!< The in-game time value, in milliseconds *
  * 0=off, 1=current cycle, +1=multiple cycles
  */
 int maps_cache_cycles = 1;
+/**
+ * Same as `maps_cache_cycles` but this one represents the current value
+ * that changes on each cycle rather than the reference from the script
+ */
+int maps_cache_cycles_value = 1; /*!< The number of cycles the cache is active for */
+
 atomic_bool auto_splitter_enabled = true; /*!< Defines if the auto splitter is enabled */
 atomic_bool auto_splitter_running = false; /*!< Defines if the auto splitter is running */
 atomic_bool call_start = false; /*!< True if the auto splitter is requesting for a run to start */
@@ -529,7 +536,7 @@ void run_auto_splitter()
         // Clear the memory maps cache if needed
         maps_cache_cycles_value--;
         if (maps_cache_cycles_value < 1) {
-            p_maps_cache_size = 0; // We dont need to "empty" the list as the elements after index 0 are considered invalid
+            maps_clearCache();
             maps_cache_cycles_value = maps_cache_cycles;
             // printf("Cleared maps cache\n");
         }

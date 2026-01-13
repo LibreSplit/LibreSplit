@@ -30,16 +30,6 @@ typedef struct ProcessMap {
     char name[PATH_MAX];
 } ProcessMap;
 
-#define MAPS_CACHE_MAX_SIZE 32
-extern ProcessMap p_maps_cache[MAPS_CACHE_MAX_SIZE];
-extern uint32_t p_maps_cache_size;
-/**
- * Same as `maps_cache_cycles` but this one represents the current value
- * that changes on each cycle rather than the reference from the script
- */
-extern int maps_cache_cycles_value;
-
-bool parseMapsLine(const char* line, ProcessMap* map);
 uintptr_t find_base_address(const char* module);
 bool handle_memory_error(uint32_t err);
 const char* value_to_c_string(lua_State* L, int index);

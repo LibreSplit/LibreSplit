@@ -1,0 +1,6 @@
+option(
+    'ioctl_maps',
+    type: 'feature',
+    value: 'auto',
+    description: 'Support ioctl calls to fetch memory maps instead of reading /proc/[pid]/maps.',
+)

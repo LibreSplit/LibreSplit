@@ -10,6 +10,13 @@ if get_option('buildtype') == 'debug'
     add_project_arguments('-DDEBUG', language: 'cpp')
 endif
 
+cc = meson.get_compiler('c')
+has_procmap_ioctl = cc.has_header_symbol('linux/fs.h', 'PROCMAP_QUERY')
+ioctl_maps = get_option('ioctl_maps').enable_auto_if(has_procmap_ioctl)
+if ioctl_maps.enabled()
+    add_project_arguments('-DIOCTL_MAPS', language: 'c')
+endif
+
 threads = dependency('threads')
 gtk = dependency('gtk+-3.0')
 luajit = dependency('luajit')
@@ -33,6 +40,7 @@ executable(
         # LASR
         'src/lasr/auto-splitter.c',
         'src/lasr/utils.c',
+        'src/lasr/maps/maps.c',
         'src/lasr/functions/bitwise.c',
         'src/lasr/functions/getBaseAddress.c',
         'src/lasr/functions/getModuleSize.c',
@@ -78,6 +86,7 @@ executable(
 message('prefix: ' + get_option('prefix')) # /usr/local by default
 message('datadir: ' + get_option('datadir')) # share by default
 message('buildtype: ' + get_option('buildtype'))
+message('ioctl_maps: ' + ioctl_maps.enabled().to_string())
 
 install_data(
     'assets/libresplit.desktop',

@@ -43,6 +43,7 @@ void log_error(const char* format, ...)
  */
 ProcessMap* get_memory_regions(pid_t pid, int* count)
 {
+    // TODO: Convert this function to use maps.c functions
     char maps_path[256];
     if (snprintf(maps_path, sizeof(maps_path), "/proc/%d/maps", pid) < 0) {
         HANDLE_ERROR("Failed to create maps path");
