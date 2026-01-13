@@ -240,37 +240,38 @@ static gboolean ls_app_window_step(gpointer data)
  * Finds a theme, given its name and variant.
  *
  * @param win The LibreSplit Window.
- * @param theme_name The name of the theme to load.
- * @param theme_variant The name of the variant to load (can be empty).
- * @param str Pointer to a string onto which the theme path will be copied.
+ * @param name The name of the theme to load.
+ * @param variant The name of the variant to load (can be empty).
+ * @param out_path Pointer to a string onto which the theme path will be copied.
  *
  * @return 1 if the load is successful, 0 otherwise.
  */
 static int ls_app_window_find_theme(const LSAppWindow* win,
-    const char* theme_name,
-    const char* theme_variant,
-    char* str)
+    const char* name,
+    const char* variant,
+    char* out_path)
 {
-    char theme_path[PATH_MAX];
-    struct stat st = { 0 };
-    if (!theme_name || !strlen(theme_name)) {
-        str[0] = '\0';
+    if (!name || !strlen(name)) {
+        out_path[0] = '\0';
         return 0;
     }
+
+    char theme_path[PATH_MAX];
     strcpy(theme_path, "/");
-    strcat(theme_path, theme_name);
+    strcat(theme_path, name);
     strcat(theme_path, "/");
-    strcat(theme_path, theme_name);
-    if (theme_variant && strlen(theme_variant)) {
+    strcat(theme_path, name);
+    if (variant && strlen(variant)) {
         strcat(theme_path, "-");
-        strcat(theme_path, theme_variant);
+        strcat(theme_path, variant);
     }
     strcat(theme_path, ".css");
 
-    strcpy(str, win->data_path);
-    strcat(str, "/themes");
-    strcat(str, theme_path);
-    if (stat(str, &st) == -1) {
+    strcpy(out_path, win->data_path);
+    strcat(out_path, "/themes");
+    strcat(out_path, theme_path);
+    struct stat st = { 0 };
+    if (stat(out_path, &st) == -1) {
         return 0;
     }
     return 1;
@@ -306,7 +307,7 @@ static void ls_app_load_theme_with_fallback(LSAppWindow* win, const char* name, 
     bool error = false;
 
     if (!found) {
-        printf("Theme not found: \"%s\" (variant: \"%s\")\n", name, variant);
+        printf("Theme not found: \"%s\" (variant: \"%s\")\n", name ? name : "", variant ? variant : "");
     }
 
     if (found) {
@@ -319,7 +320,7 @@ static void ls_app_load_theme_with_fallback(LSAppWindow* win, const char* name, 
             GTK_CSS_PROVIDER(provider_to_use),
             path, &gerror);
         if (gerror != nullptr) {
-            g_printerr("Error loading theme CSS: %s\n", gerror->message);
+            g_printerr("Error loading custom theme CSS: %s\n", gerror->message);
             error = true;
             g_error_free(gerror);
             gerror = nullptr;
@@ -338,7 +339,7 @@ static void ls_app_load_theme_with_fallback(LSAppWindow* win, const char* name, 
             (const char*)css_data,
             css_data_len, &gerror);
         if (gerror != nullptr) {
-            g_printerr("Error loading theme CSS: %s\n", gerror->message);
+            g_printerr("Error loading default theme CSS: %s\n", gerror->message);
             error = true;
             g_error_free(gerror);
             gerror = nullptr;
