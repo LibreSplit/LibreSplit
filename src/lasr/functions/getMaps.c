@@ -1,5 +1,7 @@
 #include "getMaps.h"
+
 #include "../maps/maps.h"
+
 #include <stdio.h>
 
 /**
@@ -7,10 +9,10 @@
  *
  * @param L The lua stack
  */
-int get_maps(lua_State* L)
+int getMaps(lua_State* L)
 {
     if (lua_gettop(L) != 0) {
-        printf("[getmaps] No arguments accepted");
+        printf("[getMaps] No arguments accepted");
         lua_pushnil(L);
         return 1;
     }
