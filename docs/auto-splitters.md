@@ -483,3 +483,33 @@ local main_module_size = getModuleSize();
 local main_module_size_2 = getModuleSize(nil);
 local other_module_size = getModuleSize("other_module");
 ```
+## getMaps
+
+Returns an array-like table that contains other tables: one for each of the process's memory maps.
+
+The array will have a structure similar to this:
+
+```lua
+{
+    {
+        name="something",
+        start=123456,
+        end=789456,
+        size=666000
+    },
+    {
+        name="something_else",
+        start=123456,
+        end=789456,
+        size=666000
+    }
+}
+```
+
+This way you can query memory maps for any property you want, using custom Lua code.
+
+Usage:
+
+```lua
+local maps = getMaps()
+```
