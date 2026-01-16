@@ -66,7 +66,7 @@ struct _LSAppWindow {
     GtkWidget* box;
     GList* components;
     GtkWidget* footer;
-    GtkCssProvider* style;
+    GtkCssProvider* style; // Current style provider, there can be only one
     gboolean hide_cursor; /*!< Defines whether the cursor should be hidden when on top of LibreSplit */
     gboolean global_hotkeys; /*!< Defines whether global hotkeys are currently enabled */
     Keybind keybind_start_split; /*!< The "start or split" global keybind */
@@ -141,38 +141,6 @@ static gpointer save_game_thread(gpointer data)
 static void save_game(ls_game* game)
 {
     g_thread_new("save_game", save_game_thread, game);
-}
-
-/**
- * Clears the current game and reset all the components.
- *
- * @param win The LibreSplit app window
- */
-static void ls_app_window_clear_game(LSAppWindow* win)
-{
-    GdkScreen* screen;
-    GList* l;
-
-    atomic_store(&run_finished, false);
-
-    gtk_widget_hide(win->box);
-    gtk_widget_show_all(win->welcome);
-
-    for (l = win->components; l != NULL; l = l->next) {
-        LSComponent* component = l->data;
-        if (component->ops->clear_game) {
-            component->ops->clear_game(component);
-        }
-    }
-
-    // remove game's style
-    if (win->style) {
-        screen = gdk_display_get_default_screen(win->display);
-        gtk_style_context_remove_provider_for_screen(
-            screen, GTK_STYLE_PROVIDER(win->style));
-        g_object_unref(win->style);
-        win->style = NULL;
-    }
 }
 
 // Forward declarations
@@ -282,23 +250,23 @@ static int ls_app_window_find_theme(const LSAppWindow* win,
  * @param win The LibreSplit window.
  * @param name The name of the theme to load.
  * @param variant The variant of the theme to load.
- * @param provider The CSS provider to use for the theme. If null, a new one will be created.
  */
-static void ls_app_load_theme_with_fallback(LSAppWindow* win, const char* name, const char* variant, GtkCssProvider** provider)
+static void ls_app_load_theme_with_fallback(LSAppWindow* win, const char* name, const char* variant)
 {
     char path[PATH_MAX];
 
-    GtkCssProvider* provider_to_use = nullptr;
-    const bool shouldCreateProvider = provider == nullptr;
+    // Remove old style
+    if (win->style) {
+        gtk_style_context_remove_provider_for_screen(
+            gdk_screen_get_default(),
+            GTK_STYLE_PROVIDER(win->style));
+        g_object_unref(win->style);
+        win->style = nullptr;
+    }
 
-    if (!shouldCreateProvider) {
-        provider_to_use = *provider;
-        if (provider_to_use == nullptr) {
-            provider_to_use = gtk_css_provider_new();
-            *provider = provider_to_use;
-        }
-    } else
-        provider_to_use = gtk_css_provider_new();
+    if (!win->style) {
+        win->style = gtk_css_provider_new();
+    }
 
     GError* gerror = nullptr;
 
@@ -313,10 +281,10 @@ static void ls_app_load_theme_with_fallback(LSAppWindow* win, const char* name, 
         GdkScreen* screen = gdk_display_get_default_screen(win->display);
         gtk_style_context_add_provider_for_screen(
             screen,
-            GTK_STYLE_PROVIDER(provider_to_use),
+            GTK_STYLE_PROVIDER(win->style),
             GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
         gtk_css_provider_load_from_path(
-            GTK_CSS_PROVIDER(provider_to_use),
+            GTK_CSS_PROVIDER(win->style),
             path, &gerror);
         if (gerror != nullptr) {
             g_printerr("Error loading theme CSS: %s\n", gerror->message);
@@ -331,10 +299,10 @@ static void ls_app_load_theme_with_fallback(LSAppWindow* win, const char* name, 
         GdkScreen* screen = gdk_display_get_default_screen(win->display);
         gtk_style_context_add_provider_for_screen(
             screen,
-            GTK_STYLE_PROVIDER(provider_to_use),
+            GTK_STYLE_PROVIDER(win->style),
             GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
         gtk_css_provider_load_from_data(
-            GTK_CSS_PROVIDER(provider_to_use),
+            GTK_CSS_PROVIDER(win->style),
             (const char*)css_data,
             css_data_len, &gerror);
         if (gerror != nullptr) {
@@ -344,9 +312,30 @@ static void ls_app_load_theme_with_fallback(LSAppWindow* win, const char* name, 
             gerror = nullptr;
         }
     }
+}
 
-    if (shouldCreateProvider)
-        g_object_unref(provider_to_use);
+/**
+ * Clears the current game and reset all the components.
+ *
+ * @param win The LibreSplit app window
+ */
+static void ls_app_window_clear_game(LSAppWindow* win)
+{
+    GList* l;
+
+    atomic_store(&run_finished, false);
+
+    gtk_widget_hide(win->box);
+    gtk_widget_show_all(win->welcome);
+
+    for (l = win->components; l != NULL; l = l->next) {
+        LSComponent* component = l->data;
+        if (component->ops->clear_game) {
+            component->ops->clear_game(component);
+        }
+    }
+
+    ls_app_load_theme_with_fallback(win, cfg.libresplit.theme.value.s, cfg.libresplit.theme_variant.value.s);
 }
 
 /**
@@ -368,7 +357,7 @@ static void ls_app_window_show_game(LSAppWindow* win)
 
     // set game theme (if it is set)
     if (win->game->theme) {
-        ls_app_load_theme_with_fallback(win, win->game->theme, win->game->theme_variant, &win->style);
+        ls_app_load_theme_with_fallback(win, win->game->theme, win->game->theme_variant);
     }
 
     for (l = win->components; l != NULL; l = l->next) {
@@ -749,7 +738,7 @@ static void ls_app_window_init(LSAppWindow* win)
     // Load theme
     theme = cfg.libresplit.theme.value.s;
     theme_variant = cfg.libresplit.theme_variant.value.s;
-    ls_app_load_theme_with_fallback(win, theme, theme_variant, nullptr);
+    ls_app_load_theme_with_fallback(win, theme, theme_variant);
 
     // Load window junk
     add_class(GTK_WIDGET(win), "window");
