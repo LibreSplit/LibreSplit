@@ -2,6 +2,7 @@
 
 #include "functions/bitwise.h"
 #include "functions/getBaseAddress.h"
+#include "functions/getMaps.h"
 #include "functions/getModuleSize.h"
 #include "functions/getPID.h"
 #include "functions/print_tbl.h"

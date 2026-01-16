@@ -45,6 +45,7 @@ executable(
         'src/lasr/functions/getBaseAddress.c',
         'src/lasr/functions/getModuleSize.c',
         'src/lasr/functions/getPID.c',
+        'src/lasr/functions/getMaps.c',
         'src/lasr/functions/print_tbl.c',
         'src/lasr/functions/process.c',
         'src/lasr/functions/readAddress.c',
