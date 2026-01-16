@@ -1,7 +1,7 @@
 #pragma once
 
-#include "lua.h"
 #include "src/lasr/utils.h"
+#include <lua.h>
 
 extern ProcessMap* maps_cache;
 extern size_t maps_cache_size;
