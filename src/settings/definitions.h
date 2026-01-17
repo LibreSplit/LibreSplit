@@ -3,13 +3,13 @@
 #include <linux/limits.h>
 #include <stddef.h>
 
-typedef enum {
+typedef enum ConfigType {
     CFG_BOOL,
     CFG_INT,
     CFG_STRING
 } ConfigType;
 
-typedef union {
+typedef union ConfigValue {
     bool b; // For boolean values
     int i; // For integer values
     char s[4096]; // For string values 4096 should be adequate for all use cases

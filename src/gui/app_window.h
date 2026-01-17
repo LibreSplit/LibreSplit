@@ -10,6 +10,14 @@ typedef struct _LSAppWindowClass {
     GtkApplicationWindowClass parent_class;
 } LSAppWindowClass;
 
+typedef struct LSApp {
+    GtkApplication parent;
+} LSApp;
+
+typedef struct _LSAppClass {
+    GtkApplicationClass parent_class;
+} LSAppClass;
+
 /**
  * @brief The main LibreSplit application window
  */

@@ -23,7 +23,7 @@ extern bool prev_is_loading;
 /**
  * Defines a Lua Auto Splitter Runtime Function.
  */
-struct lasr_func_struct {
+struct lasr_function {
     char* function_name; /*!< The name of the function in Lua */
     lua_CFunction function_ptr; /*!< C Function to be executed */
 } typedef lasr_function;

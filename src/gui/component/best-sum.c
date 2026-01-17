@@ -7,7 +7,7 @@
 /**
  * @brief The component representing a sum of the best segments.
  */
-typedef struct _LSBestSum {
+typedef struct LSBestSum {
     LSComponent base; /*!< The base struct that is extended */
     GtkWidget* container; /*!< The container for the sum of bests */
     GtkWidget* sum_of_bests; /*!< The actual timer/label showing the sum of bests */

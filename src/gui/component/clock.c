@@ -7,7 +7,7 @@
 /**
  * @brief The Timer component itself.
  */
-typedef struct _LSTimer {
+typedef struct LSTimer {
     LSComponent base; /*!< The base struct that is extended. */
     GtkWidget* time; /*!< The timer container */
     GtkWidget* time_seconds; /*!< The label representing the seconds part of the timer */

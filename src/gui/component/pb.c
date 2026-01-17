@@ -7,7 +7,7 @@
 /**
  * @brief The component representing a personal best
  */
-typedef struct _LSPb {
+typedef struct LSPb {
     LSComponent base; /*!< The base struct that is extended */
     GtkWidget* container; /*!< The container for the PB */
     GtkWidget* personal_best; /*< The actual personal best label */

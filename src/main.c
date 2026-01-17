@@ -25,8 +25,7 @@
 #define LS_APP(obj) \
     (G_TYPE_CHECK_INSTANCE_CAST((obj), LS_APP_TYPE, LSApp))
 
-typedef struct _LSApp LSApp;
-typedef struct _LSAppClass LSAppClass;
+G_DEFINE_TYPE(LSApp, ls_app, GTK_TYPE_APPLICATION)
 
 #define LS_APP_WINDOW_TYPE (ls_app_window_get_type())
 #define LS_APP_WINDOW(obj) \
@@ -733,16 +732,6 @@ static void ls_app_window_open(LSAppWindow* win, const char* file)
         ls_app_window_show_game(win);
     }
 }
-
-struct _LSApp {
-    GtkApplication parent;
-};
-
-struct _LSAppClass {
-    GtkApplicationClass parent_class;
-};
-
-G_DEFINE_TYPE(LSApp, ls_app, GTK_TYPE_APPLICATION)
 
 /**
  * Shows the "Open JSON Split File" dialog eventually using

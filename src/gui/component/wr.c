@@ -7,7 +7,7 @@
 /**
  * @brief The component representing the saved World Record
  */
-typedef struct _LSWr {
+typedef struct LSWr {
     LSComponent base; /*!< The base struct that is extended */
     GtkWidget* container; /*!< The container for the world record */
     GtkWidget* world_record_label; /*!< The label showing the "World record" text */

@@ -17,7 +17,7 @@ extern atomic_bool exit_requested;
 /**
  * Structure to pass command data to main thread
  */
-typedef struct {
+typedef struct CommandData {
     CTLCommand command; /*!< The command to send to the main thread */
 } CommandData;
 

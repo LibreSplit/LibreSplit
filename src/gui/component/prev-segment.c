@@ -7,7 +7,7 @@
 /**
  * @brief The component representing the "Previous segment" part of LibreSplit
  */
-typedef struct _LSPrevSegment {
+typedef struct LSPrevSegment {
     LSComponent base; /*!< The base struct that is extended */
     GtkWidget* container; /*!< The container for the previous segment */
     GtkWidget* previous_segment_label; /*!< Label containing the previous segment text (or live segment in some cases) */

@@ -7,7 +7,7 @@
 /**
  * @brief The component representing the detailed timer part of the window.
  */
-typedef struct _LSDetailedTimer {
+typedef struct LSDetailedTimer {
     LSComponent base; /*!< The base struct that is extended */
     GtkWidget* detailed_timer; /*!< The container for the detailed timer */
     GtkWidget* detailed_info; /*!< Box */

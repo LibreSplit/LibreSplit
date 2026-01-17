@@ -9,7 +9,7 @@
 /**
  * @brief The component containing all the splits for the game.
  */
-typedef struct _LSSplits {
+typedef struct LSSplits {
     LSComponent base; /*!< The base struct that is extended */
     int split_count; /*!< The number of splits */
     GtkWidget* container; /*!< The container for the splits */

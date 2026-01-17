@@ -9,15 +9,13 @@
 #include "../../timer.h"
 #include "../utils.h"
 
-typedef struct _LSComponent LSComponent;
-typedef struct _LSComponentOps LSComponentOps;
-typedef struct _LSComponentAvailable LSComponentAvailable;
+typedef struct LSComponentOps LSComponentOps; // forward declaration
 
-struct _LSComponent {
+typedef struct LSComponent {
     LSComponentOps* ops;
-};
+} LSComponent;
 
-struct _LSComponentOps {
+typedef struct LSComponentOps {
     void (*delete)(LSComponent* self);
     GtkWidget* (*widget)(LSComponent* self);
 
@@ -31,12 +29,12 @@ struct _LSComponentOps {
     void (*unsplit)(LSComponent* self, const ls_timer* timer);
     void (*stop_reset)(LSComponent* self, ls_timer* timer);
     void (*cancel_run)(LSComponent* self, ls_timer* timer);
-};
+} LSComponentOps;
 
-struct _LSComponentAvailable {
+typedef struct LSComponentAvailable {
     char* name;
     LSComponent* (*new)();
-};
+} LSComponentAvailable;
 
 // A NULL-terminated array of all available components
 extern LSComponentAvailable ls_components[];

@@ -5,7 +5,7 @@
 #define LS_INFO_BEST_SPLIT (4)
 #define LS_INFO_BEST_SEGMENT (8)
 
-struct ls_game {
+typedef struct ls_game {
     char* path;
     char* title;
     char* theme;
@@ -24,10 +24,9 @@ struct ls_game {
     long long* segment_times;
     long long* best_splits;
     long long* best_segments;
-};
-typedef struct ls_game ls_game;
+} ls_game;
 
-struct ls_timer {
+typedef struct ls_timer {
     int started;
     int running;
     int loading;
@@ -47,8 +46,7 @@ struct ls_timer {
     const ls_game* game;
     int* attempt_count;
     int* finished_count;
-};
-typedef struct ls_timer ls_timer;
+} ls_timer;
 
 long long ls_time_now(void);
 

@@ -9,7 +9,7 @@
  *
  * Represents the title of the run, as well as the count of attempts, both finished and total.
  */
-typedef struct _LSTitle {
+typedef struct LSTitle {
     LSComponent base; /*!< The base struct that is extended */
     GtkWidget* header; /*!< The container for the title */
     GtkWidget* title; /*!< The label containing the title itself */
