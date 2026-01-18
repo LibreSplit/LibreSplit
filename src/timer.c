@@ -610,7 +610,11 @@ int ls_run_save(ls_timer* timer, const char* reason)
     strftime(time_buf, sizeof(time_buf), "%Y-%m-%d_%H-%M-%S", timeinfo);
 
     char filename[PATH_MAX];
-    snprintf(filename, sizeof(filename), "%s/run_%s.json", path, time_buf);
+    int ret = snprintf(filename, sizeof(filename), "%s/run_%s.json", path, time_buf);
+    if (ret < 0 || (size_t)ret >= sizeof(filename)) {
+        printf("Error creating run filename. The path may be too long, aborting save.\n");
+        return 1;
+    }
 
     const int json_dump_result = json_dump_file(json, filename, JSON_PRESERVE_ORDER | JSON_INDENT(2));
     if (json_dump_result) {
