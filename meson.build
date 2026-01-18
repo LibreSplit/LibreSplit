@@ -1,13 +1,12 @@
 project(
     'libresplit',
     'c',
-    'cpp',
-    default_options: ['c_std=gnu23', 'cpp_std=c++20'],
+    default_options: ['c_std=gnu23'],
     meson_version: '>=1.1',
 )
 
 if get_option('buildtype') == 'debug'
-    add_project_arguments('-DDEBUG', language: 'cpp')
+    add_project_arguments('-DDEBUG', language: 'c')
 endif
 
 cc = meson.get_compiler('c')

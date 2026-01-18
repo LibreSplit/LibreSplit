@@ -558,7 +558,7 @@ void keybinder_unbind(const char* keystring, KeybinderHandler handler)
         do_ungrab_key(binding);
         bindings = g_slist_remove(bindings, binding);
 
-        TRACE(g_print("unbind, notify: %p\n", binding->notify));
+        TRACE(g_print("unbind, notify: 0x%" PRIxPTR "\n", (uintptr_t)binding->notify));
         if (binding->notify) {
             binding->notify(binding->user_data);
         }
@@ -592,7 +592,7 @@ void keybinder_unbind_all(const char* keystring)
         do_ungrab_key(binding);
         bindings = g_slist_remove(bindings, binding);
 
-        TRACE(g_print("unbind_all, notify: %p\n", binding->notify));
+        TRACE(g_print("unbind_all, notify: 0x%" PRIxPTR "\n", (uintptr_t)binding->notify));
         if (binding->notify) {
             binding->notify(binding->user_data);
         }
