@@ -34,11 +34,11 @@ typedef struct _LSAppWindowClass LSAppWindowClass;
 
 atomic_bool exit_requested = 0; /*!< Set to 1 when LibreSplit is exiting */
 
-static const unsigned char css_data[] = {
-#embed "main.css"
+static const unsigned char fallback_css_data[] = {
+#embed "fallback.css"
 };
 
-static const size_t css_data_len = sizeof(css_data);
+static const size_t fallback_css_data_len = sizeof(fallback_css_data);
 
 /**
  * @brief Keybind A GTK Key bind
@@ -304,8 +304,8 @@ static void ls_app_load_theme_with_fallback(LSAppWindow* win, const char* name, 
             GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
         gtk_css_provider_load_from_data(
             GTK_CSS_PROVIDER(win->style),
-            (const char*)css_data,
-            css_data_len, &gerror);
+            (const char*)fallback_css_data,
+            fallback_css_data_len, &gerror);
         if (gerror != nullptr) {
             g_printerr("Error loading default theme CSS: %s\n", gerror->message);
             error = true;
