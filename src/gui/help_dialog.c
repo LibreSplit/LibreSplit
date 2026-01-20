@@ -62,7 +62,7 @@ static void build_help_dialog(GtkApplication* app, gpointer data)
     GtkWidget* wiki_lnk = gtk_link_button_new_with_label("https://github.com/LibreSplit/LibreSplit/wiki", "Check our Wiki");
     gtk_container_add(GTK_CONTAINER(box), wiki_lnk);
 
-    gtk_widget_show_all(box);
+    gtk_widget_show_all(window);
     gtk_window_present(GTK_WINDOW(window));
 
     g_object_unref(pixbuf);
