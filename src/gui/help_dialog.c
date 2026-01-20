@@ -2,12 +2,20 @@
 #include "gdk-pixbuf/gdk-pixbuf.h"
 #include <gtk/gtk.h>
 
+static gboolean on_help_window_delete(GtkWidget* widget, GdkEvent* event, gpointer user_data)
+{
+    gtk_widget_destroy(widget);
+    return TRUE;
+}
+
 static void build_help_dialog(GtkApplication* app, gpointer data)
 {
     GtkWidget* window = gtk_application_window_new(app);
     gtk_window_set_title(GTK_WINDOW(window), "About LibreSplit");
     gtk_window_set_default_size(GTK_WINDOW(window), 200, 320);
     gtk_window_set_resizable(GTK_WINDOW(window), FALSE);
+
+    g_signal_connect(window, "delete-event", G_CALLBACK(on_help_window_delete), NULL);
 
     GtkWidget* box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 2);
     gtk_widget_set_margin_top(box, 8);
