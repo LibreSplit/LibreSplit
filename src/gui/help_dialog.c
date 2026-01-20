@@ -1,6 +1,7 @@
 #include "help_dialog.h"
 #include "gdk-pixbuf/gdk-pixbuf.h"
 #include <gtk/gtk.h>
+#include <stdio.h>
 
 static gboolean on_help_window_delete(GtkWidget* widget, GdkEvent* event, gpointer user_data)
 {
