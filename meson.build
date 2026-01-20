@@ -6,10 +6,7 @@ project(
     meson_version: '>=1.1',
 )
 
-add_project_arguments(
-    '-DAPP_VERSION="@0@"'.format(meson.project_version()),
-    language: 'c'
-)
+add_project_arguments('-DAPP_VERSION="@0@"'.format(meson.project_version()), language: 'c')
 
 if get_option('buildtype') == 'debug'
     add_project_arguments('-DDEBUG', language: 'c')
@@ -130,6 +127,12 @@ foreach size : [16, 22, 24, 32, 36, 48, 64, 72, 96, 128, 256, 512, 1024]
         install_mode: 'rw-r--r--',
     )
 endforeach
+install_data(
+    'assets/libresplit.svg',
+    install_dir: get_option('prefix') / get_option('datadir') / 'icons/hicolor/scalable/apps/',
+    rename: 'libresplit.png',
+    install_mode: 'rw-r--r--',
+)
 
 gnome = import('gnome')
 #gnome.post_install(update_desktop_database: true, gtk_update_icon_cache: true)
