@@ -1,8 +1,14 @@
 project(
     'libresplit',
     'c',
+    version: 'pre-release',
     default_options: ['c_std=gnu23'],
     meson_version: '>=1.1',
+)
+
+add_project_arguments(
+    '-DAPP_VERSION="@0@"'.format(meson.project_version()),
+    language: 'c'
 )
 
 if get_option('buildtype') == 'debug'
