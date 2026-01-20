@@ -1,16 +1,21 @@
 #include "app_window.h"
 #include "src/gui/component/components.h"
+#include "src/settings/settings.h"
 
 void toggle_decorations(LSAppWindow* win)
 {
     gtk_window_set_decorated(GTK_WINDOW(win), !win->opts.decorated);
     win->opts.decorated = !win->opts.decorated;
+    cfg.libresplit.start_decorated.value.b = win->opts.decorated;
+    config_save();
 }
 
 void toggle_win_on_top(LSAppWindow* win)
 {
     gtk_window_set_keep_above(GTK_WINDOW(win), !win->opts.win_on_top);
     win->opts.win_on_top = !win->opts.win_on_top;
+    cfg.libresplit.start_on_top.value.b = win->opts.win_on_top;
+    config_save();
 }
 
 static void resize_window(LSAppWindow* win,
