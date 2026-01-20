@@ -31,6 +31,11 @@ static void build_help_dialog(GtkApplication* app, gpointer data)
     gtk_widget_set_halign(label, GTK_ALIGN_CENTER);
     gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
     gtk_container_add(GTK_CONTAINER(box), label);
+    char version_text[128];
+    snprintf(version_text, sizeof(version_text), "Version %s", APP_VERSION);
+    GtkWidget* version_label = gtk_label_new(version_text);
+    gtk_widget_set_halign(version_label, GTK_ALIGN_CENTER);
+    gtk_container_add(GTK_CONTAINER(box), version_label);
     gtk_container_add(GTK_CONTAINER(window), box);
     GtkWidget* website_lnk = gtk_link_button_new_with_label("https://libresplit.org/", "Check out our website!");
     gtk_container_add(GTK_CONTAINER(box), website_lnk);
