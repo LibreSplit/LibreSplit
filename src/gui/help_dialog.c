@@ -25,15 +25,27 @@ static void build_help_dialog(GtkApplication* app, gpointer data)
     gtk_widget_set_vexpand(box, TRUE);
 
     GError* err = NULL;
-    GdkPixbuf* pixbuf = gdk_pixbuf_new_from_file("assets/libresplit.svg", &err);
+    GdkPixbuf* pixbuf = NULL;
+    GdkPixbuf* scaled_pixbuf = NULL;
+
+    pixbuf = gdk_pixbuf_new_from_file("assets/libresplit.svg", &err);
     if (!pixbuf) {
-        printf("Error loading SVG: %s\n", err->message);
-        g_error_free(err);
+        g_printerr("Error loading SVG: %s\n", err ? err->message : "unknown error");
+        if (err)
+            g_error_free(err);
         return;
     }
 
-    GdkPixbuf* scaled_pixbuf = gdk_pixbuf_scale_simple(pixbuf, 200, 200, GDK_INTERP_BILINEAR);
+    scaled_pixbuf = gdk_pixbuf_scale_simple(pixbuf, 200, 200, GDK_INTERP_BILINEAR);
+    g_object_unref(pixbuf);
+    pixbuf = NULL;
+    if (!scaled_pixbuf) {
+        return;
+    }
+
     GtkWidget* img = gtk_image_new_from_pixbuf(scaled_pixbuf);
+    g_object_unref(scaled_pixbuf);
+    scaled_pixbuf = NULL;
 
     gtk_widget_set_halign(img, GTK_ALIGN_CENTER);
     gtk_widget_set_valign(img, GTK_ALIGN_CENTER);
@@ -64,9 +76,6 @@ static void build_help_dialog(GtkApplication* app, gpointer data)
 
     gtk_widget_show_all(window);
     gtk_window_present(GTK_WINDOW(window));
-
-    g_object_unref(pixbuf);
-    g_object_unref(scaled_pixbuf);
 }
 
 void show_help_dialog(GSimpleAction* action, GVariant* parameter, gpointer app)
