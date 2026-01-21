@@ -21,3 +21,24 @@ jobs:
                     echo "Run 'clang-format -i src/**/*.{c,h}' and commit the changes."
                     exit 1
                   fi
+
+    linter-check:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Install and cache dependencies
+              uses: awalsh128/cache-apt-pkgs-action@latest
+              with:
+                  packages: >
+                      cppcheck
+                      meson
+                  version: 1.0
+
+            - name: Set up project
+              run: meson setup build -Dbuildtype=debug
+
+            - name: Run linter rests
+              run: meson test -C build --suite lint -v
