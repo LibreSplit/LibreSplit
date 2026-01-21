@@ -32,7 +32,6 @@ jobs:
             - name: Add PPAs for software versions
               run: |
                 sudo add-apt-repository ppa:puni070/gcc-noble -y
-                sudo add-apt-repository ppa:cppcheck/ppa -y
                 sudo apt update
 
             - name: Install and cache dependencies
