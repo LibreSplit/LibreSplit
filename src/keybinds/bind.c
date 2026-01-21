@@ -299,7 +299,7 @@ do_grab_key(struct Binding* binding)
 
     binding->keyval = keysym;
     binding->modifiers = modifiers;
-    TRACE(g_print("Grabbing keyval: %d, vmodifiers: 0x%x, name: %s\n",
+    TRACE(g_print("Grabbing keyval: %u, vmodifiers: 0x%x, name: %s\n",
         keysym, modifiers, binding->keystring));
 
     /* Map virtual modifiers to non-virtual modifiers */
@@ -331,7 +331,7 @@ do_ungrab_key(struct Binding* binding)
         return FALSE;
     }
 
-    TRACE(g_print("Ungrabbing keyval: %d, vmodifiers: 0x%x, name: %s\n",
+    TRACE(g_print("Ungrabbing keyval: %u, vmodifiers: 0x%x, name: %s\n",
         binding->keyval, binding->modifiers, binding->keystring));
 
     /* Map virtual modifiers to non-virtual modifiers */
@@ -380,7 +380,7 @@ filter_func(GdkXEvent* gdk_xevent, GdkEvent* event, gpointer data)
             gdk_keymap_add_virtual_modifiers(keymap, &modifiers);
             modifiers &= mod_mask;
 
-            TRACE(g_print("Translated keyval: %d, vmodifiers: 0x%x, name: %s\n",
+            TRACE(g_print("Translated keyval: %u, vmodifiers: 0x%x, name: %s\n",
                 keyval, modifiers,
                 gtk_accelerator_name(keyval, modifiers)));
 
