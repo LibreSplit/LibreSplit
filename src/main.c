@@ -480,8 +480,7 @@ static void open_auto_splitter(GSimpleAction* action,
             while (atomic_load(&auto_splitter_running) && was_asl_enabled) {
                 // wait, this will be very fast so its ok to just spin
             }
-            if (was_asl_enabled)
-                atomic_store(&auto_splitter_enabled, true);
+            atomic_store(&auto_splitter_enabled, true);
         }
 
         g_free(filename);
