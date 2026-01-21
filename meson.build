@@ -177,6 +177,7 @@ if cppcheck.found()
         '--std=gnu23',
         '--language=c',
         '--enable=warning,style,performance',
+        '--error-exitcode=1',
     ]
     # Check LibreSplit
     test(
