@@ -188,6 +188,10 @@ int readAddress(lua_State* L)
             exit(1);
         }
         uint8_t* results = malloc(array_size * sizeof(uint8_t));
+        if (!results) {
+            printf("[readAddress] Memory allocation failed for byte array.\n");
+            exit(1);
+        }
         for (int j = 0; j < array_size; j++) {
             uint8_t value = read_memory_uint8_t(address + j, &error);
             if (memory_error)

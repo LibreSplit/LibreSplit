@@ -17,7 +17,7 @@ ssize_t process_vm_readv(pid_t pid,
  */
 typedef struct game_process {
     const char* name; /*!< The name of the process */
-    int pid; /*!< The PID of the process */
+    unsigned int pid; /*!< The PID of the process */
     uintptr_t base_address; /*!< The detected base address of the process */
     uintptr_t dll_address; /*!< The detected base address of the last requested module */
 } game_process;

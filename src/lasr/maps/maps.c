@@ -11,6 +11,9 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
+#define STR_HELPER(x) #x
+#define STR(x) STR_HELPER(x)
+
 ProcessMap* maps_cache = NULL; // Array of cached maps
 size_t maps_cache_size = 0; // Number of cached maps
 
@@ -143,7 +146,7 @@ static size_t maps_getAll_ioctl(void)
     int f = open(path, O_RDONLY);
     if (f >= 0) {
         struct procmap_query q = { 0 };
-        char map_name[PATH_MAX];
+        char map_name[PATH_MAX] = { 0 };
         q.size = sizeof(q);
         q.query_flags = PROCMAP_QUERY_COVERING_OR_NEXT_VMA;
         q.query_addr = 0;
@@ -189,7 +192,7 @@ static bool maps_parseMapsLine(const char* line, ProcessMap* map)
     unsigned int major_id, minor_id, node_id;
 
     // Thank you kernel source code
-    int sscanf_res = sscanf(line, "%lx-%lx %7s %lx %u:%u %u %s", &map->start,
+    int sscanf_res = sscanf(line, "%lx-%lx %7s %lx %u:%u %u %" STR(PATH_MAX) "[^\n]", &map->start,
         &map->end, mode, &offset, &major_id,
         &minor_id, &node_id, map->name);
     if (!sscanf_res)

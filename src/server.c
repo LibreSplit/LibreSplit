@@ -65,6 +65,10 @@ int receive_message(int sockfd, CTLMessage** out)
         return -1;
 
     CTLMessage* msg = malloc(sizeof(CTLMessage) + len);
+    if (!msg) {
+        fprintf(stderr, "Failed to allocate memory for control message.\n");
+        return -1;
+    }
     msg->length = len;
 
     size_t received = 0;

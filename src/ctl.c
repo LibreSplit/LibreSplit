@@ -68,6 +68,11 @@ bool sendToLibreSplit(const CTLCommand cmd)
     // We can send arbitrarily long messages, but for now we only need to send a single byte
     // Could be useful for future extensions though
     CTLMessage* ctl_msg = (CTLMessage*)malloc(sizeof(CTLMessage) + sizeof(cmd));
+    if (!ctl_msg) {
+        fprintf(stderr, "Failed to allocate memory for control message.\n");
+        close(sockfd);
+        return false;
+    }
     ctl_msg->length = htonl(sizeof(cmd));
     memcpy(ctl_msg->message, &cmd, sizeof(cmd));
 

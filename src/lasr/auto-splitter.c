@@ -219,6 +219,7 @@ bool call_va(lua_State* L, const char* func, const char* sig, ...)
     if (lua_pcall(L, narg, nres, 0) != LUA_OK) {
         const char* err = lua_tostring(L, -1);
         printf("error running function '%s': %s\n", func, err);
+        va_end(vl);
         return false;
     }
 
