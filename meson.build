@@ -137,16 +137,27 @@ foreach size : [16, 22, 24, 32, 36, 48, 64, 72, 96, 128, 256, 512, 1024]
     )
 endforeach
 
-# Code formatting test.
+# Code formatting test
 clang_format = find_program('clang-format', required: false)
 if clang_format.found()
+    # Check LibreSplit
     test(
-        'clang-format',
+        'clang-format-libresplit',
         clang_format,
         args: [
             '--dry-run',
             '--Werror',
             libresplit_sources,
+        ],
+        suite: 'format',
+    )
+    # Check LibreSplitCTL
+    test(
+        'clang-format-ctl',
+        clang_format,
+        args: [
+            '--dry-run',
+            '--Werror',
             libresplit_ctl_sources,
         ],
         suite: 'format',
