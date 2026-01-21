@@ -178,6 +178,11 @@ if cppcheck.found()
         '--language=c',
         '--enable=warning,style,performance',
         '--error-exitcode=1',
+        # Recommended silences for GTK/GLib apps
+        '--suppress=missingIncludeSystem',
+        '--suppress=unknownMacro',
+        '--suppress=preprocessorErrorDirective',
+        '--suppress=unusedParameter',
     ]
     # Check LibreSplit
     test(
