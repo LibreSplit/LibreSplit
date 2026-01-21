@@ -29,9 +29,10 @@ jobs:
             - name: Checkout repository
               uses: actions/checkout@v4
 
-            - name: "Add gcc-15 PPA"
+            - name: Add PPAs for software versions
               run: |
                 sudo add-apt-repository ppa:puni070/gcc-noble -y
+                sudo add-apt-repository ppa:cppcheck/ppa -y
                 sudo apt update
 
             - name: Install and cache dependencies
@@ -45,6 +46,9 @@ jobs:
                     libluajit-5.1-dev
                     cppcheck
                   version: 1.0
+
+            - name: DEBUG - Check cppcheck version
+              run: cppcheck --version
 
             - name: Install Meson
               run: sudo pip3 install meson
