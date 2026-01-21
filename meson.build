@@ -174,7 +174,7 @@ cppcheck = find_program('cppcheck', required: false)
 if cppcheck.found()
     # Set args for analysing both sources.
     cppcheck_base_args = [
-        '--std=gnu23',
+        '--std=c23',
         '--language=c',
         '--enable=warning,performance',
         '--error-exitcode=1',
