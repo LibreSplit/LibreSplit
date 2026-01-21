@@ -29,14 +29,26 @@ jobs:
             - name: Checkout repository
               uses: actions/checkout@v4
 
+            - name: "Add gcc-15 PPA"
+              run: |
+                sudo add-apt-repository ppa:puni070/gcc-noble -y
+                sudo apt update
+
             - name: Install and cache dependencies
               uses: awalsh128/cache-apt-pkgs-action@latest
               with:
-                  packages: cppcheck
+                  packages: >
+                    gcc-15
+                    cppcheck
                   version: 1.0
 
             - name: Install Meson
               run: sudo pip3 install meson
+
+            - name: "Set up compiler"
+              run: |
+                sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-15 150
+                sudo update-alternatives --set gcc /usr/bin/gcc-15
 
             - name: Set up project
               run: meson setup build -Dbuildtype=debug
