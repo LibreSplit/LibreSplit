@@ -61,5 +61,5 @@ jobs:
             - name: Set up project
               run: meson setup build -Dbuildtype=debug
 
-            - name: Run linter rests
+            - name: Run linter tests
               run: meson test -C build --suite lint -v
