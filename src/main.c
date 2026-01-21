@@ -595,6 +595,10 @@ static void reload_activated(GSimpleAction* action,
     }
     if (win->game) {
         path = strdup(win->game->path);
+        if (!path) {
+            fprintf(stderr, "Out of memory duplicating path\n");
+            return;
+        }
         ls_app_window_open(win, path);
         free(path);
     }
