@@ -199,6 +199,8 @@ if cppcheck.found()
         args: cppcheck_base_args + libresplit_ctl_sources,
         suite: 'lint',
     )
+else
+    message('cppcheck not found, skipping linting test')
 endif
 
 gnome = import('gnome')
