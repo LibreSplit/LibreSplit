@@ -179,6 +179,7 @@ if cppcheck.found()
         '--enable=warning,performance',
         '--error-exitcode=1',
         # Recommended silences for GTK/GLib apps
+        '--library=gtk.cfg',
         '--suppress=missingIncludeSystem',
         '--suppress=unknownMacro',
         '--suppress=preprocessorErrorDirective',
