@@ -72,5 +72,6 @@ gpointer save_game_thread(gpointer data)
 
 void save_game(ls_game* game)
 {
-    g_thread_new("save_game", save_game_thread, game);
+    GThread* thread = g_thread_new("save_game", save_game_thread, game);
+    g_thread_unref(thread);
 }
