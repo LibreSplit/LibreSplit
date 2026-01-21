@@ -185,6 +185,13 @@ if cppcheck.found()
         args: cppcheck_base_args + libresplit_sources,
         suite: 'lint',
     )
+    # Check LibreSplitCTL
+    test(
+        'cppcheck-ctl',
+        cppcheck,
+        args: cppcheck_base_args + libresplit_ctl_sources,
+        suite: 'lint',
+    )
 endif
 
 gnome = import('gnome')
