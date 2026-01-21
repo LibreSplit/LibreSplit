@@ -46,9 +46,6 @@ jobs:
                     cppcheck
                   version: 1.0
 
-            - name: DEBUG - Check cppcheck version
-              run: cppcheck --version
-
             - name: Install Meson
               run: sudo pip3 install meson
 
