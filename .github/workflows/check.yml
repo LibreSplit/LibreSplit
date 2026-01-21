@@ -32,10 +32,11 @@ jobs:
             - name: Install and cache dependencies
               uses: awalsh128/cache-apt-pkgs-action@latest
               with:
-                  packages: >
-                      cppcheck
-                      meson
+                  packages: cppcheck
                   version: 1.0
+
+            - name: Install Meson
+              run: sudo pip3 install meson
 
             - name: Set up project
               run: meson setup build -Dbuildtype=debug
