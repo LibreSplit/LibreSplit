@@ -169,6 +169,24 @@ else
     message('clang-format not found, skipping formatting test')
 endif
 
+# Static analysis + Linting
+cppcheck = find_program('cppcheck', required: false)
+if cppcheck.found()
+    # Set args for analysing both sources.
+    cppcheck_base_args = [
+        '--std=gnu23',
+        '--language=c',
+        '--enable=warning,style,performance',
+    ]
+    # Check LibreSplit
+    test(
+        'cppcheck-libresplit',
+        cppcheck,
+        args: cppcheck_base_args + libresplit_sources,
+        suite: 'lint',
+    )
+endif
+
 gnome = import('gnome')
 #gnome.post_install(update_desktop_database: true, gtk_update_icon_cache: true)
 gnome.post_install(gtk_update_icon_cache: true)
