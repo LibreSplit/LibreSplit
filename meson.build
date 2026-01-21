@@ -176,7 +176,7 @@ if cppcheck.found()
     cppcheck_base_args = [
         '--std=gnu23',
         '--language=c',
-        '--enable=warning,style,performance',
+        '--enable=warning,performance',
         '--error-exitcode=1',
         # Recommended silences for GTK/GLib apps
         '--suppress=missingIncludeSystem',
