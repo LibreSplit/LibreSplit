@@ -137,6 +137,24 @@ foreach size : [16, 22, 24, 32, 36, 48, 64, 72, 96, 128, 256, 512, 1024]
     )
 endforeach
 
+# Code formatting test.
+clang_format = find_program('clang-format', required: false)
+if clang_format.found()
+    test(
+        'clang-format',
+        clang_format,
+        args: [
+            '--dry-run',
+            '--Werror',
+            libresplit_sources,
+            libresplit_ctl_sources,
+        ],
+        suite: 'format',
+    )
+else
+    message('clang-format not found, skipping formatting test')
+endif
+
 gnome = import('gnome')
 #gnome.post_install(update_desktop_database: true, gtk_update_icon_cache: true)
 gnome.post_install(gtk_update_icon_cache: true)
