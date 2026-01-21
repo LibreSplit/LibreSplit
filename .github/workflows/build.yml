@@ -10,16 +10,21 @@ jobs:
               with:
                   fetch-depth: 0
 
+            - name: "Add gcc-15 PPA"
+              run: |
+                sudo add-apt-repository ppa:puni070/gcc-noble -y
+                sudo apt update
+
             - name: "Install and cache C dependencies"
               uses: awalsh128/cache-apt-pkgs-action@latest
               with:
-                add-repository: ppa:puni070/gcc-noble
                 packages: >
                   gcc-15
                   libgtk-3-dev
                   libx11-dev
                   libjansson-dev
                   libluajit-5.1-dev
+                version: 1.0
 
             - name: "Install Meson"
               run: sudo pip3 install meson
