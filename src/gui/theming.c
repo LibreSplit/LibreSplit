@@ -3,6 +3,15 @@
 #include <string.h>
 #include <sys/stat.h>
 
+static inline const unsigned char* fallback_css_data(void)
+{
+    return _binary____src_fallback_css_start;
+}
+static inline size_t fallback_css_data_len(void)
+{
+    return (size_t)(_binary____src_fallback_css_end - _binary____src_fallback_css_start);
+}
+
 /**
  * Finds a theme, given its name and variant.
  *
@@ -103,8 +112,8 @@ void ls_app_load_theme_with_fallback(LSAppWindow* win, const char* name, const c
             GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
         gtk_css_provider_load_from_data(
             GTK_CSS_PROVIDER(win->style),
-            (const char*)fallback_css_data,
-            fallback_css_data_len, &gerror);
+            (const char*)fallback_css_data(),
+            (gssize)fallback_css_data_len(), &gerror);
         if (gerror != nullptr) {
             g_printerr("Error loading default theme CSS: %s\n", gerror->message);
             error = true;
