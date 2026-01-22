@@ -113,6 +113,8 @@ jobs:
                 cp assets/appimage.sh AppDir/AppRun
                 cp assets/icons/libresplit-256.png AppDir/libresplit.png
                 chmod +x AppDir/AppRun
+                chmod +x AppDir/usr/bin/libresplit
+                chmod +x AppDir/usr/bin/libresplit-ctl
 
             - name: "Download linuxdeploy"
               run: |
