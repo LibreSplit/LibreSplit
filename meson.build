@@ -84,7 +84,7 @@ libresplit_ctl_sources = files(
     'src/shared.c',
 )
 
-ld = find_program('ld')
+ld = find_program('ld', required: true)
 css_o = custom_target(
     'fallback-css-o',
     input: 'src/fallback.css',
