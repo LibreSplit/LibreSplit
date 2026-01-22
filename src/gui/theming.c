@@ -9,7 +9,7 @@ static inline const unsigned char* fallback_css_data(void)
 }
 static inline size_t fallback_css_data_len(void)
 {
-    return (size_t)(_binary____src_fallback_css_end - _binary____src_fallback_css_start);
+    return (size_t)((uintptr_t)_binary____src_fallback_css_end - (uintptr_t)_binary____src_fallback_css_start);
 }
 
 /**
