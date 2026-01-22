@@ -18,10 +18,10 @@ typedef union ConfigValue {
 } ConfigValue;
 
 typedef struct ConfigEntry {
-    const char* key;
-    ConfigType type;
+    const char* const key;
+    const ConfigType type;
     ConfigValue value; // Serves as default value unless explicitly changed by user configuration
-    const char* desc;
+    const char* const desc;
 } ConfigEntry;
 
 typedef struct LibreSplitConfig {
@@ -62,11 +62,11 @@ typedef struct AppConfig {
  * `definitions.c` consecutively, so we can treat them as an array and
  * iterate by index to avoid repeating every field name. */
 typedef struct SectionInfo {
-    const char* name;
+    const char* const name;
     void* entries; /* pointer to first ConfigEntry in the section */
-    size_t count;
-    bool in_gui;
+    const size_t count;
+    const bool in_gui;
 } SectionInfo;
 
-extern SectionInfo sections[];
+extern const SectionInfo sections[];
 extern const size_t sections_count;

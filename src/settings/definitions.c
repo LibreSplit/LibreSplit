@@ -122,7 +122,7 @@ AppConfig cfg = {
     },
 };
 
-SectionInfo sections[] = {
+const SectionInfo sections[] = {
     { "libresplit", &cfg.libresplit, sizeof(cfg.libresplit) / sizeof(ConfigEntry), true },
     { "keybinds", &cfg.keybinds, sizeof(cfg.keybinds) / sizeof(ConfigEntry), true },
     { "history", &cfg.history, sizeof(cfg.history) / sizeof(ConfigEntry), false },

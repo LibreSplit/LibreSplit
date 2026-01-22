@@ -116,7 +116,7 @@ bool config_init(void)
     }
 
     for (size_t s = 0; s < sections_count; ++s) {
-        SectionInfo* sec = &sections[s];
+        const SectionInfo* sec = &sections[s];
         json_t* sec_obj = json_object_get(root, sec->name);
         if (!sec_obj || !json_is_object(sec_obj))
             continue; // leave defaults for this section
@@ -150,7 +150,7 @@ bool config_save(void)
         return false;
 
     for (size_t s = 0; s < sections_count; ++s) {
-        SectionInfo* sec = &sections[s];
+        const SectionInfo* sec = &sections[s];
         json_t* sec_obj = json_object();
         for (size_t i = 0; i < sec->count; ++i) {
             ConfigEntry* e = (ConfigEntry*)((char*)sec->entries + (sizeof(ConfigEntry) * i));
