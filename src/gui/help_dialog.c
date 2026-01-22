@@ -62,6 +62,8 @@ static void build_help_dialog(GtkApplication* app, gpointer data)
     gtk_container_add(GTK_CONTAINER(box), discord_lnk);
     GtkWidget* github_lnk = gtk_link_button_new_with_label("https://github.com/LibreSplit/LibreSplit", "Check out the source code");
     gtk_container_add(GTK_CONTAINER(box), github_lnk);
+    GtkWidget* resources_lnk = gtk_link_button_new_with_label("https://github.com/LibreSplit/LibreSplit-resources", "Check out themes, autosplitters and splitfiles!");
+    gtk_container_add(GTK_CONTAINER(box), resources_lnk);
     GtkWidget* wiki_lnk = gtk_link_button_new_with_label("https://github.com/LibreSplit/LibreSplit/wiki", "Check our Wiki");
     gtk_container_add(GTK_CONTAINER(box), wiki_lnk);
 
