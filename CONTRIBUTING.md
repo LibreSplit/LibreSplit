@@ -10,6 +10,15 @@ If you want to format a file, you can use the `clang-format -i -- myfile.c` (whe
 
 Alternatively, you can configure your editor to use `clang-format` on save automatically.
 
+Static Analysis and Linting
+---------------------------
+
+The project also uses `cppcheck` to check for common mistakes and errors in C code.
+
+It checks for any undefined behavior and dangerous code constructs in an attempt to ensure we aren't introducing bugs into the LibreSplit codebase.
+
+You can run it with `meson test -C build -v` to show the output of the code formatter and analysis tools.
+
 Opening a PR
 ------------
 
