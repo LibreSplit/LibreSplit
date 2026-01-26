@@ -167,7 +167,7 @@ static void detailed_timer_clear_game(LSComponent* self_)
 static void detailed_timer_draw(LSComponent* self_, const ls_game* game, const ls_timer* timer)
 {
     LSDetailedTimer* self = (LSDetailedTimer*)self_;
-    char str[256], millis[256], seg[256], seg_millis[256];
+    char str[256], millis[10] = {}, seg[256], seg_millis[10] = {};
     char pb[256] = "PB:    ";
     char best[256] = "Best: ";
     int curr;
@@ -204,7 +204,8 @@ static void detailed_timer_draw(LSComponent* self_, const ls_game* game, const l
         }
     }
     ls_time_millis_string(str, &millis[1], timer->time);
-    millis[0] = '.';
+    if (millis[1] != '\0')
+        millis[0] = '.';
     gtk_label_set_text(GTK_LABEL(self->time_seconds), str);
     gtk_label_set_text(GTK_LABEL(self->time_millis), millis);
 
@@ -213,7 +214,8 @@ static void detailed_timer_draw(LSComponent* self_, const ls_game* game, const l
         gtk_label_set_text(GTK_LABEL(self->segment_millis), millis);
     } else {
         ls_time_millis_string(seg, &seg_millis[1], timer->segment_times[timer->curr_split]);
-        seg_millis[0] = '.';
+        if (seg_millis[1] != '\0')
+            seg_millis[0] = '.';
         gtk_label_set_text(GTK_LABEL(self->segment_seconds), seg);
         gtk_label_set_text(GTK_LABEL(self->segment_millis), seg_millis);
     }

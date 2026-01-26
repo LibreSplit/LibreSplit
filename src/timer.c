@@ -142,7 +142,7 @@ static void ls_time_string_format(char* string,
             subsec_idx = display_decimals + 1;
         }
         /* Show only a dot and x decimal places instead of all 6 */
-        dot_subsecs[subsec_idx] = '\0';
+        memset(&dot_subsecs[subsec_idx], '\0', sizeof(dot_subsecs) - subsec_idx);
     }
     if (millis) {
         strcpy(millis, &dot_subsecs[1]);
