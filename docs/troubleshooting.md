@@ -13,3 +13,7 @@
 
 ## Global hotkeys on wayland
 * Global hotkeys on wayland are disabled by default when the `WAYLAND_DISPLAY` environment variable is set, if you want to enable them regardless of it, you can set `LIBRESPLIT_FORCE_GLOBAL_HOTKEYS` to `1` or anything and they will be enabled, expect it to be somewhat unreliable
+
+## Memory offsets are wrong/dont work
+* This might be to some bug in fetching maps with ioctl
+* You can disable ioctl behaviour by setting `LIBRESPLIT_DISABLE_IOCTL_MAPS` environment variable to `1`.

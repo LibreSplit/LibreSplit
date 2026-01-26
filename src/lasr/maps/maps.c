@@ -249,7 +249,7 @@ static size_t (*maps_getAll_var)(void) = maps_getAll_legacy;
  */
 static size_t maps_getAll_init(void)
 {
-    if (maps_ioctlSupported()) {
+    if (!getenv("LIBRESPLIT_DISABLE_IOCTL_MAPS") && maps_ioctlSupported()) {
         maps_getAll_var = maps_getAll_ioctl;
         printf("PROCMAP_QUERY is supported, using ioctl method for maps retrieval.\n");
     } else {
