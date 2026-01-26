@@ -288,8 +288,8 @@ bool maps_findMapByName(const char* name, ProcessMap* out_map)
         return false;
 
     for (uint32_t i = 0; i < maps_cache_size; i++) {
-        const char* name = maps_cache[i].name;
-        if (strstr(name, name) != NULL) {
+        const char* map_name = maps_cache[i].name;
+        if (strstr(map_name, name) != NULL) {
             *out_map = maps_cache[i];
             return true;
         }
@@ -299,8 +299,8 @@ bool maps_findMapByName(const char* name, ProcessMap* out_map)
     maps_getAll();
 
     for (uint32_t i = 0; i < maps_cache_size; i++) {
-        const char* name = maps_cache[i].name;
-        if (strstr(name, name) != NULL) {
+        const char* map_name = maps_cache[i].name;
+        if (strstr(map_name, name) != NULL) {
             *out_map = maps_cache[i];
             if (!maps_cache_cycles) { // Cache is disabled, clear after use
                 maps_clearCache();
