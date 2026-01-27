@@ -932,6 +932,38 @@ void ls_timer_stop(ls_timer* timer)
     atomic_store(&run_started, false);
 }
 
+ls_reset_result ls_timer_reset_confirmable(ls_timer* timer, bool force)
+{
+    if (!timer) {
+        // Can't reset
+        return LS_RESET_NOOP;
+    }
+
+    if (timer->running) {
+        // Can't reset
+        return LS_RESET_NOOP;
+    }
+
+    // If user hasn't forced reset yet, and gold split has happened in this run, require confirmation.
+    if (!force && timer->started && timer->time > 0 && ls_timer_has_gold_split(timer)) {
+        return LS_RESET_NEEDS_CONFIRMATION;
+    }
+
+    // Existing behaviour from ls_timer_reset()
+    if (timer->started && timer->time <= 0) {
+        ls_timer_cancel(timer);
+        // Reset happened
+        return LS_RESET_DONE;
+    }
+    if (timer->curr_split < timer->game->split_count) {
+        ls_run_save(timer, "RESET");
+    }
+
+    reset_timer(timer);
+    // Reset happened
+    return LS_RESET_DONE;
+}
+
 int ls_timer_reset(ls_timer* timer)
 {
     if (!timer->running) {
