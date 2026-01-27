@@ -57,6 +57,19 @@ static void ls_app_window_destroy(GtkWidget* widget, gpointer data)
     }
     atomic_store(&auto_splitter_enabled, 0);
     atomic_store(&exit_requested, 1);
+    // Close any other open application windows (settings, dialogs, etc.)
+    GApplication* app = g_application_get_default();
+    if (app) {
+        GList* windows = gtk_application_get_windows(GTK_APPLICATION(app));
+        GList* snapshot = g_list_copy(windows); // Copy to avoid race conditions
+        for (GList* l = snapshot; l != NULL; l = l->next) {
+            GtkWidget* w = GTK_WIDGET(l->data);
+            if (w != GTK_WIDGET(win)) {
+                gtk_widget_destroy(w);
+            }
+        }
+        g_list_free(snapshot);
+    }
 }
 
 /**
