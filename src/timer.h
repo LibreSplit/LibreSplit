@@ -70,6 +70,8 @@ void ls_game_update_splits(ls_game* game, const ls_timer* timer);
 
 void ls_game_update_bests(const ls_game* game, const ls_timer* timer);
 
+bool ls_timer_has_gold_split(const ls_game* timer);
+
 int ls_game_save(const ls_game* game);
 
 void ls_game_release(const ls_game* game);
