@@ -475,6 +475,20 @@ void ls_game_update_bests(const ls_game* game,
     }
 }
 
+bool ls_timer_has_gold_split(const ls_timer* timer)
+{
+    if (!timer || !timer->split_info) return false;
+
+    // Only consider splits that happened this run.
+    const int committed = timer->curr_split;
+    for (int i = 0; i < committed; i++) {
+        if (timer->split_info[i] & LS_INFO_BEST_SEGMENT) {
+            return true;
+        }
+    }
+    return false;
+}
+
 int ls_game_save(const ls_game* game)
 {
     int error = 0;
