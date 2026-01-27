@@ -52,6 +52,12 @@ typedef struct ls_timer {
     int* finished_count;
 } ls_timer;
 
+typedef enum {
+    LS_RESET_NOOP = 0,
+    LS_RESET_DONE = 1,
+    LS_RESET_NEEDS_CONFIRMATION = 2,
+} ls_reset_result;
+
 long long ls_time_now(void);
 
 long long ls_time_value(const char* string);
