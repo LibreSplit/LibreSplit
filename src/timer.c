@@ -477,7 +477,8 @@ void ls_game_update_bests(const ls_game* game,
 
 bool ls_timer_has_gold_split(const ls_timer* timer)
 {
-    if (!timer || !timer->split_info) return false;
+    if (!timer || !timer->split_info)
+        return false;
 
     // Only consider splits that happened this run.
     const int committed = timer->curr_split;
