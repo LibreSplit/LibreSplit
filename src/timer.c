@@ -3,6 +3,7 @@
  * Implementation of the timer
  */
 #include "timer.h"
+#include "gui/dialogs.h"
 #include "settings/utils.h"
 
 #include "lasr/auto-splitter.h"
@@ -946,6 +947,7 @@ ls_reset_result ls_timer_reset_confirmable(ls_timer* timer, bool force)
 
     // If user hasn't forced reset yet, and gold split has happened in this run, require confirmation.
     if (!force && timer->started && timer->time > 0 && ls_timer_has_gold_split(timer)) {
+        display_confirm_reset_dialog();
         return LS_RESET_NEEDS_CONFIRMATION;
     }
 
@@ -966,6 +968,7 @@ ls_reset_result ls_timer_reset_confirmable(ls_timer* timer, bool force)
 
 int ls_timer_reset(ls_timer* timer)
 {
+    ls_timer_reset_confirmable(timer, false);
     if (!timer->running) {
         if (timer->started && timer->time <= 0) {
             return ls_timer_cancel(timer);
