@@ -951,6 +951,7 @@ int ls_timer_reset(ls_timer* timer)
                 return 0;
             }
         }
+        reset_timer(timer);
         return 1;
     }
     return 0;
