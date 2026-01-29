@@ -1,6 +1,7 @@
 #pragma once
 
 #include "src/settings/definitions.h"
+#include <stdatomic.h>
 
 #define LS_INFO_BEHIND_TIME (1)
 #define LS_INFO_LOSING_TIME (2)
@@ -52,6 +53,8 @@ typedef struct ls_timer {
     int* finished_count;
 } ls_timer;
 
+extern atomic_bool run_started;
+
 long long ls_time_now(void);
 
 long long ls_time_value(const char* string);
@@ -93,3 +96,5 @@ void ls_timer_stop(ls_timer* timer);
 int ls_timer_reset(ls_timer* timer);
 
 int ls_timer_cancel(ls_timer* timer);
+
+bool is_run_started(ls_timer* timer);

@@ -377,7 +377,7 @@ static void open_activated(GSimpleAction* action,
     } else {
         win = ls_app_window_new(LS_APP(app));
     }
-    if (win->timer->running) {
+    if (is_run_started(win->timer)) {
         GtkWidget* warning = gtk_message_dialog_new(
             GTK_WINDOW(win),
             GTK_DIALOG_MODAL,
