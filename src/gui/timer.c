@@ -2,6 +2,7 @@
 #include "game.h"
 #include "src/gui/component/components.h"
 #include "src/lasr/auto-splitter.h"
+#include "src/timer.h"
 
 void timer_reset(LSAppWindow* win)
 {
@@ -74,7 +75,7 @@ void timer_stop_reset(LSAppWindow* win)
 {
     if (win->timer) {
         GList* l;
-        if (atomic_load(&run_started) || win->timer->running) {
+        if (is_run_started(win->timer)) {
             ls_timer_stop(win->timer);
         } else {
             const bool was_asl_enabled = atomic_load(&auto_splitter_enabled);
