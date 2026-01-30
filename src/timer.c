@@ -880,7 +880,9 @@ int ls_timer_split(ls_timer* timer)
                 ls_timer_stop(timer);
                 atomic_store(&run_finished, true);
                 ls_game_update_splits((ls_game*)timer->game, timer);
-                ls_run_save(timer, "FINISHED");
+                if (cfg.libresplit.save_run_history.value.b) {
+                    ls_run_save(timer, "FINISHED");
+                }
             }
             return timer->curr_split;
         }
@@ -940,7 +942,9 @@ int ls_timer_reset(ls_timer* timer)
             return ls_timer_cancel(timer);
         }
         if (timer->curr_split < timer->game->split_count) {
-            ls_run_save(timer, "RESET");
+            if (cfg.libresplit.save_run_history.value.b) {
+                ls_run_save(timer, "RESET");
+            }
         }
         if (ls_timer_has_gold_split(timer)) {
             bool user_reset = display_confirm_reset_dialog();
