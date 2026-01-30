@@ -33,6 +33,7 @@ typedef struct LibreSplitConfig {
     ConfigEntry theme;
     ConfigEntry theme_variant;
     ConfigEntry decimals;
+    ConfigEntry save_run_history;
 } LibreSplitConfig;
 
 typedef struct KeybindConfig {

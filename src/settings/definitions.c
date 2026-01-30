@@ -55,6 +55,12 @@ AppConfig cfg = {
             .value.i = 2,
             .desc = "Decimals shown on timer",
         },
+        .save_run_history = {
+            .key = "save_run_history",
+            .type = CFG_BOOL,
+            .value.b = true,
+            .desc = "Save run history JSON files",
+        },
     },
     .keybinds = {
         .start_split = {
