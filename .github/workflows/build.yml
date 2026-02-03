@@ -1,7 +1,7 @@
 on: [push, pull_request]
 
 jobs:
-    tests:
+    build:
         runs-on: ubuntu-24.04
         name: Build
         steps:
@@ -47,73 +47,127 @@ jobs:
             - name: "Upload artifacts"
               uses: actions/upload-artifact@v4
               with:
-                  name: LibreSplit-${{ env.build_number }}-${{ env.git_short_sha }}
+                  name: LibreSplit-${{ env.build_number }}-${{ env.git_short_sha }}-standalone
                   path: release/
-
-    appimage:
-        runs-on: ubuntu-24.04
-        name: Build AppImage
-        needs: tests
-        steps:
-            - name: "Checkout"
-              uses: actions/checkout@v4
-              with:
-                  fetch-depth: 0
-
-            - name: "Download build artifacts"
-              uses: actions/download-artifact@v4
-              with:
-                  pattern: LibreSplit-*
-                  merge-multiple: true
-                  path: release
 
             - name: "Install AppImage dependencies"
               run: |
                   sudo apt -y update
                   sudo apt -y install desktop-file-utils libluajit-5.1-dev
 
-            - name: Set Build number
-              shell: bash
-              run: echo "build_number=$(git rev-list HEAD --count)" >> $GITHUB_ENV
-
-            - name: Compute git short sha
-              shell: bash
-              run: echo "git_short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-
             - name: "Prepare AppDir from release artifact"
               run: |
-                rm -rf AppDir
-                mkdir -p AppDir
+                  rm -rf AppDir
+                  mkdir -p AppDir
 
-                if [ -d release ]; then
-                  cp -a release/* AppDir/
-                  rm -rf AppDir/assets
-                else
-                  echo "release directory not found; listing files:" && ls -la
-                  exit 1
-                fi
+                  if [ -d release ]; then
+                    cp -a release/* AppDir/
+                    rm -rf AppDir/assets
+                  else
+                    echo "release directory not found; listing files:" && ls -la
+                    exit 1
+                  fi
 
-                mkdir -p AppDir/usr/share/applications
-                cp assets/libresplit.desktop AppDir/
-                cp assets/libresplit.desktop AppDir/usr/share/applications/
-                sed -i 's/^Exec=.*/Exec=AppRun/' AppDir/libresplit.desktop
-                cp assets/appimage.sh AppDir/AppRun
-                cp assets/icons/libresplit-256.png AppDir/libresplit.png
-                chmod +x AppDir/AppRun
-                chmod +x AppDir/usr/bin/libresplit
-                chmod +x AppDir/usr/bin/libresplit-ctl
+                  mkdir -p AppDir/usr/share/applications
+                  cp assets/libresplit.desktop AppDir/
+                  cp assets/libresplit.desktop AppDir/usr/share/applications/
+                  sed -i 's/^Exec=.*/Exec=AppRun/' AppDir/libresplit.desktop
+                  cp assets/appimage.sh AppDir/AppRun
+                  cp assets/icons/libresplit-256.png AppDir/libresplit.png
+                  chmod +x AppDir/AppRun
+                  chmod +x AppDir/usr/bin/libresplit
+                  chmod +x AppDir/usr/bin/libresplit-ctl
 
             - name: "Download linuxdeploy"
               run: |
                   wget -O linuxdeploy-x86_64.AppImage https://github.com/linuxdeploy/linuxdeploy/releases/latest/download/linuxdeploy-x86_64.AppImage
+                  wget -O linuxdeploy-plugin-appimage-x86_64.AppImage https://github.com/linuxdeploy/linuxdeploy-plugin-appimage/releases/latest/download/linuxdeploy-plugin-appimage-x86_64.AppImage
                   chmod +x linuxdeploy-x86_64.AppImage
+                  chmod +x linuxdeploy-plugin-appimage-x86_64.AppImage
 
             - name: "Create AppImage"
               run: |
+                  LDAI_UPDATE_INFORMATION="gh-releases-zsync|${{ github.repository_owner }}|LibreSplit|nightly|LibreSplit-*x86_64.AppImage.zsync" \
                   ./linuxdeploy-x86_64.AppImage --appdir AppDir --desktop-file AppDir/libresplit.desktop --icon-file AppDir/libresplit.png --output appimage
+                  mv LibreSplit-x86_64.AppImage LibreSplit-${{ env.build_number }}-${{ env.git_short_sha }}-nightly-x86_64.AppImage
+                  mv LibreSplit-x86_64.AppImage.zsync LibreSplit-nightly-x86_64.AppImage.zsync
 
             - name: "Upload AppImage"
               uses: actions/upload-artifact@v4
               with:
-                  path: LibreSplit-x86_64.AppImage
-                  name: LibreSplit-${{ env.build_number }}-${{ env.git_short_sha }}-x86_64.AppImage
+                  path: LibreSplit-${{ env.build_number }}-${{ env.git_short_sha }}-nightly-x86_64.AppImage
+                  name: LibreSplit-${{ env.build_number }}-${{ env.git_short_sha }}-nightly-x86_64.AppImage
+
+            - name: "Upload AppImage zsync"
+              uses: actions/upload-artifact@v4
+              with:
+                  path: LibreSplit-nightly-x86_64.AppImage.zsync
+                  name: LibreSplit-nightly-x86_64.AppImage.zsync
+
+    create-nightly-release:
+        name: "Upload nightly release"
+        needs: [build]
+        runs-on: ubuntu-latest
+        concurrency:
+            group: create-release
+            cancel-in-progress: false
+        if: |
+            github.ref == 'refs/heads/main' &&
+            github.repository == 'LibreSplit/LibreSplit'
+        steps:
+            - uses: actions/checkout@v6
+              with:
+                  fetch-depth: 0
+
+            - name: Download Artifacts
+              uses: actions/download-artifact@v7
+
+            - name: Get commit info
+              run: |
+                  echo "GIT_SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+                  echo "BUILD_VARIABLE=$(git rev-list --count HEAD)" >> $GITHUB_ENV
+                  echo "LAST_COMMIT_MESSAGE=$(git log -1 --pretty=format:'%s')" >> $GITHUB_ENV
+
+            - name: Get last committer
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  COMMITTER=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+                  https://api.github.com/repos/${{ github.repository }}/commits/${{ github.sha }} \
+                  | jq -r '.commit.author.name')
+                  echo "COMMITTER_NAME=$COMMITTER" >> $GITHUB_ENV
+
+            - name: Prepare artifacts
+              run: |
+                  mkdir -p artifacts-master
+                  files=$(find . -maxdepth 1 -type d -name "LibreSplit-*")
+                  printf "Found files:\n$files\n"
+                  for f in $files; do
+                    dir=$(basename $f)
+                    if [[ $dir == *-x86_64.AppImage ]]; then
+                      echo "Processing $dir (x86_64 AppImage)"
+                      cp $dir/*.AppImage artifacts-master/
+                    elif [[ $dir == *-x86_64.AppImage.zsync ]]; then
+                      echo "Processing $dir (x86_64 AppImage zsync)"
+                      cp $dir/*.AppImage.zsync artifacts-master/
+                    elif [[ $dir == *-standalone ]]; then
+                      echo "Processing $dir (Standalone x86_64)"
+                      (cd $dir && zip -r ../artifacts-master/$dir.zip *)
+                    fi
+                  done
+                  echo "=== artifacts-master ==="
+                  ls -al artifacts-master/
+
+            - name: Download ghr
+              run: |
+                  wget -c https://github.com/tcnksm/ghr/releases/download/v0.17.0/ghr_v0.17.0_linux_amd64.tar.gz
+                  tar xfv ghr_v0.17.0_linux_amd64.tar.gz
+
+            - name: Upload to master repository
+              run: |
+                  ghr_v0.17.0_linux_amd64/ghr -u ${{ github.repository_owner }} -r LibreSplit -recreate -prerelease \
+                    -n 'Automatic CI builds' \
+                    -b "$(printf "Corresponding commit: ${{ github.sha }}\nLibreSplit Build: ${{ env.BUILD_VARIABLE }}")" \
+                    nightly artifacts-master/
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
