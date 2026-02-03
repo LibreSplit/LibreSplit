@@ -20,7 +20,7 @@ See the [GtkCssProvider documentation](https://docs.gtk.org/gtk3/css-properties.
 | ----------------------------- | -----------------------------------------------           |
 | `.window`                     | The entire LibreSplit window                              |
 | `.header`                     | The header, containing title and attempt counters         |
-| `.title`                      | The title of the category (set in the splits json file    |
+| `.title`                      | The title of the category (set in the splits json file)   |
 | `.attempt-count`              | Counter for attempts in top right corner (#attempts_finished / attempts_total) |
 | `.delta`                      | Difference between current time and PB, appears at -30s to PB. Should be overwritten by .behind, .losing, .behind.losing, .best-split, and .best-segment |
 | `.time`                       | All time fields from the main big timer, the splits times, and the times of personal best and sum of bests and other things in the footer |
@@ -28,7 +28,7 @@ See the [GtkCssProvider documentation](https://docs.gtk.org/gtk3/css-properties.
 | `.timer-container`            | Container for both the detailed and normal timer          |
 | `.detailed-timer`             | Container for the `segment-pb` and `segment-best` classes |
 | `.timer-seconds`              | Large main timer seconds                                  |
-| `.timer-millis`               | Large main timer milliseconds                             |
+| `.timer-millis`               | Large main timer milli(seconds)                           |
 | `.delay`                      | Timer not running/in negative time                        |
 | `.splits`                     | Container of the splits                                   |
 | `.split`                      | The splits themselves                                     |
@@ -55,7 +55,7 @@ See the [GtkCssProvider documentation](https://docs.gtk.org/gtk3/css-properties.
 | `.segment-best`               | Best text within .detailed-timer                          |
 | `.segment-pb`                 | PB text within .detailed-timer                            |
 | `.segment-seconds`            | Smaller detailed timer seconds                            |
-| `.segment-millis`             | Smaller detailed timer milliseconds                       |
+| `.segment-millis`             | Smaller detailed timer milli(seconds)                     |
 | `.sum-of-bests-label`         | Text that says "Sum of Bests"                             |
 | `.sum-of-bests`               | Time for Sum of Bests                                     |
 | `.personal-best-label`        | Text that says "Personal Best"                            |
