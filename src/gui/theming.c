@@ -93,19 +93,19 @@ void ls_app_load_theme_with_fallback(LSAppWindow* win, const char* name, const c
             gdk_screen_get_default(),
             GTK_STYLE_PROVIDER(win->style));
         g_object_unref(win->style);
-        win->style = nullptr;
+        win->style = NULL;
     }
 
-    GError* gerror = nullptr;
+    GError* gerror = NULL;
 
     // If reset rules have never been loaded, create them
     if (!win->reset_style) {
         win->reset_style = gtk_css_provider_new();
         apply_reset_rules(win, &gerror);
-        if (gerror != nullptr) {
+        if (gerror != NULL) {
             g_printerr("Error loading theme reset Rules: %s\n", gerror->message);
             g_error_free(gerror);
-            gerror = nullptr;
+            gerror = NULL;
         }
     }
 
@@ -129,11 +129,11 @@ void ls_app_load_theme_with_fallback(LSAppWindow* win, const char* name, const c
         gtk_css_provider_load_from_path(
             GTK_CSS_PROVIDER(win->style),
             path, &gerror);
-        if (gerror != nullptr) {
+        if (gerror != NULL) {
             g_printerr("Error loading custom theme CSS: %s\n", gerror->message);
             error = true;
             g_error_free(gerror);
-            gerror = nullptr;
+            gerror = NULL;
         }
     }
 
@@ -148,11 +148,11 @@ void ls_app_load_theme_with_fallback(LSAppWindow* win, const char* name, const c
             GTK_CSS_PROVIDER(win->style),
             (const char*)fallback_css_data(),
             (gssize)fallback_css_data_len(), &gerror);
-        if (gerror != nullptr) {
+        if (gerror != NULL) {
             g_printerr("Error loading default theme CSS: %s\n", gerror->message);
             error = true;
             g_error_free(gerror);
-            gerror = nullptr;
+            gerror = NULL;
         }
     }
 }

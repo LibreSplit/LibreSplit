@@ -4,14 +4,14 @@
  */
 #include "components.h"
 
-LSComponent* ls_component_title_new();
-LSComponent* ls_component_splits_new();
-LSComponent* ls_component_timer_new();
-LSComponent* ls_component_detailed_timer_new();
-LSComponent* ls_component_prev_segment_new();
-LSComponent* ls_component_best_sum_new();
-LSComponent* ls_component_pb_new();
-LSComponent* ls_component_wr_new();
+LSComponent* ls_component_title_new(void);
+LSComponent* ls_component_splits_new(void);
+LSComponent* ls_component_timer_new(void);
+LSComponent* ls_component_detailed_timer_new(void);
+LSComponent* ls_component_prev_segment_new(void);
+LSComponent* ls_component_best_sum_new(void);
+LSComponent* ls_component_pb_new(void);
+LSComponent* ls_component_wr_new(void);
 
 LSComponentAvailable ls_components[] = {
     { "title", ls_component_title_new },

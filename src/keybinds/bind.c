@@ -449,7 +449,7 @@ keymap_changed(GdkKeymap* map)
  * This function must be called after initializing GTK, before calling any
  * other function in the library. Can only be called once.
  */
-void keybinder_init()
+void keybinder_init(void)
 {
     GdkDisplay* display = gdk_display_get_default();
     GdkKeymap* keymap = gdk_keymap_get_for_display(display);

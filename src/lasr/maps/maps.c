@@ -113,7 +113,7 @@ void maps_clearCache(void)
  *
  * @return true if supported, false otherwise.
  */
-static bool maps_ioctlSupported()
+static bool maps_ioctlSupported(void)
 {
     const char* path = "/proc/self/maps";
     int f = open(path, O_RDONLY);

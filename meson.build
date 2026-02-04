@@ -2,7 +2,7 @@ project(
     'libresplit',
     'c',
     version: 'pre-release',
-    default_options: ['c_std=gnu23'],
+    default_options: ['c_std=gnu17'],
     meson_version: '>=1.1',
 )
 
@@ -95,26 +95,29 @@ css_o = custom_target(
     build_by_default: true,
 )
 
+shared_c_flags = [
+    '-DPREFIX="' + get_option('prefix') + '"',
+    '-DDATADIR="' + get_option('datadir') + '"',
+    '-Werror',
+    '-Wall',
+    '-Wbad-function-cast',
+    '-Wsign-compare',
+    '-Wpedantic',
+]
+
 executable(
     'libresplit',
     libresplit_sources,
     objects: [css_o],
     dependencies: [threads, gtk, luajit, x11, jansson],
-    c_args: [
-        '-DPREFIX="' + get_option('prefix') + '"',
-        '-DDATADIR="' + get_option('datadir') + '"',
-        '-Werror',
-        '-Wall',
-        '-Wbad-function-cast',
-        '-Wsign-compare',
-        '-Wpedantic',
-    ],
+    c_args: shared_c_flags,
     install: true,
 )
 
 executable(
     'libresplit-ctl',
     libresplit_ctl_sources,
+    c_args: shared_c_flags,
     install: true,
 )
 
@@ -186,7 +189,7 @@ cppcheck = find_program('cppcheck', required: false)
 if cppcheck.found()
     # Set args for analysing both sources.
     cppcheck_base_args = [
-        '--std=c23',
+        '--std=c17',
         '--language=c',
         '--enable=warning,performance',
         '--error-exitcode=1',

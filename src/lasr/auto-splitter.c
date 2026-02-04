@@ -74,7 +74,7 @@ static const char* disabled_functions[] = {
  *
  * @returns Zero if the process is not running, non-zero if it is.
  */
-int process_exists()
+static int process_exists(void)
 {
     int result = kill(process.pid, 0);
     return result == 0;
@@ -428,7 +428,7 @@ void gameTime(lua_State* L)
 /**
  * Loads the auto splitter Lua file and executes the auto splitter.
  */
-void run_auto_splitter()
+void run_auto_splitter(void)
 {
     lua_State* L = luaL_newstate();
     luaL_openlibs(L);

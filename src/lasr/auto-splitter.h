@@ -3,6 +3,7 @@
 #include <linux/limits.h>
 #include <lua.h>
 #include <stdatomic.h>
+#include <stdbool.h>
 
 extern char auto_splitter_file[PATH_MAX];
 extern int refresh_rate;
@@ -28,5 +29,5 @@ struct lasr_function {
     lua_CFunction function_ptr; /*!< C Function to be executed */
 } typedef lasr_function;
 
-void check_directories();
-void run_auto_splitter();
+void check_directories(void);
+void run_auto_splitter(void);

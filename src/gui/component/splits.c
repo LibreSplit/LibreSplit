@@ -30,7 +30,7 @@ extern LSComponentOps ls_splits_operations;
 /**
  * Constructor
  */
-LSComponent* ls_component_splits_new()
+LSComponent* ls_component_splits_new(void)
 {
     LSSplits* self;
 

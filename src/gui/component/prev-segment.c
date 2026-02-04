@@ -21,7 +21,7 @@ extern LSComponentOps ls_prev_segment_operations;
 /**
  * Constructor
  */
-LSComponent* ls_component_prev_segment_new()
+LSComponent* ls_component_prev_segment_new(void)
 {
     LSPrevSegment* self;
 

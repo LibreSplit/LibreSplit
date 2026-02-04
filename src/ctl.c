@@ -6,6 +6,7 @@
 #include <arpa/inet.h>
 #include <endian.h>
 #include <linux/limits.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,7 +19,7 @@
  *
  * Shows the available commands to the user.
  */
-void print_help()
+void print_help(void)
 {
     printf("Available commands:\n");
     printf("  startorsplit  - Start the timer/Split if timer is running\n");

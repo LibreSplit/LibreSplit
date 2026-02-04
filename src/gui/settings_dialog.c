@@ -108,19 +108,25 @@ static void save_gui_settings(GSimpleAction* action, GVariant* parameter, gpoint
         LSGuiSetting setting_to_save = gui_settings[i];
         switch (setting_to_save.settings_entry->type) {
             case CFG_STRING:
-            case CFG_KEYBIND: // TODO: Keygrab logic for keybinds
-                const char* str_value = gtk_entry_buffer_get_text(setting_to_save.entry_buffer);
-                strcpy(setting_to_save.settings_entry->value.s, str_value);
-                break;
+            case CFG_KEYBIND:
+                {
+                    const char* str_value = gtk_entry_buffer_get_text(setting_to_save.entry_buffer);
+                    strcpy(setting_to_save.settings_entry->value.s, str_value);
+                    break;
+                }
             case CFG_BOOL:
-                bool bool_value = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(setting_to_save.widget));
-                setting_to_save.settings_entry->value.b = bool_value;
-                break;
+                {
+                    bool bool_value = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(setting_to_save.widget));
+                    setting_to_save.settings_entry->value.b = bool_value;
+                    break;
+                }
             case CFG_INT:
-                const char* int_str_value = gtk_entry_buffer_get_text(setting_to_save.entry_buffer);
-                int int_value = atoi(int_str_value);
-                setting_to_save.settings_entry->value.i = int_value;
-                break;
+                {
+                    const char* int_str_value = gtk_entry_buffer_get_text(setting_to_save.entry_buffer);
+                    int int_value = atoi(int_str_value);
+                    setting_to_save.settings_entry->value.i = int_value;
+                    break;
+                }
         }
     }
     // Call the normal save_settings thing
@@ -165,37 +171,45 @@ static void build_settings_dialog(GtkApplication* app, gpointer data)
             gui_settings[settings_idx].settings_entry = &((ConfigEntry*)section_info.entries)[i];
             switch (entry.type) {
                 case CFG_STRING:
-                    GtkWidget* lbl_str = gtk_label_new(entry.desc);
-                    gtk_container_add(GTK_CONTAINER(box), lbl_str);
+                    {
+                        GtkWidget* lbl_str = gtk_label_new(entry.desc);
+                        gtk_container_add(GTK_CONTAINER(box), lbl_str);
 
-                    gui_settings[settings_idx].entry_buffer = gtk_entry_buffer_new(entry.value.s, sizeof(entry.value.s));
-                    gui_settings[settings_idx].widget = gtk_entry_new_with_buffer(gui_settings[settings_idx].entry_buffer);
-                    gtk_container_add(GTK_CONTAINER(box), gui_settings[settings_idx].widget);
-                    break;
+                        gui_settings[settings_idx].entry_buffer = gtk_entry_buffer_new(entry.value.s, sizeof(entry.value.s));
+                        gui_settings[settings_idx].widget = gtk_entry_new_with_buffer(gui_settings[settings_idx].entry_buffer);
+                        gtk_container_add(GTK_CONTAINER(box), gui_settings[settings_idx].widget);
+                        break;
+                    }
                 case CFG_KEYBIND:
-                    GtkWidget* lbl_kb = gtk_label_new(entry.desc);
-                    gtk_container_add(GTK_CONTAINER(box), lbl_kb);
+                    {
+                        GtkWidget* lbl_kb = gtk_label_new(entry.desc);
+                        gtk_container_add(GTK_CONTAINER(box), lbl_kb);
 
-                    gui_settings[settings_idx].entry_buffer = gtk_entry_buffer_new(entry.value.s, sizeof(entry.value.s));
-                    gui_settings[settings_idx].widget = gtk_entry_new_with_buffer(gui_settings[settings_idx].entry_buffer);
-                    g_signal_connect(gui_settings[settings_idx].widget, "key-press-event", G_CALLBACK(on_key_press), NULL);
-                    gtk_container_add(GTK_CONTAINER(box), gui_settings[settings_idx].widget);
-                    break;
+                        gui_settings[settings_idx].entry_buffer = gtk_entry_buffer_new(entry.value.s, sizeof(entry.value.s));
+                        gui_settings[settings_idx].widget = gtk_entry_new_with_buffer(gui_settings[settings_idx].entry_buffer);
+                        g_signal_connect(gui_settings[settings_idx].widget, "key-press-event", G_CALLBACK(on_key_press), NULL);
+                        gtk_container_add(GTK_CONTAINER(box), gui_settings[settings_idx].widget);
+                        break;
+                    }
                 case CFG_BOOL:
-                    gui_settings[settings_idx].widget = gtk_check_button_new_with_label(entry.desc);
-                    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gui_settings[settings_idx].widget), entry.value.b);
-                    gtk_container_add(GTK_CONTAINER(box), gui_settings[settings_idx].widget);
-                    break;
+                    {
+                        gui_settings[settings_idx].widget = gtk_check_button_new_with_label(entry.desc);
+                        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gui_settings[settings_idx].widget), entry.value.b);
+                        gtk_container_add(GTK_CONTAINER(box), gui_settings[settings_idx].widget);
+                        break;
+                    }
                 case CFG_INT:
-                    GtkWidget* lbl_int = gtk_label_new(entry.desc);
-                    gtk_container_add(GTK_CONTAINER(box), lbl_int);
-                    char setting_as_str[64];
-                    sprintf(setting_as_str, "%d", entry.value.i);
+                    {
+                        GtkWidget* lbl_int = gtk_label_new(entry.desc);
+                        gtk_container_add(GTK_CONTAINER(box), lbl_int);
+                        char setting_as_str[64];
+                        sprintf(setting_as_str, "%d", entry.value.i);
 
-                    gui_settings[settings_idx].entry_buffer = gtk_entry_buffer_new(setting_as_str, sizeof(setting_as_str));
-                    gui_settings[settings_idx].widget = gtk_entry_new_with_buffer(gui_settings[settings_idx].entry_buffer);
-                    gtk_container_add(GTK_CONTAINER(box), gui_settings[settings_idx].widget);
-                    break;
+                        gui_settings[settings_idx].entry_buffer = gtk_entry_buffer_new(setting_as_str, sizeof(setting_as_str));
+                        gui_settings[settings_idx].widget = gtk_entry_new_with_buffer(gui_settings[settings_idx].entry_buffer);
+                        gtk_container_add(GTK_CONTAINER(box), gui_settings[settings_idx].widget);
+                        break;
+                    }
             }
             settings_idx++;
         }

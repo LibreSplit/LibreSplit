@@ -2,6 +2,7 @@
 
 #include "src/settings/definitions.h"
 #include <stdatomic.h>
+#include <stdbool.h>
 
 #define LS_INFO_BEHIND_TIME (1)
 #define LS_INFO_LOSING_TIME (2)

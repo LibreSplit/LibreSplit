@@ -57,7 +57,7 @@ gboolean display_non_capable_mem_read_dialog(gpointer data)
     return FALSE; // False removes this function from the queue
 }
 
-bool display_confirm_reset_dialog()
+bool display_confirm_reset_dialog(void)
 {
     GtkWidget* dialog = gtk_message_dialog_new(
         NULL,

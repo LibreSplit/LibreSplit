@@ -33,7 +33,7 @@ typedef struct LSComponentOps {
 
 typedef struct LSComponentAvailable {
     char* name;
-    LSComponent* (*new)();
+    LSComponent* (*new)(void);
 } LSComponentAvailable;
 
 // A NULL-terminated array of all available components

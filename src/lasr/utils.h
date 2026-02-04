@@ -2,6 +2,8 @@
 
 #include <linux/limits.h>
 #include <lua.h>
+
+#include <stdbool.h>
 #include <stdint.h>
 
 #include <sys/uio.h>

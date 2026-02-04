@@ -21,7 +21,7 @@ extern LSComponentOps ls_title_operations; // defined at the end of the file
 /**
  * Constructor
  */
-LSComponent* ls_component_title_new()
+LSComponent* ls_component_title_new(void)
 {
     LSTitle* self;
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <linux/limits.h>
+#include <stdbool.h>
 #include <stddef.h>
 
 typedef enum ConfigType {
