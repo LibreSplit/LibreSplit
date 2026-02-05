@@ -37,18 +37,6 @@ AppConfig cfg = {
             .value.b = false,
             .desc = "Enable Global Hotkeys",
         },
-        .theme = {
-            .key = "theme",
-            .type = CFG_STRING,
-            .value.s = "standard",
-            .desc = "Theme name",
-        },
-        .theme_variant = {
-            .key = "theme_variant",
-            .type = CFG_STRING,
-            .value.s = "",
-            .desc = "Theme Variant (if any)",
-        },
         .decimals = {
             .key = "timer_decimals",
             .type = CFG_INT,
@@ -144,11 +132,26 @@ AppConfig cfg = {
             .desc = "Last Auto Splitter File",
         },
     },
+    .theme = {
+        .name = {
+            .key = "name",
+            .type = CFG_STRING,
+            .value.s = "",
+            .desc = "Theme name",
+        },
+        .variant = {
+            .key = "variant",
+            .type = CFG_STRING,
+            .value.s = "",
+            .desc = "Theme Variant (if any)",
+        },
+    },
 };
 
 const SectionInfo sections[] = {
     { "libresplit", &cfg.libresplit, sizeof(cfg.libresplit) / sizeof(ConfigEntry), true },
     { "keybinds", &cfg.keybinds, sizeof(cfg.keybinds) / sizeof(ConfigEntry), true },
+    { "theme", &cfg.theme, sizeof(cfg.theme) / sizeof(ConfigEntry), true },
     { "history", &cfg.history, sizeof(cfg.history) / sizeof(ConfigEntry), false },
 };
 

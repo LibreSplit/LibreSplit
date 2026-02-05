@@ -27,7 +27,7 @@ void ls_app_window_clear_game(LSAppWindow* win)
         }
     }
 
-    ls_app_load_theme_with_fallback(win, cfg.libresplit.theme.value.s, cfg.libresplit.theme_variant.value.s);
+    ls_app_load_theme_with_fallback(win, cfg.theme.name.value.s, cfg.theme.variant.value.s);
 }
 
 /**

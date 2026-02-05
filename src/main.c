@@ -225,8 +225,8 @@ static void ls_app_window_init(LSAppWindow* win)
     gtk_window_set_keep_above(GTK_WINDOW(win), win->opts.win_on_top);
 
     // Load theme
-    theme = cfg.libresplit.theme.value.s;
-    theme_variant = cfg.libresplit.theme_variant.value.s;
+    theme = cfg.theme.name.value.s;
+    theme_variant = cfg.theme.variant.value.s;
     ls_app_load_theme_with_fallback(win, theme, theme_variant);
 
     // Load window junk

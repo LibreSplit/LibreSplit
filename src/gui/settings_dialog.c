@@ -1,15 +1,21 @@
 #include "settings_dialog.h"
+#include "src/gui/app_window.h"
+#include "src/gui/dialogs.h"
+#include "src/gui/theming.h"
 #include "src/settings/definitions.h"
 #include "src/settings/settings.h"
 
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #include <gdk/gdk.h>
 #include <glib-object.h>
+#include <glib.h>
 #include <glibconfig.h>
 #include <gtk/gtk.h>
 #include <stdio.h>
+#include <string.h>
 
 static LSGuiSetting* gui_settings;
+static LSAppWindow* g_main_window = NULL; // Reference to main window
 
 /**
  * Takes the application config and counts how many settings are available.
@@ -47,6 +53,91 @@ static gboolean on_help_window_delete(GtkWidget* widget, GdkEvent* event, gpoint
     gtk_widget_destroy(widget);
     free(gui_settings);
     return TRUE;
+}
+
+/**
+ * Saves the GUI settings and validates theme changes.
+ * If theme settings have changed, validates the new theme exists and
+ * automatically refreshes the main window if valid.
+ *
+ * @param action The action that triggered this callback
+ * @param parameter Additional parameters (unused)
+ * @param app Pointer to the GTK application
+ */
+static void save_gui_settings(GSimpleAction* action, GVariant* parameter, gpointer app)
+{
+    // get the current theme settings to compare later
+    char old_theme_name[4096];
+    char old_theme_variant[4096];
+    strcpy(old_theme_name, cfg.theme.name.value.s);
+    strcpy(old_theme_variant, cfg.theme.variant.value.s);
+
+    size_t settings_number = enumerate_settings(cfg);
+
+    // Parse all values in gui_settings, assign them to the respective cfg settings
+    for (size_t i = 0; i < settings_number; i++) {
+        LSGuiSetting setting_to_save = gui_settings[i];
+        switch (setting_to_save.settings_entry->type) {
+            case CFG_STRING:
+            case CFG_KEYBIND: // TODO: Keygrab logic for keybinds
+                const char* str_value = gtk_entry_buffer_get_text(setting_to_save.entry_buffer);
+                strcpy(setting_to_save.settings_entry->value.s, str_value);
+                break;
+            case CFG_BOOL:
+                bool bool_value = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(setting_to_save.widget));
+                setting_to_save.settings_entry->value.b = bool_value;
+                break;
+            case CFG_INT:
+                const char* int_str_value = gtk_entry_buffer_get_text(setting_to_save.entry_buffer);
+                int int_value = atoi(int_str_value);
+                setting_to_save.settings_entry->value.i = int_value;
+                break;
+        }
+    }
+
+    // check if theme settings have changed and validate them
+    if (g_main_window) {
+        bool theme_changed = (strcmp(old_theme_name, cfg.theme.name.value.s) != 0) || (strcmp(old_theme_variant, cfg.theme.variant.value.s) != 0);
+        if (theme_changed) {
+            // First check if a split has its own theme - if so, warn user and prevent change
+            if (g_main_window->game && g_main_window->game->theme) {
+                show_split_theme_warning(NULL, g_main_window->game->theme, g_main_window->game->theme_variant);
+
+                // Restore the old theme settings
+                strcpy(cfg.theme.name.value.s, old_theme_name);
+                strcpy(cfg.theme.variant.value.s, old_theme_variant);
+
+                return; // Don't save settings if split theme is active
+            }
+            // validate the new theme (only if theme name is not empty)
+            if (strlen(cfg.theme.name.value.s) > 0) {
+                char theme_path[PATH_MAX];
+                int theme_found = ls_app_window_find_theme(g_main_window,
+                    cfg.theme.name.value.s,
+                    cfg.theme.variant.value.s,
+                    theme_path);
+
+                if (!theme_found) {
+                    // Theme doesn't exist, show error and restore old values
+                    show_theme_error_dialog(NULL, cfg.theme.name.value.s, cfg.theme.variant.value.s);
+
+                    // Restore the old theme settings
+                    strcpy(cfg.theme.name.value.s, old_theme_name);
+                    strcpy(cfg.theme.variant.value.s, old_theme_variant);
+
+                    return; // Don't save settings if theme is invalid
+                }
+            }
+            // theme is valid (or empty for fallback), refresh the main window
+            const char* current_theme_name = cfg.theme.name.value.s;
+            const char* current_theme_variant = cfg.theme.variant.value.s;
+
+            ls_app_load_theme_with_fallback(g_main_window, current_theme_name, current_theme_variant);
+        }
+    }
+
+    // Save all the settings
+    config_save();
 }
 
 /**
@@ -98,33 +189,6 @@ bool on_key_press(GtkWidget* widget, GdkEventKey* event, gpointer data)
     get_key_string(event->keyval, event->state, key_buffer, sizeof(key_buffer));
     gtk_entry_set_text(GTK_ENTRY(widget), key_buffer);
     return TRUE;
-}
-
-static void save_gui_settings(GSimpleAction* action, GVariant* parameter, gpointer app)
-{
-    size_t settings_number = enumerate_settings(cfg);
-    // Parse all values in gui_settings, assign them to the respective cfg settings
-    for (size_t i = 0; i < settings_number; i++) {
-        LSGuiSetting setting_to_save = gui_settings[i];
-        switch (setting_to_save.settings_entry->type) {
-            case CFG_STRING:
-            case CFG_KEYBIND: // TODO: Keygrab logic for keybinds
-                const char* str_value = gtk_entry_buffer_get_text(setting_to_save.entry_buffer);
-                strcpy(setting_to_save.settings_entry->value.s, str_value);
-                break;
-            case CFG_BOOL:
-                bool bool_value = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(setting_to_save.widget));
-                setting_to_save.settings_entry->value.b = bool_value;
-                break;
-            case CFG_INT:
-                const char* int_str_value = gtk_entry_buffer_get_text(setting_to_save.entry_buffer);
-                int int_value = atoi(int_str_value);
-                setting_to_save.settings_entry->value.i = int_value;
-                break;
-        }
-    }
-    // Call the normal save_settings thing
-    config_save();
 }
 
 static void set_widget_defaults(GtkWidget* obj)
@@ -203,7 +267,7 @@ static void build_settings_dialog(GtkApplication* app, gpointer data)
     }
     gtk_container_add(GTK_CONTAINER(main_box), tabs);
     GtkWidget* save_btn = gtk_button_new_with_label("Save");
-    g_signal_connect(save_btn, "clicked", G_CALLBACK(save_gui_settings), NULL);
+    g_signal_connect(save_btn, "clicked", G_CALLBACK(save_gui_settings), app);
     gtk_container_add(GTK_CONTAINER(main_box), save_btn);
     gtk_container_add(GTK_CONTAINER(window), main_box);
     gtk_widget_show_all(main_box);
@@ -215,5 +279,10 @@ void show_settings_dialog(GSimpleAction* action, GVariant* parameter, gpointer a
     if (parameter != NULL) {
         app = parameter;
     }
-    build_settings_dialog(app, NULL);
+
+    // Set the global main window reference
+    GList* windows = gtk_application_get_windows(GTK_APPLICATION(app));
+    g_main_window = windows ? (LSAppWindow*)(windows->data) : NULL;
+
+    build_settings_dialog(GTK_APPLICATION(app), NULL);
 }
