@@ -70,6 +70,11 @@ LibreSplit requires the following dependencies on your system to compile:
 - `libjansson`
 - `luajit`
 
+and also the following (optional) runtime dependencies:
+
+- `gvfs` (for web split icons)
+- `glib-networking` (for web split icons)
+
 Install the required dependencies:
 
 - Debian-based systems
