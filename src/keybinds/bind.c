@@ -21,9 +21,9 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+#include <inttypes.h>
 #include <string.h>
 #include <unistd.h>
-#include <inttypes.h>
 
 #include <X11/XKBlib.h>
 #include <X11/Xlib.h>
