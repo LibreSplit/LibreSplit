@@ -23,6 +23,7 @@
  */
 #include <string.h>
 #include <unistd.h>
+#include <inttypes.h>
 
 #include <X11/XKBlib.h>
 #include <X11/Xlib.h>
