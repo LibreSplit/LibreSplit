@@ -245,11 +245,11 @@ gboolean ls_app_window_step(gpointer data)
 
         if (atomic_load(&auto_splitter_enabled)) {
             if (atomic_load(&call_start) && !win->timer->loading) {
-                timer_start(win, true);
+                timer_start(win);
                 atomic_store(&call_start, 0);
             }
             if (atomic_load(&call_split)) {
-                timer_split(win, true);
+                timer_split(win);
                 atomic_store(&call_split, 0);
             }
             if (atomic_load(&toggle_loading)) {
