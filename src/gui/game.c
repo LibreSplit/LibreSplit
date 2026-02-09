@@ -15,8 +15,6 @@ void ls_app_window_clear_game(LSAppWindow* win)
 {
     GList* l;
 
-    atomic_store(&run_finished, false);
-
     gtk_widget_hide(win->box);
     gtk_widget_show_all(win->welcome_box->box);
 

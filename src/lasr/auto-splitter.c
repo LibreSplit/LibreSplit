@@ -40,11 +40,11 @@ int maps_cache_cycles_value = 1; /*!< The number of cycles the cache is active f
 atomic_bool auto_splitter_enabled = true; /*!< Defines if the auto splitter is enabled */
 atomic_bool auto_splitter_running = false; /*!< Defines if the auto splitter is running */
 atomic_bool call_start = false; /*!< True if the auto splitter is requesting for a run to start */
-atomic_bool run_started = false; /*!< Defines if a run is started */
-atomic_bool run_finished = false; // Disallows starting the timer again after finishing until reset
 atomic_bool call_split = false; /*!< True if the auto splitter is requesting to split */
 atomic_bool toggle_loading = false;
 atomic_bool call_reset = false; /*!< True if the auto splitter is requesting a run reset */
+atomic_bool run_started = false; // Wheter a run was started or not, same as timer->started but accessible from the auto splitter thread
+atomic_bool run_running = false; // Wheter we are running or not, same as timer->running but accessible from the auto splitter thread
 bool prev_is_loading; /*!< The previous frame "is_loading" state */
 
 /**
@@ -516,11 +516,11 @@ void run_auto_splitter(void)
             update(L);
         }
 
-        if (gameTime_exists && use_game_time && atomic_load(&run_started) && !atomic_load(&run_finished)) {
+        if (gameTime_exists && use_game_time && atomic_load(&run_started) && atomic_load(&run_running)) {
             gameTime(L);
         }
 
-        if (start_exists && !atomic_load(&run_started) && !atomic_load(&run_finished)) {
+        if (start_exists && !atomic_load(&run_started) && atomic_load(&run_running)) {
             start(L);
         }
 

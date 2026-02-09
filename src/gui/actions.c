@@ -1,7 +1,9 @@
 #include "src/gui/actions.h"
 #include "src/gui/app_window.h"
 #include "src/gui/game.h"
+#include "src/gui/timer.h"
 #include "src/lasr/auto-splitter.h"
+#include "src/lasr/utils.h"
 #include "src/settings/settings.h"
 #include <gtk/gtk.h>
 #include <sys/stat.h>
@@ -234,6 +236,9 @@ void close_activated(GSimpleAction* action,
     } else {
         win = ls_app_window_new(LS_APP(app));
     }
+
+    timer_stop_and_reset(win);
+
     if (win->game && win->timer) {
         ls_app_window_clear_game(win);
     }
@@ -391,14 +396,7 @@ void open_auto_splitter(GSimpleAction* action,
         config_save();
 
         // Restart auto-splitter if it was running
-        const bool was_asl_enabled = atomic_load(&auto_splitter_enabled);
-        if (was_asl_enabled) {
-            atomic_store(&auto_splitter_enabled, false);
-            while (atomic_load(&auto_splitter_running) && was_asl_enabled) {
-                // wait, this will be very fast so its ok to just spin
-            }
-            atomic_store(&auto_splitter_enabled, true);
-        }
+        restart_auto_splitter();
 
         g_free(filename);
     }

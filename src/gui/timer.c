@@ -1,7 +1,7 @@
 #include "timer.h"
 #include "game.h"
 #include "src/gui/component/components.h"
-#include "src/lasr/auto-splitter.h"
+#include "src/lasr/utils.h"
 #include "src/timer.h"
 
 // Stops and then resets the timer
@@ -73,16 +73,11 @@ void timer_stop_or_reset(LSAppWindow* win)
     if (!win->timer)
         return;
 
-    if (is_run_started(win->timer)) {
+    if (win->timer->running) {
         ls_timer_stop(win->timer);
     } else {
-        const bool was_asl_enabled = atomic_load(&auto_splitter_enabled);
-        atomic_store(&auto_splitter_enabled, false);
-        while (atomic_load(&auto_splitter_running) && was_asl_enabled) {
-            // wait, this will be very fast so its ok to just spin
-        }
-        if (was_asl_enabled)
-            atomic_store(&auto_splitter_enabled, true);
+        // Restart LASR on reset
+        restart_auto_splitter();
 
         if (ls_timer_reset(win->timer)) {
             ls_app_window_clear_game(win);

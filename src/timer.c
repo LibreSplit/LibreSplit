@@ -8,6 +8,7 @@
 
 #include "lasr/auto-splitter.h"
 
+#include <assert.h>
 #include <jansson.h>
 #include <limits.h>
 #include <stdatomic.h>
@@ -694,6 +695,9 @@ static void reset_timer(ls_timer* timer)
     int i;
     int size;
     timer->started = 0;
+    atomic_store(&run_started, false);
+    timer->running = 0;
+    atomic_store(&run_running, false);
     timer->curr_split = 0;
     timer->realTime = -timer->game->start_delay; // Start delay only applies to real time only
     timer->gameTime = 0;
@@ -850,62 +854,67 @@ int ls_timer_start(ls_timer* timer)
         if (!timer->started) {
             ++*timer->attempt_count;
             timer->started = 1;
+            atomic_store(&run_started, true);
         }
         timer->running = true;
+        atomic_store(&run_running, true);
     }
     return timer->running;
 }
 
 int ls_timer_split(ls_timer* timer)
 {
-    if (ls_timer_get_time(timer, true) > 0) {
-        if (timer->curr_split < timer->game->split_count) {
-            int i;
-            // check for best split and segment
-            if (!timer->best_splits[timer->curr_split]
-                || timer->split_times[timer->curr_split]
-                    < timer->best_splits[timer->curr_split]) {
-                timer->best_splits[timer->curr_split] = timer->split_times[timer->curr_split];
-                timer->split_info[timer->curr_split]
-                    |= LS_INFO_BEST_SPLIT;
-            }
-            if (!timer->best_segments[timer->curr_split]
-                || timer->segment_times[timer->curr_split]
-                    < timer->best_segments[timer->curr_split]) {
-                timer->best_segments[timer->curr_split] = timer->segment_times[timer->curr_split];
-                timer->split_info[timer->curr_split]
-                    |= LS_INFO_BEST_SEGMENT;
-            }
-            // update sum of bests
-            timer->sum_of_bests = 0;
-            for (i = 0; i < timer->game->split_count; ++i) {
-                // Check if any best segment is missing/LLONG_MAX
-                if (timer->best_segments[i] && timer->best_segments[i] < LLONG_MAX) {
-                    timer->sum_of_bests += timer->best_segments[i];
-                } else if (timer->game->best_segments[i] && timer->game->best_segments[i] < LLONG_MAX) {
-                    timer->sum_of_bests += timer->game->best_segments[i];
-                } else {
-                    timer->sum_of_bests = 0;
-                    break;
-                }
-            }
+    if (ls_timer_get_time(timer, true) <= 0) {
+        return 0;
+    }
 
-            ++timer->curr_split;
-            // stop timer if last split
-            if (timer->curr_split == timer->game->split_count) {
-                // Increment finished_count
-                ++*timer->finished_count;
-                ls_timer_stop(timer);
-                atomic_store(&run_finished, true);
-                ls_game_update_splits((ls_game*)timer->game, timer);
-                if (cfg.libresplit.save_run_history.value.b) {
-                    ls_run_save(timer, "FINISHED");
-                }
-            }
-            return timer->curr_split;
+    if (timer->curr_split >= timer->game->split_count) {
+        assert(false && "Current split cannot be out of bounds of splits");
+        return 0;
+    }
+
+    // check for best split and segment
+    if (!timer->best_splits[timer->curr_split]
+        || timer->split_times[timer->curr_split]
+            < timer->best_splits[timer->curr_split]) {
+        timer->best_splits[timer->curr_split] = timer->split_times[timer->curr_split];
+        timer->split_info[timer->curr_split]
+            |= LS_INFO_BEST_SPLIT;
+    }
+    if (!timer->best_segments[timer->curr_split]
+        || timer->segment_times[timer->curr_split]
+            < timer->best_segments[timer->curr_split]) {
+        timer->best_segments[timer->curr_split] = timer->segment_times[timer->curr_split];
+        timer->split_info[timer->curr_split]
+            |= LS_INFO_BEST_SEGMENT;
+    }
+    // update sum of bests
+    timer->sum_of_bests = 0;
+    for (int i = 0; i < timer->game->split_count; ++i) {
+        // Check if any best segment is missing/LLONG_MAX
+        if (timer->best_segments[i] && timer->best_segments[i] < LLONG_MAX) {
+            timer->sum_of_bests += timer->best_segments[i];
+        } else if (timer->game->best_segments[i] && timer->game->best_segments[i] < LLONG_MAX) {
+            timer->sum_of_bests += timer->game->best_segments[i];
+        } else {
+            timer->sum_of_bests = 0;
+            break;
         }
     }
-    return 0;
+
+    ++timer->curr_split;
+    // stop timer if last split
+    if (timer->curr_split == timer->game->split_count) {
+        // Increment finished_count
+        ++*timer->finished_count;
+        ls_timer_stop(timer);
+        atomic_store(&run_running, false);
+        ls_game_update_splits((ls_game*)timer->game, timer);
+        if (cfg.libresplit.save_run_history.value.b) {
+            ls_run_save(timer, "FINISHED");
+        }
+    }
+    return timer->curr_split;
 }
 
 int ls_timer_skip(ls_timer* timer)
@@ -941,6 +950,7 @@ int ls_timer_unsplit(ls_timer* timer)
         }
         if (timer->curr_split + 1 == timer->game->split_count) {
             timer->running = true;
+            atomic_store(&run_running, true);
         }
         return timer->curr_split;
     }
@@ -960,7 +970,7 @@ void ls_timer_unpause(ls_timer* timer)
 void ls_timer_stop(ls_timer* timer)
 {
     timer->running = false;
-    atomic_store(&run_started, false);
+    atomic_store(&run_running, false);
 }
 
 // TODO: docs, resets timer back to 0
@@ -999,16 +1009,16 @@ int ls_timer_reset(ls_timer* timer)
 // Cancels the current run, not counting it as an attempt
 int ls_timer_cancel(ls_timer* timer)
 {
-    if (!timer->running) {
-        if (timer->started) {
-            if (*timer->attempt_count > 0) {
-                --*timer->attempt_count;
-            }
+    if (timer->running)
+        return 0;
+
+    if (timer->started) {
+        if (*timer->attempt_count > 0) {
+            --*timer->attempt_count;
         }
-        reset_timer(timer);
-        return 1;
     }
-    return 0;
+    reset_timer(timer);
+    return 1;
 }
 
 /**
@@ -1021,8 +1031,9 @@ int ls_timer_cancel(ls_timer* timer)
  */
 bool is_run_started(ls_timer* timer)
 {
-    if (timer == NULL) {
+    if (!timer) {
         return false;
     }
+
     return timer->running || atomic_load(&run_started);
 }
