@@ -28,6 +28,8 @@ typedef struct LSComponentOps {
     void (*skip)(LSComponent* self, const ls_timer* timer);
     void (*unsplit)(LSComponent* self, const ls_timer* timer);
     void (*stop_reset)(LSComponent* self, ls_timer* timer);
+    void (*pause)(LSComponent* self, ls_timer* timer);
+    void (*unpause)(LSComponent* self, ls_timer* timer);
     void (*cancel_run)(LSComponent* self, ls_timer* timer);
 } LSComponentOps;
 

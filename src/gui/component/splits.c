@@ -313,7 +313,7 @@ static void splits_draw(LSComponent* self_, const ls_game* game, const ls_timer*
     int i;
     for (i = 0; i < self->split_count; ++i) {
         if (i == timer->curr_split
-            && timer->start_time) {
+            && timer->started) {
             add_class(self->split_rows[i], "current-split");
         } else {
             remove_class(self->split_rows[i], "current-split");

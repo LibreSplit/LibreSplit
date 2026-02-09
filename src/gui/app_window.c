@@ -230,7 +230,6 @@ void ls_app_window_destroy(GtkWidget* widget, gpointer data)
 gboolean ls_app_window_step(gpointer data)
 {
     LSAppWindow* win = data;
-    long long now = ls_time_now();
     static int set_cursor;
     if (win->opts.hide_cursor && !set_cursor) {
         GdkWindow* gdk_window = gtk_widget_get_window(GTK_WIDGET(win));
@@ -240,8 +239,9 @@ gboolean ls_app_window_step(gpointer data)
             set_cursor = 1;
         }
     }
+
     if (win->timer) {
-        ls_timer_step(win->timer, now);
+        ls_timer_step(win->timer);
 
         if (atomic_load(&auto_splitter_enabled)) {
             if (atomic_load(&call_start) && !win->timer->loading) {
@@ -254,21 +254,24 @@ gboolean ls_app_window_step(gpointer data)
             }
             if (atomic_load(&toggle_loading)) {
                 win->timer->loading = !win->timer->loading;
-                if (win->timer->running && win->timer->loading) {
-                    timer_stop(win);
-                } else if (win->timer->started && !win->timer->running && !win->timer->loading) {
-                    timer_start(win, true);
+
+                if (win->timer->running) {
+                    if (win->timer->loading) {
+                        timer_pause(win);
+                    } else {
+                        timer_unpause(win);
+                    }
                 }
                 atomic_store(&toggle_loading, 0);
             }
             if (atomic_load(&call_reset)) {
-                timer_reset(win);
+                timer_stop_and_reset(win);
                 atomic_store(&run_started, false);
                 atomic_store(&call_reset, 0);
             }
             if (atomic_load(&update_game_time)) {
                 // Update the timer with the game time from auto-splitter
-                win->timer->time = atomic_load(&game_time_value);
+                win->timer->gameTime = atomic_load(&game_time_value);
                 atomic_store(&update_game_time, false);
             }
         }

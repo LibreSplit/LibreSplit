@@ -4,25 +4,19 @@
 #include "src/lasr/auto-splitter.h"
 #include "src/timer.h"
 
-void timer_reset(LSAppWindow* win)
+// Stops and then resets the timer
+void timer_stop_and_reset(LSAppWindow* win)
 {
     if (win->timer) {
-        GList* l;
         if (win->timer->running) {
             ls_timer_stop(win->timer);
-            for (l = win->components; l != NULL; l = l->next) {
-                LSComponent* component = l->data;
-                if (component->ops->stop_reset) {
-                    component->ops->stop_reset(component, win->timer);
-                }
-            }
         }
         if (ls_timer_reset(win->timer)) {
             ls_app_window_clear_game(win);
             ls_app_window_show_game(win);
             save_game(win->game);
         }
-        for (l = win->components; l != NULL; l = l->next) {
+        for (GList* l = win->components; l != NULL; l = l->next) {
             LSComponent* component = l->data;
             if (component->ops->stop_reset) {
                 component->ops->stop_reset(component, win->timer);
@@ -31,11 +25,12 @@ void timer_reset(LSAppWindow* win)
     }
 }
 
+// Starts or splits the timer, whichever is appropriate
 void timer_start_split(LSAppWindow* win)
 {
     if (win->timer) {
         GList* l;
-        if (!win->timer->running) {
+        if (!win->timer->started) { // To start again a reset needs to happen
             if (ls_timer_start(win->timer)) {
                 save_game(win->game);
             }
@@ -71,7 +66,7 @@ void timer_start(LSAppWindow* win, bool updateComponents)
     }
 }
 
-void timer_stop_reset(LSAppWindow* win)
+void timer_stop_or_reset(LSAppWindow* win)
 {
     if (win->timer) {
         GList* l;
@@ -162,6 +157,43 @@ void timer_split(LSAppWindow* win, bool updateComponents)
         }
     }
 }
+
+
+void timer_pause(LSAppWindow* win)
+{
+    if (win->timer) {
+        GList* l;
+        if (win->timer->running) {
+            ls_timer_pause(win->timer);
+        }
+        for (l = win->components; l != NULL; l = l->next) {
+            LSComponent* component = l->data;
+            if (component->ops->stop_reset) {
+                component->ops->stop_reset(component, win->timer);
+            }
+        }
+    }
+}
+
+
+
+void timer_unpause(LSAppWindow* win)
+{
+    if (win->timer) {
+        GList* l;
+        if (win->timer->running) {
+            ls_timer_unpause(win->timer);
+        }
+        for (l = win->components; l != NULL; l = l->next) {
+            LSComponent* component = l->data;
+            if (component->ops->stop_reset) {
+                component->ops->stop_reset(component, win->timer);
+            }
+        }
+    }
+}
+
+
 
 void timer_stop(LSAppWindow* win)
 {

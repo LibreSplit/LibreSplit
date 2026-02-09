@@ -121,7 +121,7 @@ static void timer_draw(LSComponent* self_, const ls_game* game, const ls_timer* 
     if (curr == game->split_count) {
         curr = game->split_count - 1;
     }
-    if (timer->time <= 0) {
+    if (ls_timer_get_time(timer, true) <= 0) {
         add_class(self->time, "delay");
     } else {
         if (timer->curr_split == game->split_count
@@ -139,7 +139,7 @@ static void timer_draw(LSComponent* self_, const ls_game* game, const ls_timer* 
             }
         }
     }
-    ls_time_millis_string(str, &millis[1], timer->time);
+    ls_time_millis_string(str, &millis[1], ls_timer_get_time(timer, true));
     millis[0] = '.';
     gtk_label_set_text(GTK_LABEL(self->time_seconds), str);
     gtk_label_set_text(GTK_LABEL(self->time_millis), millis);

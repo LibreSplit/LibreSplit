@@ -45,7 +45,7 @@ void handle_ctl_command(CTLCommand command)
             timer_start_split(win);
             break;
         case CTL_CMD_STOP_RESET:
-            timer_stop_reset(win);
+            timer_stop_or_reset(win);
             break;
         case CTL_CMD_CANCEL:
             timer_cancel_run(win);

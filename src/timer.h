@@ -33,13 +33,15 @@ typedef struct ls_game {
 } ls_game;
 
 typedef struct ls_timer {
-    int started;
-    int running;
-    int loading;
-    int curr_split;
+    bool usingGameTime; // Splitter is using game time instead of real time. Only to be used internally
+    long long gameTime; // The current game time only usable in LASR. Only to be used internally
+    long long realTime; // Real time. Starts when run start and pauses while loading. Only to be used internally
+    int loading; // Currently loading? used for knowing if loadingTime should tick or not. Only to be used internally
+    long long loadingTime; // Time spent loading, used to subtract from real time when trying to get Load-Removed Time. Only to be used internally
+    int started; // Wether the run has started, either by LASR or manually, keeps being set to true after run finished
+    bool running; // Whether the runner is currently running. If this is false and started is true then the run finished. Mainly used to check if some actions are valid to perform (splits, pause, etc)
+    int curr_split; // Index of the current split, 0 for first split
     long long now;
-    long long start_time;
-    long long time;
     long long sum_of_bests;
     long long world_record;
     long long* split_times;
@@ -56,7 +58,7 @@ typedef struct ls_timer {
 
 extern atomic_bool run_started;
 
-long long ls_time_now(void);
+long long ls_timer_get_time(const ls_timer* timer, bool load_removed);
 
 long long ls_time_value(const char* string);
 
@@ -86,13 +88,17 @@ void ls_timer_release(const ls_timer* timer);
 
 int ls_timer_start(ls_timer* timer);
 
-void ls_timer_step(ls_timer* timer, long long now);
+void ls_timer_step(ls_timer* timer);
 
 int ls_timer_split(ls_timer* timer);
 
 int ls_timer_skip(ls_timer* timer);
 
 int ls_timer_unsplit(ls_timer* timer);
+
+void ls_timer_pause(ls_timer* timer);
+
+void ls_timer_unpause(ls_timer* timer);
 
 void ls_timer_stop(ls_timer* timer);
 
