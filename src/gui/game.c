@@ -1,7 +1,6 @@
 #include "game.h"
 #include "src/gui/component/components.h"
 #include "src/gui/theming.h"
-#include "src/lasr/auto-splitter.h"
 #include "src/settings/definitions.h"
 
 extern AppConfig cfg;
