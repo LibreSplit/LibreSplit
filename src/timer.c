@@ -210,7 +210,6 @@ void ls_delta_string(char* string, long long time)
 
 void ls_game_release(const ls_game* game)
 {
-    int i;
     if (game->path) {
         free(game->path);
     }
@@ -224,7 +223,7 @@ void ls_game_release(const ls_game* game)
         free(game->theme_variant);
     }
     if (game->split_titles) {
-        for (i = 0; i < game->split_count; ++i) {
+        for (unsigned int i = 0; i < game->split_count; ++i) {
             if (game->split_titles[i]) {
                 free(game->split_titles[i]);
                 free(game->split_icon_paths[i]);
@@ -250,7 +249,6 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
 {
     int error = 0;
     ls_game* game;
-    int i;
     json_t* json = 0;
     json_t* ref;
     json_error_t json_error;
@@ -377,7 +375,7 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
         }
         game->contains_icons = false;
         // copy splits
-        for (i = 0; i < game->split_count; ++i) {
+        for (unsigned int i = 0; i < game->split_count; ++i) {
             json_t* split;
             json_t* split_ref;
             split = json_array_get(ref, i);
@@ -452,8 +450,7 @@ game_create_done:
     return error;
 }
 
-void ls_game_update_splits(ls_game* game,
-    const ls_timer* timer)
+void ls_game_update_splits(ls_game* game, const ls_timer* timer)
 {
     if (timer->curr_split) {
         int size;
@@ -468,7 +465,7 @@ void ls_game_update_splits(ls_game* game,
             memcpy(game->split_times, timer->split_times, size);
         }
         memcpy(game->segment_times, timer->segment_times, size);
-        for (int i = 0; i < game->split_count; ++i) {
+        for (unsigned int i = 0; i < game->split_count; ++i) {
             if (timer->split_times[i] < game->best_splits[i]) {
                 game->best_splits[i] = timer->split_times[i];
             }
@@ -511,7 +508,6 @@ int ls_game_save(const ls_game* game)
     char str[256];
     json_t* json = json_object();
     json_t* splits = json_array();
-    int i;
     if (game->title) {
         json_object_set_new(json, "title", json_string(game->title));
     }
@@ -531,7 +527,7 @@ int ls_game_save(const ls_game* game)
         ls_time_string_serialized(str, game->start_delay);
         json_object_set_new(json, "start_delay", json_string(str));
     }
-    for (i = 0; i < game->split_count; ++i) {
+    for (unsigned int i = 0; i < game->split_count; ++i) {
         json_t* split = json_object();
         json_object_set_new(split, "title", json_string(game->split_titles[i]));
         json_object_set_new(split, "icon", json_string(game->split_icon_paths[i]));
@@ -604,7 +600,7 @@ int ls_run_save(ls_timer* timer, const char* reason)
     // Splits Array
     json_t* splits = json_array();
 
-    for (int i = 0; i < timer->game->split_count; i++) {
+    for (unsigned int i = 0; i < timer->game->split_count; i++) {
         json_t* split = json_object();
 
         // Title
@@ -692,8 +688,6 @@ void ls_timer_release(const ls_timer* timer)
 
 static void reset_timer(ls_timer* timer)
 {
-    int i;
-    int size;
     timer->started = 0;
     atomic_store(&run_started, false);
     timer->running = 0;
@@ -702,7 +696,7 @@ static void reset_timer(ls_timer* timer)
     timer->realTime = -timer->game->start_delay; // Start delay only applies to real time only
     timer->gameTime = 0;
     timer->loadingTime = 0;
-    size = timer->game->split_count * sizeof(long long);
+    int size = timer->game->split_count * sizeof(long long);
     memcpy(timer->split_times, timer->game->split_times, size);
     memset(timer->split_deltas, 0, size);
     memcpy(timer->segment_times, timer->game->segment_times, size);
@@ -712,7 +706,7 @@ static void reset_timer(ls_timer* timer)
     size = timer->game->split_count * sizeof(int);
     memset(timer->split_info, 0, size);
     timer->sum_of_bests = 0;
-    for (i = 0; i < timer->game->split_count; ++i) {
+    for (unsigned int i = 0; i < timer->game->split_count; ++i) {
         // Check no segments are erroring with LLONG_MAX
         if (timer->best_segments[i] && timer->best_segments[i] < LLONG_MAX) {
             timer->sum_of_bests += timer->best_segments[i];
@@ -890,7 +884,7 @@ int ls_timer_split(ls_timer* timer)
     }
     // update sum of bests
     timer->sum_of_bests = 0;
-    for (int i = 0; i < timer->game->split_count; ++i) {
+    for (unsigned int i = 0; i < timer->game->split_count; ++i) {
         // Check if any best segment is missing/LLONG_MAX
         if (timer->best_segments[i] && timer->best_segments[i] < LLONG_MAX) {
             timer->sum_of_bests += timer->best_segments[i];
@@ -939,9 +933,8 @@ int ls_timer_skip(ls_timer* timer)
 int ls_timer_unsplit(ls_timer* timer)
 {
     if (timer->curr_split) {
-        int i;
-        int curr = --timer->curr_split;
-        for (i = curr; i < timer->game->split_count; ++i) {
+        unsigned int curr = --timer->curr_split;
+        for (unsigned int i = curr; i < timer->game->split_count; ++i) {
             timer->split_times[i] = timer->game->split_times[i];
             timer->split_deltas[i] = 0;
             timer->split_info[i] = 0;

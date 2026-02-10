@@ -106,9 +106,8 @@ static void timer_draw(LSComponent* self_, const ls_game* game, const ls_timer* 
 {
     LSTimer* self = (LSTimer*)self_;
     char str[256], millis[256];
-    int curr;
 
-    curr = timer->curr_split;
+    unsigned int curr = timer->curr_split;
     if (curr == game->split_count) {
         --curr;
     }

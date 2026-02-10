@@ -117,7 +117,7 @@ static void prev_segment_draw(LSComponent* self_, const ls_game* game,
     LSPrevSegment* self = (LSPrevSegment*)self_;
     const char* label;
     char str[256];
-    int prev, curr = timer->curr_split;
+    unsigned int prev, curr = timer->curr_split;
     if (curr == game->split_count) {
         --curr;
     }

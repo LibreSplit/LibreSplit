@@ -170,9 +170,8 @@ static void detailed_timer_draw(LSComponent* self_, const ls_game* game, const l
     char str[256], millis[10] = { 0 }, seg[256], seg_millis[10] = { 0 };
     char pb[256] = "PB:    ";
     char best[256] = "Best: ";
-    int curr;
 
-    curr = timer->curr_split;
+    unsigned int curr = timer->curr_split;
     if (curr == game->split_count) {
         --curr;
     }
