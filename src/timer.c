@@ -796,7 +796,7 @@ void ls_timer_step(ls_timer* timer)
             timer->loadingTime += delta; // Accumulate loading time if currently loading
         }
         if (timer->curr_split < timer->game->split_count) {
-            timer->split_times[timer->curr_split] = timer->realTime - timer->loadingTime;
+            timer->split_times[timer->curr_split] = timer->usingGameTime ? timer->gameTime : timer->realTime - timer->loadingTime;
             // calc delta and check it's not an error of LLONG_MAX
             if (timer->game->split_times[timer->curr_split] && timer->game->split_times[timer->curr_split] < LLONG_MAX) {
                 timer->split_deltas[timer->curr_split] = timer->split_times[timer->curr_split]
@@ -974,9 +974,8 @@ void ls_timer_stop(ls_timer* timer)
 int ls_timer_reset(ls_timer* timer)
 {
     // Disallow resets while running
-    if (timer->running) {
+    if (timer->running)
         return 0;
-    }
 
     if (timer->started && ls_timer_get_time(timer, true) <= 0) {
         return ls_timer_cancel(timer);
@@ -1006,6 +1005,7 @@ int ls_timer_reset(ls_timer* timer)
 // Cancels the current run, not counting it as an attempt
 int ls_timer_cancel(ls_timer* timer)
 {
+    // Disallow resets while running
     if (timer->running)
         return 0;
 
