@@ -51,6 +51,7 @@ typedef struct ls_timer {
     long long* best_splits;
     long long* best_segments;
     const ls_game* game;
+    long long last_tick; // This NEEDS to be here for resetting
     int* attempt_count;
     int* finished_count;
 } ls_timer;

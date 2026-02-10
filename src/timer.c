@@ -696,6 +696,7 @@ static void reset_timer(ls_timer* timer)
     timer->realTime = -timer->game->start_delay; // Start delay only applies to real time only
     timer->gameTime = 0;
     timer->loadingTime = 0;
+    timer->last_tick = 0;
     int size = timer->game->split_count * sizeof(long long);
     memcpy(timer->split_times, timer->game->split_times, size);
     memset(timer->split_deltas, 0, size);
@@ -787,10 +788,9 @@ timer_create_done:
 
 void ls_timer_step(ls_timer* timer)
 {
-    static long long start_time = 0;
     long long now = ls_time_now();
     if (timer->running) {
-        long long delta = now - start_time;
+        long long delta = now - timer->last_tick;
         timer->realTime += delta; // Accumulate the elapsed time
         if (timer->loading) {
             timer->loadingTime += delta; // Accumulate loading time if currently loading
@@ -839,7 +839,7 @@ void ls_timer_step(ls_timer* timer)
             }
         }
     }
-    start_time = now; // Update the start time for the next iteration
+    timer->last_tick = now; // Update the start time for the next iteration
 }
 
 int ls_timer_start(ls_timer* timer)
