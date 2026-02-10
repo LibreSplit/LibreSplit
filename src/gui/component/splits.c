@@ -410,7 +410,7 @@ static void splits_scroll_to_split(LSComponent* self_, const ls_timer* timer)
     int scroller_h;
     double curr_scroll;
     double min_scroll, max_scroll;
-    unsigned int prev = timer->curr_split;
+    unsigned int prev = timer->curr_split ? timer->curr_split - 1 : 0;
     unsigned int curr = timer->curr_split;
     unsigned int next = timer->curr_split + 1;
     if (prev < 0) {
