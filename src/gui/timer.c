@@ -55,15 +55,17 @@ void timer_start(LSAppWindow* win)
     if (!win->timer)
         return;
 
-    if (!win->timer->running) {
-        if (ls_timer_start(win->timer)) {
-            save_game(win->game);
-        }
-        for (GList* l = win->components; l != NULL; l = l->next) {
-            LSComponent* component = l->data;
-            if (component->ops->start_split) {
-                component->ops->start_split(component, win->timer);
-            }
+    if (win->timer->running)
+        return; // Timer is already running, do nothing
+
+    if (ls_timer_start(win->timer)) {
+        save_game(win->game);
+    }
+
+    for (GList* l = win->components; l != NULL; l = l->next) {
+        LSComponent* component = l->data;
+        if (component->ops->start_split) {
+            component->ops->start_split(component, win->timer);
         }
     }
 }

@@ -104,5 +104,3 @@ void ls_timer_stop(ls_timer* timer);
 int ls_timer_reset(ls_timer* timer);
 
 int ls_timer_cancel(ls_timer* timer);
-
-bool is_run_started(ls_timer* timer);

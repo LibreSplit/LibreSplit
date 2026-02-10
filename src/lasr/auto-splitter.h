@@ -17,6 +17,8 @@ extern atomic_bool call_start;
 extern atomic_bool call_split;
 extern atomic_bool toggle_loading;
 extern atomic_bool call_reset;
+extern atomic_bool run_using_game_time_call;
+extern atomic_bool run_using_game_time;
 extern atomic_bool run_started;
 extern atomic_bool run_running;
 extern bool prev_is_loading;

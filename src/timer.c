@@ -1013,20 +1013,3 @@ int ls_timer_cancel(ls_timer* timer)
     reset_timer(timer);
     return 1;
 }
-
-/**
- * Checks if a run is started, either manually or by
- * the auto-splitter
- *
- * @param timer Pointer to the timer instance (used for RTA)
- *
- * @returns True if a run is started, false otherwise
- */
-bool is_run_started(ls_timer* timer)
-{
-    if (!timer) {
-        return false;
-    }
-
-    return timer->running || atomic_load(&run_started);
-}
