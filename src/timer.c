@@ -790,7 +790,7 @@ void ls_timer_step(ls_timer* timer)
 {
     long long now = ls_time_now();
     if (timer->running) {
-        long long delta = now - timer->last_tick;
+        long long delta = timer->last_tick ? now - timer->last_tick : 0;
         timer->realTime += delta; // Accumulate the elapsed time
         if (timer->loading) {
             timer->loadingTime += delta; // Accumulate loading time if currently loading
