@@ -902,7 +902,6 @@ int ls_timer_split(ls_timer* timer)
         // Increment finished_count
         ++*timer->finished_count;
         ls_timer_stop(timer);
-        atomic_store(&run_running, false);
         ls_game_update_splits((ls_game*)timer->game, timer);
         if (cfg.libresplit.save_run_history.value.b) {
             ls_run_save(timer, "FINISHED");
