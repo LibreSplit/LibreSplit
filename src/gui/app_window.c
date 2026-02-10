@@ -259,7 +259,8 @@ gboolean ls_app_window_step(gpointer data)
                 atomic_store(&run_using_game_time_call, false);
             }
             if (atomic_load(&call_start)) {
-                timer_start(win);
+                if (atomic_load(&run_started))
+                    timer_start(win);
                 atomic_store(&call_start, 0);
             }
             if (atomic_load(&call_split)) {
