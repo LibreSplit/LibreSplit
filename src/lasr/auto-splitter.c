@@ -307,11 +307,11 @@ void startup(lua_State* L)
     lua_getglobal(L, "useGameTime");
     if (lua_isboolean(L, -1)) {
         use_game_time = lua_toboolean(L, -1);
-        atomic_store(&run_using_game_time_call, true);
         atomic_store(&run_using_game_time, use_game_time);
-    } else {
         atomic_store(&run_using_game_time_call, true);
+    } else {
         atomic_store(&run_using_game_time, false); // Default to real time if not specified
+        atomic_store(&run_using_game_time_call, true);
     }
     lua_pop(L, 1); // Remove 'useGameTime' from the stack
 }
@@ -352,9 +352,9 @@ void start(lua_State* L)
 {
     bool ret;
     if (call_va(L, "start", ">b", &ret)) {
-        atomic_store(&call_start, ret);
         if (ret) {
             atomic_store(&run_started, true);
+            atomic_store(&call_start, true);
         }
     }
     lua_pop(L, 1); // Remove the return value from the stack
