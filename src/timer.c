@@ -35,13 +35,13 @@ inline long long ls_timer_get_time(const ls_timer* timer, bool load_removed)
 {
     if (timer->usingGameTime) {
         return timer->gameTime;
-    } else {
-        if (load_removed) {
-            return timer->realTime - timer->loadingTime;
-        } else {
-            return timer->realTime;
-        }
     }
+
+    if (load_removed) {
+        return timer->realTime - timer->loadingTime;
+    }
+
+    return timer->realTime;
 }
 
 /**
@@ -913,41 +913,46 @@ int ls_timer_split(ls_timer* timer)
 
 int ls_timer_skip(ls_timer* timer)
 {
-    if (ls_timer_get_time(timer, true) > 0) {
-        if (timer->curr_split + 1 == timer->game->split_count) {
-            // This is the last split, do a normal split instead of skipping
-            return ls_timer_split(timer);
-        }
-        if (timer->curr_split < timer->game->split_count) {
-            timer->split_times[timer->curr_split] = 0;
-            timer->split_deltas[timer->curr_split] = 0;
-            timer->split_info[timer->curr_split] = 0;
-            timer->segment_times[timer->curr_split] = 0;
-            timer->segment_deltas[timer->curr_split] = 0;
-            return ++timer->curr_split;
-        }
+    if (ls_timer_get_time(timer, false) <= 0)
+        return 0;
+
+    if (timer->curr_split + 1 == timer->game->split_count) {
+        // This is the last split, do a normal split instead of skipping
+        return ls_timer_split(timer);
     }
-    return 0;
+
+    if (timer->curr_split >= timer->game->split_count) {
+        assert(false && "Current split cannot be out of bounds of splits");
+        return 0;
+    }
+
+    timer->split_times[timer->curr_split] = 0;
+    timer->split_deltas[timer->curr_split] = 0;
+    timer->split_info[timer->curr_split] = 0;
+    timer->segment_times[timer->curr_split] = 0;
+    timer->segment_deltas[timer->curr_split] = 0;
+    return ++timer->curr_split;
 }
 
 int ls_timer_unsplit(ls_timer* timer)
 {
-    if (timer->curr_split) {
-        unsigned int curr = --timer->curr_split;
-        for (unsigned int i = curr; i < timer->game->split_count; ++i) {
-            timer->split_times[i] = timer->game->split_times[i];
-            timer->split_deltas[i] = 0;
-            timer->split_info[i] = 0;
-            timer->segment_times[i] = timer->game->segment_times[i];
-            timer->segment_deltas[i] = 0;
-        }
-        if (timer->curr_split + 1 == timer->game->split_count) {
-            timer->running = true;
-            atomic_store(&run_running, true);
-        }
-        return timer->curr_split;
+    if (timer->curr_split == 0) {
+        return 0;
     }
-    return 0;
+
+    unsigned int curr = --timer->curr_split;
+    for (unsigned int i = curr; i < timer->game->split_count; ++i) {
+        timer->split_times[i] = timer->game->split_times[i];
+        timer->split_deltas[i] = 0;
+        timer->split_info[i] = 0;
+        timer->segment_times[i] = timer->game->segment_times[i];
+        timer->segment_deltas[i] = 0;
+    }
+    if (timer->curr_split + 1 == timer->game->split_count) {
+        timer->running = true;
+        atomic_store(&run_running, true);
+    }
+    return timer->curr_split;
 }
 
 void ls_timer_pause(ls_timer* timer)
