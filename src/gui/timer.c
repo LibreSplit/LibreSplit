@@ -116,7 +116,6 @@ void timer_cancel_run(LSAppWindow* win)
 
 void timer_skip(LSAppWindow* win)
 {
-
     if (!win->timer)
         return;
 

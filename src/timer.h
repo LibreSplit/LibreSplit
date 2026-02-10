@@ -4,10 +4,10 @@
 #include <stdatomic.h>
 #include <stdbool.h>
 
-#define LS_INFO_BEHIND_TIME (1)
-#define LS_INFO_LOSING_TIME (2)
-#define LS_INFO_BEST_SPLIT (4)
-#define LS_INFO_BEST_SEGMENT (8)
+#define LS_INFO_BEHIND_TIME (1 << 0)
+#define LS_INFO_LOSING_TIME (1 << 1)
+#define LS_INFO_BEST_SPLIT (1 << 2)
+#define LS_INFO_BEST_SEGMENT (1 << 3) // Gold split
 
 extern AppConfig cfg;
 
@@ -40,10 +40,9 @@ typedef struct ls_timer {
     long long loadingTime; // Time spent loading, used to subtract from real time when trying to get Load-Removed Time. Only to be used internally
     int started; // Wether the run has started, either by LASR or manually, keeps being set to true after run finished
     bool running; // Whether the runner is currently running. If this is false and started is true then the run finished. Mainly used to check if some actions are valid to perform (splits, pause, etc)
-    int curr_split; // Index of the current split, 0 for first split
-    long long now;
-    long long sum_of_bests;
-    long long world_record;
+    unsigned int curr_split; // Index of the current split, 0 for first split
+    long long sum_of_bests; // Sum of best segments
+    long long world_record; // World record time
     long long* split_times;
     long long* split_deltas;
     long long* segment_times;
