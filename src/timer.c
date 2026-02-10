@@ -661,6 +661,11 @@ int ls_run_save(ls_timer* timer, const char* reason)
     return error;
 }
 
+/**
+ * Frees all the timer information, but not itself
+ *
+ * @param timer The timer instance
+ */
 void ls_timer_release(const ls_timer* timer)
 {
     if (timer->split_times) {
@@ -686,6 +691,11 @@ void ls_timer_release(const ls_timer* timer)
     }
 }
 
+/**
+ * Resets the whole timer back to 0, ready for a new run
+ *
+ * @param timer The timer instance
+ */
 static void reset_timer(ls_timer* timer)
 {
     timer->started = 0;
@@ -720,6 +730,13 @@ static void reset_timer(ls_timer* timer)
     }
 }
 
+/**
+ * Creates a timer instance linked to a game instance, allocating necessary memory
+ *
+ * @param timer_ptr Apointer to where the allocated timer instance should be stored
+ * @param game The game instance to link the timer to
+ * @return Whether the timer creation had an error or not
+ */
 int ls_timer_create(ls_timer** timer_ptr, ls_game* game)
 {
     int error = 0;
@@ -786,6 +803,11 @@ timer_create_done:
     return error;
 }
 
+/**
+ * Executes a timer step, calculating deltas, times, and split infos
+ *
+ * @param timer The timer instance
+ */
 void ls_timer_step(ls_timer* timer)
 {
     long long now = ls_time_now();
@@ -842,6 +864,12 @@ void ls_timer_step(ls_timer* timer)
     timer->last_tick = now; // Update the start time for the next iteration
 }
 
+/**
+ * Starts the timer, setting it to running and incrementing attempt count if not already started
+ *
+ * @param timer The timer instance
+ * @return Whether the timer is now running
+ */
 int ls_timer_start(ls_timer* timer)
 {
     if (timer->curr_split < timer->game->split_count) {
@@ -856,6 +884,12 @@ int ls_timer_start(ls_timer* timer)
     return timer->running;
 }
 
+/**
+ * Performs a split
+ *
+ * @param timer The timer instance
+ * @return The current split index after splitting, 0 if no split happened
+ */
 int ls_timer_split(ls_timer* timer)
 {
     if (ls_timer_get_time(timer, true) <= 0) {
@@ -910,6 +944,12 @@ int ls_timer_split(ls_timer* timer)
     return timer->curr_split;
 }
 
+/**
+ * Skips a split, moving the timer forward one split and setting the split and segment times and deltas to 0
+ *
+ * @param timer The timer instance
+ * @return The current split index after skipping, 0 if no skip happened
+ */
 int ls_timer_skip(ls_timer* timer)
 {
     if (ls_timer_get_time(timer, false) <= 0)
@@ -933,6 +973,12 @@ int ls_timer_skip(ls_timer* timer)
     return ++timer->curr_split;
 }
 
+/**
+ * Unsplits the last split, moving the timer back one split and resetting the split and segment times and deltas to the game times
+ *
+ * @param timer The timer instance
+ * @return The current split index after unsplitting, the same or 0 if no unsplit happened
+ */
 int ls_timer_unsplit(ls_timer* timer)
 {
     if (timer->curr_split == 0) {
@@ -954,23 +1000,45 @@ int ls_timer_unsplit(ls_timer* timer)
     return timer->curr_split;
 }
 
+/**
+ * Marks the timer as loading, incrementing loading time in step until unpaused
+ *
+ * @param timer The timer instance
+ */
 void ls_timer_pause(ls_timer* timer)
 {
     timer->loading = 1;
 }
 
+/**
+ * Marks the timer as not loading, not incrementing loading time
+ *
+ * @param timer The timer instance
+ */
 void ls_timer_unpause(ls_timer* timer)
 {
     timer->loading = 0;
 }
 
+/**
+ * Stops the timer from ticking
+ *
+ * @param timer The timer instance
+ */
 void ls_timer_stop(ls_timer* timer)
 {
     timer->running = false;
     atomic_store(&run_running, false);
 }
 
-// TODO: docs, resets timer back to 0
+/**
+ * Resets all the timer and splits back to 0
+ *
+ * Also saves run
+ *
+ * @param timer The timer instance
+ * @return Whether the reset was successful, will fail if the timer is currently running/reset cancelled
+ */
 int ls_timer_reset(ls_timer* timer)
 {
     // Disallow resets while running
@@ -1002,7 +1070,12 @@ int ls_timer_reset(ls_timer* timer)
     return 1;
 }
 
-// Cancels the current run, not counting it as an attempt
+/**
+ * Cancels the current run, ignoring attempt and resetting timer
+ *
+ * @param timer The timer instance
+ * @return Whether the cancel was successful, will fail if the timer is currently running
+ */
 int ls_timer_cancel(ls_timer* timer)
 {
     // Disallow resets while running
