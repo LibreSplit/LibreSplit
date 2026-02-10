@@ -116,7 +116,8 @@ static void pb_draw(LSComponent* self_, const ls_game* game,
     char str[256];
     remove_class(self->personal_best, "time");
     gtk_label_set_text(GTK_LABEL(self->personal_best), "-");
-    if (timer->curr_split == game->split_count
+    if (game->split_count
+        && timer->curr_split == game->split_count
         && timer->split_times[game->split_count - 1]
         && (!game->split_times[game->split_count - 1]
             || (timer->split_times[game->split_count - 1]
@@ -125,7 +126,7 @@ static void pb_draw(LSComponent* self_, const ls_game* game,
         ls_time_string(
             str, timer->split_times[game->split_count - 1]);
         gtk_label_set_text(GTK_LABEL(self->personal_best), str);
-    } else if (game->split_times[game->split_count - 1]) {
+    } else if (game->split_count && game->split_times[game->split_count - 1]) {
         add_class(self->personal_best, "time");
         ls_time_string(
             str, game->split_times[game->split_count - 1]);

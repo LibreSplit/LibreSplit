@@ -270,7 +270,8 @@ static void splits_show_game(LSComponent* self_, const ls_game* game,
     }
 
     gtk_widget_show(self->splits);
-    splits_trailer(self_);
+    if (self->split_count)
+        splits_trailer(self_);
 }
 
 /**
@@ -399,7 +400,8 @@ static void splits_draw(LSComponent* self_, const ls_game* game, const ls_timer*
         }
     }
 
-    splits_trailer(self_);
+    if (self->split_count)
+        splits_trailer(self_);
 }
 
 static void splits_scroll_to_split(LSComponent* self_, const ls_timer* timer)
@@ -410,6 +412,10 @@ static void splits_scroll_to_split(LSComponent* self_, const ls_timer* timer)
     int scroller_h;
     double curr_scroll;
     double min_scroll, max_scroll;
+
+    if (timer->game->split_count == 0)
+        return;
+
     unsigned int prev = timer->curr_split ? timer->curr_split - 1 : 0;
     unsigned int curr = timer->curr_split;
     unsigned int next = timer->curr_split + 1;
