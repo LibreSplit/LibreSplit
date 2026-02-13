@@ -897,7 +897,6 @@ int ls_timer_split(ls_timer* timer)
     }
 
     if (timer->curr_split >= timer->game->split_count) {
-        assert(false && "Current split cannot be out of bounds of splits");
         return 0;
     }
 
@@ -961,7 +960,6 @@ int ls_timer_skip(ls_timer* timer)
     }
 
     if (timer->curr_split >= timer->game->split_count) {
-        assert(false && "Current split cannot be out of bounds of splits");
         return 0;
     }
 
