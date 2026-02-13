@@ -539,7 +539,7 @@ void run_auto_splitter(void)
             is_loading(L);
         }
 
-        if (reset_exists) {
+        if (reset_exists && atomic_load(&run_running)) {
             reset(L);
         }
 
