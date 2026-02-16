@@ -165,6 +165,7 @@ static size_t maps_getAll_ioctl(void)
             };
             strncpy(map.name, q.vma_name_addr ? map_name : "", sizeof(map.name));
             map.name[sizeof(map.name) - 1] = '\0';
+            map_name[0] = '\0';
             append_entry(map);
             // Advance past this mapping
             q.query_addr = q.vma_end;
