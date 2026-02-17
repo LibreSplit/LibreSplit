@@ -13,22 +13,6 @@
 
 #define SIG_SCAN_CHUNK_SIZE 0x10000
 
-typedef struct SigByte {
-    uint8_t value;
-    uint8_t mask;
-} SigByte;
-
-typedef struct SigMatcher {
-    const SigByte* signature;
-    size_t signature_len;
-    bool has_anchor;
-    size_t anchor_pos;
-    uint8_t anchor_byte;
-    bool has_check;
-    size_t check_pos;
-    uint8_t check_byte;
-} SigMatcher;
-
 // Error handling macro
 #define HANDLE_ERROR(msg) \
     do {                  \
@@ -39,7 +23,7 @@ typedef struct SigMatcher {
 /**
  * Error logging function
  *
- * @param[out] format The format string
+ * @param[in] format The format string
  */
 void log_error(const char* format, ...)
 {
@@ -57,7 +41,7 @@ void log_error(const char* format, ...)
  * @param[in] pid The ID of the process to get the memory regions of
  * @param[in] count A pointer to a counter onto where to store the number of regions
  *
- * @return A dinamically allocated array of ProcessMap that have been found
+ * @return A dynamically allocated array of ProcessMap that have been found
  */
 ProcessMap* get_memory_regions(pid_t pid, int* count)
 {
@@ -115,6 +99,16 @@ static bool sig_byte_matches(SigByte sig, uint8_t byte)
     return (byte & sig.mask) == sig.value;
 }
 
+/**
+ * Tests whether a full signature matches the haystack at a given offset.
+ *
+ * @param[in] haystack The bytes to search in.
+ * @param[in] start The candidate start offset within haystack.
+ * @param[in] signature The parsed signature bytes.
+ * @param[in] signature_len Number of bytes in signature.
+ *
+ * @return True if all signature bytes match at `start`, false otherwise.
+ */
 static bool sig_matches_at(const uint8_t* haystack, size_t start, const SigByte* signature,
     size_t signature_len)
 {
@@ -127,6 +121,14 @@ static bool sig_matches_at(const uint8_t* haystack, size_t start, const SigByte*
     return true;
 }
 
+/**
+ * Converts one hexadecimal character into its 4-bit value.
+ *
+ * @param[in] c The character to parse.
+ * @param[out] out The resulting nibble value if parsing succeeds.
+ *
+ * @return True on success, false if `c` is not a hexadecimal character.
+ */
 static bool hex_nibble(char c, uint8_t* out)
 {
     if (c >= '0' && c <= '9') {
@@ -147,6 +149,19 @@ static bool hex_nibble(char c, uint8_t* out)
     return false;
 }
 
+/**
+ * Parses one signature token into a masked byte.
+ *
+ * Supported forms:
+ * - `??` or `?` (full wildcard)
+ * - `AB` (full exact byte)
+ * - `A?` / `?B` (nibble wildcard)
+ *
+ * @param[in] token The token to parse.
+ * @param[out] out The parsed masked byte.
+ *
+ * @return True if parsing succeeds, false otherwise.
+ */
 static bool parse_sig_token(const char* token, SigByte* out)
 {
     size_t length = strlen(token);
@@ -251,6 +266,16 @@ static SigByte* convert_signature(const char* signature, size_t* pattern_size)
     return pattern;
 }
 
+/**
+ * Reads bytes from another process memory using process_vm_readv.
+ *
+ * @param[in] pid The process ID to read from.
+ * @param[in] address The remote source address in the target process.
+ * @param[out] buffer Local destination buffer.
+ * @param[in] size Number of bytes to read.
+ *
+ * @return True if exactly `size` bytes were read, false otherwise.
+ */
 static bool read_process_memory(pid_t pid, uintptr_t address, void* buffer, size_t size)
 {
     struct iovec local_iov = { buffer, size };
@@ -260,6 +285,29 @@ static bool read_process_memory(pid_t pid, uintptr_t address, void* buffer, size
     return nread == (ssize_t)size;
 }
 
+/**
+ * Returns the absolute distance between two size_t positions.
+ *
+ * @param[in] a First position.
+ * @param[in] b Second position.
+ *
+ * @return The absolute difference `|a - b|`.
+ */
+static size_t size_t_abs_diff(size_t a, size_t b)
+{
+    return (a > b) ? (a - b) : (b - a);
+}
+
+/**
+ * Initializes matcher metadata (anchor/check bytes) from a parsed signature.
+ *
+ * The first exact byte is used as the anchor. A second exact byte, farthest
+ * from the anchor, is selected as an additional quick check.
+ *
+ * @param[out] matcher Matcher metadata to initialize.
+ * @param[in] signature Parsed signature bytes.
+ * @param[in] signature_len Number of bytes in signature.
+ */
 static void init_sig_matcher(SigMatcher* matcher, const SigByte* signature, size_t signature_len)
 {
     matcher->signature = signature;
@@ -290,8 +338,7 @@ static void init_sig_matcher(SigMatcher* matcher, const SigByte* signature, size
             continue;
         }
 
-        size_t distance = (i > matcher->anchor_pos) ? (i - matcher->anchor_pos)
-                                                    : (matcher->anchor_pos - i);
+        size_t distance = size_t_abs_diff(i, matcher->anchor_pos);
 
         if (!matcher->has_check || distance > best_distance) {
             matcher->has_check = true;
@@ -302,6 +349,20 @@ static void init_sig_matcher(SigMatcher* matcher, const SigByte* signature, size
     }
 }
 
+/**
+ * Finds the next occurrence of one byte in a buffer.
+ *
+ * Uses 64-bit SWAR-style comparisons for the bulk of the input and falls back
+ * to byte-by-byte checks for the tail.
+ *
+ * @param[in] haystack Buffer to search in.
+ * @param[in] haystack_len Number of bytes in haystack.
+ * @param[in] needle Target byte to find.
+ * @param[in] start Start offset in haystack.
+ * @param[out] found_index Offset of the found byte.
+ *
+ * @return True if `needle` is found, false otherwise.
+ */
 static bool find_byte_swar(const uint8_t* haystack, size_t haystack_len, uint8_t needle,
     size_t start, size_t* found_index)
 {
@@ -319,7 +380,18 @@ static bool find_byte_swar(const uint8_t* haystack, size_t haystack_len, uint8_t
 
         uint64_t x = word ^ repeated;
         uint64_t eq = (x - ones) & (~x) & highs;
+        /*
+         * Byte-equality detection trick:
+         * - x has zero bytes where word bytes equal `needle`
+         * - (x - ones) & ~x & highs sets the MSB of each zero byte in x
+         * So any non-zero bit in eq means at least one matching byte exists.
+         */
         if (eq != 0) {
+            /*
+             * The first set high-bit in eq corresponds to the first matching
+             * byte in this 64-bit chunk. ctz counts trailing zero bits so
+             * dividing by 8 converts bit index to byte index.
+             */
             size_t byte_index = (size_t)(__builtin_ctzll(eq) / 8);
             *found_index = start + byte_index;
             return true;
@@ -338,6 +410,19 @@ static bool find_byte_swar(const uint8_t* haystack, size_t haystack_len, uint8_t
     return false;
 }
 
+/**
+ * Searches for a signature inside one contiguous buffer window.
+ *
+ * If an anchor byte exists, candidates are located via `find_byte_swar()` and
+ * then validated with optional check-byte and full masked comparison.
+ *
+ * @param[in] matcher Prepared matcher metadata.
+ * @param[in] haystack Buffer window to search in.
+ * @param[in] haystack_len Number of bytes in haystack.
+ * @param[out] found_index Match start offset if found.
+ *
+ * @return True if a match is found, false otherwise.
+ */
 static bool find_signature_in_buffer(
     const SigMatcher* matcher, const uint8_t* haystack, size_t haystack_len, size_t* found_index)
 {
@@ -360,6 +445,12 @@ static bool find_signature_in_buffer(
                 return false;
             }
 
+            /*
+             * Safe access guarantee:
+             * - `check_pos` comes from a signature index, so check_pos < pattern_len
+             * - `start + pattern_len <= haystack_len` was validated above
+             * Therefore `start + check_pos` is always in-bounds for haystack.
+             */
             if (matcher->has_check && haystack[start + matcher->check_pos] != matcher->check_byte) {
                 search_from = anchor_hit + 1;
                 continue;
