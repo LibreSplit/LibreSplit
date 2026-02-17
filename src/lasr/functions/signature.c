@@ -372,26 +372,34 @@ static bool find_byte_swar(const uint8_t* haystack, size_t haystack_len, uint8_t
 
     const uint64_t ones = 0x0101010101010101ULL;
     const uint64_t highs = 0x8080808080808080ULL;
+
+    // We can repeat the needle across all bytes (8 lanes) of a 64-bit word by
+    // multiplying it with by 0x01 per lane.
     uint64_t repeated = ((uint64_t)needle) * ones;
 
     while (start + sizeof(uint64_t) <= haystack_len) {
         uint64_t word;
         memcpy(&word, haystack + start, sizeof(word));
 
-        uint64_t x = word ^ repeated;
-        uint64_t eq = (x - ones) & (~x) & highs;
-        /*
-         * Byte-equality detection trick:
-         * - x has zero bytes where word bytes equal `needle`
-         * - (x - ones) & ~x & highs sets the MSB of each zero byte in x
-         * So any non-zero bit in eq means at least one matching byte exists.
-         */
+        // By XORing the word with our repeated needle, we get 0x00 bytes in
+        // each lane where the needle matches.
+        uint64_t zero_where_eq = word ^ repeated;
+        // By then subtracting 0x01 per lane, we underflow the 0x00 bytes to
+        // 0xFF, while non-zero bytes would not underflow.
+        uint64_t possibly_underflowed = zero_where_eq - ones;
+        // By looking if the high-bit of the lane underflowed from 0 to 1, we
+        // can detect that the original byte was zero (match). So we keep only
+        // the high-bit of each lane.
+        uint64_t high_bits_only = possibly_underflowed & highs;
+        // We now mask away the high-bit if it was already set in the original
+        // XOR result, indicating that it did not actually underflow.
+        uint64_t eq = high_bits_only & (~zero_where_eq);
+        // Only lanes where the high-bit is left set at this point correspond to
+        // matches.
         if (eq != 0) {
-            /*
-             * The first set high-bit in eq corresponds to the first matching
-             * byte in this 64-bit chunk. ctz counts trailing zero bits so
-             * dividing by 8 converts bit index to byte index.
-             */
+            // The first set high-bit in eq corresponds to the first matching
+            // byte in this 64-bit chunk. ctz counts trailing zero bits so
+            // dividing by 8 converts bit index to byte index.
             size_t byte_index = (size_t)(__builtin_ctzll(eq) / 8);
             *found_index = start + byte_index;
             return true;
@@ -445,12 +453,10 @@ static bool find_signature_in_buffer(
                 return false;
             }
 
-            /*
-             * Safe access guarantee:
-             * - `check_pos` comes from a signature index, so check_pos < pattern_len
-             * - `start + pattern_len <= haystack_len` was validated above
-             * Therefore `start + check_pos` is always in-bounds for haystack.
-             */
+            // Safe access guarantee:
+            // - `check_pos` comes from a signature index, so check_pos < pattern_len
+            // - `start + pattern_len <= haystack_len` was validated above
+            // Therefore `start + check_pos` is always in-bounds for haystack.
             if (matcher->has_check && haystack[start + matcher->check_pos] != matcher->check_byte) {
                 search_from = anchor_hit + 1;
                 continue;
