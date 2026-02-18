@@ -52,17 +52,17 @@ long long ls_time_value(const char* string)
     }
 
     // Split at the decimal point manually
-    char* dot_pos = strchr(string, '.');
+    const char* dot_pos = strchr(string, '.');
     if (dot_pos) {
         strncpy(seconds_part, string, dot_pos - string);
         seconds_part[dot_pos - string] = '\0';
 
         // Manually parse the fractional part to avoid locale issues
-        char* frac_part = dot_pos + 1;
+        const char* frac_part = dot_pos + 1;
         subseconds_part = 0.0;
         double multiplier = 0.1;
 
-        for (char* p = frac_part; *p && *p >= '0' && *p <= '9'; p++) {
+        for (char* p = (char*)frac_part; *p && *p >= '0' && *p <= '9'; p++) {
             subseconds_part += (*p - '0') * multiplier;
             multiplier *= 0.1;
         }
