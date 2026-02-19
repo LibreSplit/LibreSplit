@@ -705,6 +705,8 @@ static void reset_timer(ls_timer* timer)
     timer->curr_split = 0;
     timer->realTime = -timer->game->start_delay; // Start delay only applies to real time only
     timer->gameTime = 0;
+    timer->usingGameTime = false;
+    timer->loading = false;
     timer->loadingTime = 0;
     timer->last_tick = 0;
     int size = timer->game->split_count * sizeof(long long);
