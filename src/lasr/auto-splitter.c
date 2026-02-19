@@ -408,8 +408,13 @@ void reset(lua_State* L)
 {
     bool shouldReset;
     if (call_va(L, "reset", ">b", &shouldReset)) {
-        if (shouldReset)
+        if (shouldReset) {
+
             atomic_store(&call_reset, true);
+            // Assume these happen instantly to avoid any desync
+            atomic_store(&run_started, false);
+            atomic_store(&run_running, false);
+        }
     }
     lua_pop(L, 1); // Remove the return value from the stack
 }
