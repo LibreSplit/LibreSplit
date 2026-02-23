@@ -43,10 +43,10 @@ atomic_bool call_start = false; /*!< True if the auto splitter is requesting for
 atomic_bool call_split = false; /*!< True if the auto splitter is requesting to split */
 atomic_bool toggle_loading = false;
 atomic_bool call_reset = false; /*!< True if the auto splitter is requesting a run reset */
-atomic_bool run_using_game_time_call; // True if startup has run and a new value for using game time has been set by the auto splitter
-atomic_bool run_using_game_time; // True if the auto splitter is requesting to use game time, false for real time
-atomic_bool run_started = false; // Wheter a run was started or not, same as timer->started but accessible from the auto splitter thread
-atomic_bool run_running = false; // Wheter we are running or not, same as timer->running but accessible from the auto splitter thread
+atomic_bool run_using_game_time_call; /*!< True if startup has run and a new value for using game time has been set by the auto splitter */
+atomic_bool run_using_game_time; /*!< True if the auto splitter is requesting to use game time, false for real time */
+atomic_bool run_started = false; /*!< Wheter a run was started or not, same as timer->started but accessible from the auto splitter thread */
+atomic_bool run_running = false; /*!< Wheter we are running or not, same as timer->running but accessible from the auto splitter thread */
 bool prev_is_loading; /*!< The previous frame "is_loading" state */
 
 /**
