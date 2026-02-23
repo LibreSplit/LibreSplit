@@ -404,6 +404,12 @@ static void splits_draw(LSComponent* self_, const ls_game* game, const ls_timer*
         splits_trailer(self_);
 }
 
+/**
+ * Scrolls to the current split if it's not visible.
+ *
+ * @param self_ The splits component itself.
+ * @param timer The timer instance.
+ */
 static void splits_scroll_to_split(LSComponent* self_, const ls_timer* timer)
 {
     LSSplits* self = (LSSplits*)self_;

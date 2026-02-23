@@ -108,7 +108,7 @@ static void timer_draw(LSComponent* self_, const ls_game* game, const ls_timer* 
     char str[256], millis[256];
 
     unsigned int curr = timer->curr_split;
-    if (curr == game->split_count) {
+    if (curr && curr == game->split_count) {
         --curr;
     }
 
@@ -117,7 +117,7 @@ static void timer_draw(LSComponent* self_, const ls_game* game, const ls_timer* 
     remove_class(self->time, "losing");
     remove_class(self->time, "best-split");
 
-    if (curr == game->split_count) {
+    if (curr && curr == game->split_count) {
         curr = game->split_count - 1;
     }
     if (ls_timer_get_time(timer, true) <= 0) {

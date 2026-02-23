@@ -32,17 +32,21 @@ typedef struct ls_game {
     long long* best_segments;
 } ls_game;
 
+/**
+ * @brief Timer structure for managing game and time.
+ * Timer structure, it includes RTA, gametime, loading time, splits, deltas, and other relevant information for tracking the progress of a run.
+ */
 typedef struct ls_timer {
-    bool usingGameTime; // Splitter is using game time instead of real time. Only to be used internally
-    long long gameTime; // The current game time only usable in LASR. Only to be used internally
-    long long realTime; // Real time. Starts when run start and pauses while loading. Only to be used internally
-    int loading; // Currently loading? used for knowing if loadingTime should tick or not. Only to be used internally
-    long long loadingTime; // Time spent loading, used to subtract from real time when trying to get Load-Removed Time. Only to be used internally
-    int started; // Wether the run has started, either by LASR or manually, keeps being set to true after run finished
-    bool running; // Whether the runner is currently running. If this is false and started is true then the run finished. Mainly used to check if some actions are valid to perform (splits, pause, etc)
-    unsigned int curr_split; // Index of the current split, 0 for first split
-    long long sum_of_bests; // Sum of best segments
-    long long world_record; // World record time
+    bool usingGameTime; /*!< Splitter is using game time instead of real time. Only to be used internally */
+    long long gameTime; /*!< The current game time only usable in LASR. Only to be used internally */
+    long long realTime; /*!< Real time. Starts when run start and pauses while loading. Only to be used internally */
+    int loading; /*!< Currently loading? used for knowing if loadingTime should tick or not. Only to be used internally */
+    long long loadingTime; /*!< Time spent loading, used to subtract from real time when trying to get Load-Removed Time. Only to be used internally */
+    int started; /*!< Wether the run has started, either by LASR or manually, keeps being set to true after run finished */
+    bool running; /*!< Whether the runner is currently running. If this is false and started is true then the run finished. Mainly used to check if some actions are valid to perform (splits, pause, etc) */
+    unsigned int curr_split; /*!< Index of the current split, 0 for first split */
+    long long sum_of_bests; /*!< Sum of best segments */
+    long long world_record; /*!< World record time */
     long long* split_times;
     long long* split_deltas;
     long long* segment_times;

@@ -8,7 +8,6 @@
 
 #include "lasr/auto-splitter.h"
 
-#include <assert.h>
 #include <jansson.h>
 #include <limits.h>
 #include <stdatomic.h>
@@ -31,6 +30,14 @@ static long long ls_time_now(void)
     return timespec.tv_sec * 1000000LL + timespec.tv_nsec / 1000;
 }
 
+
+/**
+ * Gets the timer current time, either game time or real time depending on the timer state.
+ *
+ * @param timer The timer instance
+ * @param load_removed Whether to subtract load_removed from RTA time
+ * @return The current time
+ */
 inline long long ls_timer_get_time(const ls_timer* timer, bool load_removed)
 {
     if (timer->usingGameTime) {
@@ -208,6 +215,11 @@ void ls_delta_string(char* string, long long time)
     ls_time_string_format(string, NULL, time, 0, 1, 1);
 }
 
+/**
+ * Frees the memory allocated for a game struct.
+ * 
+ * @param game 
+ */
 void ls_game_release(const ls_game* game)
 {
     if (game->path) {
@@ -450,6 +462,12 @@ game_create_done:
     return error;
 }
 
+/**
+ * Update the splits of a game based on the current timer.
+ * 
+ * @param game The game whose splits are to be updated.
+ * @param timer The timer instance
+ */
 void ls_game_update_splits(ls_game* game, const ls_timer* timer)
 {
     if (timer->curr_split) {

@@ -4,7 +4,11 @@
 #include "src/lasr/utils.h"
 #include "src/timer.h"
 
-// Stops and then resets the timer
+/**
+ * Stops the timer if it's running, otherwise resets it. If the timer is reset, the current run will be saved to history if enabled.
+ *
+ * @param win The LibreSplit window
+ */
 void timer_stop_and_reset(LSAppWindow* win)
 {
     if (!win->timer)
@@ -28,7 +32,11 @@ void timer_stop_and_reset(LSAppWindow* win)
     }
 }
 
-// Starts or splits the timer, whichever is appropriate
+/**
+ * Starts the timer, if it's not already running. If the timer is already running, it does a split.
+ *
+ * @param win The LibreSplit window
+ */
 void timer_start_split(LSAppWindow* win)
 {
     if (!win->timer)
@@ -50,6 +58,11 @@ void timer_start_split(LSAppWindow* win)
     }
 }
 
+/**
+ * Starts the timer, if it's not already running. If the timer is already running, it does nothing.
+ *
+ * @param win The LibreSplit window
+ */
 void timer_start(LSAppWindow* win)
 {
     if (!win->timer)
@@ -70,6 +83,11 @@ void timer_start(LSAppWindow* win)
     }
 }
 
+/**
+ * Stops the timer if it's running, otherwise resets it. If the timer is reset, the current run will be saved to history if enabled.
+ *
+ * @param win The LibreSplit window
+ */
 void timer_stop_or_reset(LSAppWindow* win)
 {
     if (!win->timer)
@@ -96,6 +114,11 @@ void timer_stop_or_reset(LSAppWindow* win)
     }
 }
 
+/**
+ * @brief Cancels the current run, resetting the timer and game state and saving the cancelled run to history if enabled.
+ *
+ * @param win The LibreSplit window
+ */
 void timer_cancel_run(LSAppWindow* win)
 {
 
@@ -116,6 +139,11 @@ void timer_cancel_run(LSAppWindow* win)
     }
 }
 
+/**
+ * Skips a timer split, filling the skipped split with 0's
+ *
+ * @param win The LibreSplit window
+ */
 void timer_skip(LSAppWindow* win)
 {
     if (!win->timer)
@@ -130,6 +158,11 @@ void timer_skip(LSAppWindow* win)
     }
 }
 
+/**
+ * Unsplits the last made split. If the timer is not running or if there are no splits to unsplit, it does nothing.
+ *
+ * @param win The LibreSplit window
+ */
 void timer_unsplit(LSAppWindow* win)
 {
     if (!win->timer)
@@ -145,6 +178,11 @@ void timer_unsplit(LSAppWindow* win)
     }
 }
 
+/**
+ * Makes a timer split. If the timer is not running, it does nothing.
+ *
+ * @param win The LibreSplit window
+ */
 void timer_split(LSAppWindow* win)
 {
     if (!win->timer)
@@ -160,6 +198,11 @@ void timer_split(LSAppWindow* win)
     }
 }
 
+/**
+ * Pauses the timer into a paused/loading state
+ *
+ * @param win The LibreSplit window
+ */
 void timer_pause(LSAppWindow* win)
 {
     if (!win->timer)
@@ -177,6 +220,11 @@ void timer_pause(LSAppWindow* win)
     }
 }
 
+/**
+ * Resumes the timer from a paused/loading state
+ *
+ * @param win The LibreSplit window
+ */
 void timer_unpause(LSAppWindow* win)
 {
     if (!win->timer)
@@ -194,6 +242,11 @@ void timer_unpause(LSAppWindow* win)
     }
 }
 
+/**
+ * Stops the timer from ticking
+ *
+ * @param win TheLibreSplit window
+ */
 void timer_stop(LSAppWindow* win)
 {
     if (!win->timer)
