@@ -892,7 +892,8 @@ void ls_timer_step(ls_timer* timer)
  */
 int ls_timer_start(ls_timer* timer)
 {
-    if (timer->curr_split < timer->game->split_count) {
+    // TODO: Allow starting when split_count is 0 for splitless runs, other stuff has to change for this to work (components, timer logic, etc)
+    if (timer->curr_split < timer->game->split_count) { 
         if (!timer->started) {
             ++*timer->attempt_count;
             timer->started = 1;
