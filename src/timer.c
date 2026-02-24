@@ -30,7 +30,6 @@ static long long ls_time_now(void)
     return timespec.tv_sec * 1000000LL + timespec.tv_nsec / 1000;
 }
 
-
 /**
  * Gets the timer current time, either game time or real time depending on the timer state.
  *
@@ -217,8 +216,8 @@ void ls_delta_string(char* string, long long time)
 
 /**
  * Frees the memory allocated for a game struct.
- * 
- * @param game 
+ *
+ * @param game
  */
 void ls_game_release(const ls_game* game)
 {
@@ -464,7 +463,7 @@ game_create_done:
 
 /**
  * Update the splits of a game based on the current timer.
- * 
+ *
  * @param game The game whose splits are to be updated.
  * @param timer The timer instance
  */
@@ -893,7 +892,7 @@ void ls_timer_step(ls_timer* timer)
 int ls_timer_start(ls_timer* timer)
 {
     // TODO: Allow starting when split_count is 0 for splitless runs, other stuff has to change for this to work (components, timer logic, etc)
-    if (timer->curr_split < timer->game->split_count) { 
+    if (timer->curr_split < timer->game->split_count) {
         if (!timer->started) {
             ++*timer->attempt_count;
             timer->started = 1;

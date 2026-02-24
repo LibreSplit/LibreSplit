@@ -11,7 +11,7 @@ game_process process;
 
 /**
  * Restarts the auto splitter by disabling it and re-enabling it again
- * 
+ *
  * @return true if the auto splitter was enabled before the restart, false otherwise
  */
 bool restart_auto_splitter(void)
