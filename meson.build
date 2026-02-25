@@ -49,6 +49,7 @@ libresplit_sources = files(
     'src/lasr/functions/print_tbl.c',
     'src/lasr/functions/process.c',
     'src/lasr/functions/readAddress.c',
+    'src/lasr/functions/strtoida.c',
     'src/lasr/functions/shallow_copy_tbl.c',
     'src/lasr/functions/signature.c',
     'src/lasr/functions/sizeOf.c',

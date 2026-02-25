@@ -114,6 +114,7 @@ static const lasr_function luac_functions[] = {
     { "b_lshift", b_lshift },
     { "b_rshift", b_rshift },
     { "getMaps", getMaps },
+    { "str2ida", str2ida },
     { NULL, NULL }
 };
 
