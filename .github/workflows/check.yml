@@ -39,6 +39,7 @@ jobs:
                     libjansson-dev
                     libluajit-5.1-dev
                     cppcheck
+                    libcurl4-openssl-dev
                   version: 1.0
 
             - name: Set up project

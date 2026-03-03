@@ -5,6 +5,7 @@
 #include "timer.h"
 #include "gui/dialogs.h"
 #include "settings/utils.h"
+#include "therun.h"
 
 #include "lasr/auto-splitter.h"
 
@@ -747,6 +748,7 @@ static void reset_timer(ls_timer* timer)
             break;
         }
     }
+    therun_trigger_update(timer, 2);
 }
 
 /**
@@ -896,6 +898,7 @@ int ls_timer_start(ls_timer* timer)
         if (!timer->started) {
             ++*timer->attempt_count;
             timer->started = 1;
+            therun_trigger_update(timer, 0);
             atomic_store(&run_started, true);
         }
         timer->running = true;
@@ -960,6 +963,7 @@ int ls_timer_split(ls_timer* timer)
             ls_run_save(timer, "FINISHED");
         }
     }
+    therun_trigger_update(timer, 0);
     return timer->curr_split;
 }
 
@@ -988,7 +992,9 @@ int ls_timer_skip(ls_timer* timer)
     timer->split_info[timer->curr_split] = 0;
     timer->segment_times[timer->curr_split] = 0;
     timer->segment_deltas[timer->curr_split] = 0;
-    return ++timer->curr_split;
+    ++timer->curr_split;
+    therun_trigger_update(timer, 7);
+    return timer->curr_split;
 }
 
 /**
@@ -1015,6 +1021,7 @@ int ls_timer_unsplit(ls_timer* timer)
         timer->running = true;
         atomic_store(&run_running, true);
     }
+    therun_trigger_update(timer, 6);
     return timer->curr_split;
 }
 

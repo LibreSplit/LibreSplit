@@ -19,6 +19,7 @@ jobs:
                       libx11-dev
                       libjansson-dev
                       libluajit-5.1-dev
+                      libcurl4-openssl-dev
                   version: 1.0
 
             - name: "Configure"
