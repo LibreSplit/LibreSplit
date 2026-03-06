@@ -347,39 +347,37 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
     ref = json_object_get(json, "splits");
     if (ref) {
         game->split_count = json_array_size(ref);
+
+        int split_count = game->split_count + 1; // +1 for the final split to end cursor on
+
         // allocate titles
-        game->split_titles = calloc(game->split_count,
-            sizeof(char*));
+        game->split_titles = calloc(split_count, sizeof(char*));
         if (!game->split_titles) {
             error = 1;
             goto game_create_done;
         }
         // allocate splits
-        game->split_times = calloc(game->split_count,
-            sizeof(long long));
+        game->split_times = calloc(split_count, sizeof(long long));
         if (!game->split_times) {
             error = 1;
             goto game_create_done;
         }
-        game->split_icon_paths = calloc(game->split_count, sizeof(char*));
+        game->split_icon_paths = calloc(split_count, sizeof(char*));
         if (!game->split_icon_paths) {
             error = 1;
             goto game_create_done;
         }
-        game->segment_times = calloc(game->split_count,
-            sizeof(long long));
+        game->segment_times = calloc(split_count, sizeof(long long));
         if (!game->segment_times) {
             error = 1;
             goto game_create_done;
         }
-        game->best_splits = calloc(game->split_count,
-            sizeof(long long));
+        game->best_splits = calloc(split_count, sizeof(long long));
         if (!game->best_splits) {
             error = 1;
             goto game_create_done;
         }
-        game->best_segments = calloc(game->split_count,
-            sizeof(long long));
+        game->best_segments = calloc(split_count, sizeof(long long));
         if (!game->best_segments) {
             error = 1;
             goto game_create_done;
@@ -770,44 +768,39 @@ int ls_timer_create(ls_timer** timer_ptr, ls_game* game)
     timer->attempt_count = &game->attempt_count;
     timer->finished_count = &game->finished_count;
     // alloc splits
-    timer->split_times = calloc(timer->game->split_count,
-        sizeof(long long));
+    int split_count = timer->game->split_count + 1; // +1 for the last invisible "split" that exists to signify no split
+
+    timer->split_times = calloc(split_count, sizeof(long long));
     if (!timer->split_times) {
         error = 1;
         goto timer_create_done;
     }
-    timer->split_deltas = calloc(timer->game->split_count,
-        sizeof(long long));
+    timer->split_deltas = calloc(split_count, sizeof(long long));
     if (!timer->split_deltas) {
         error = 1;
         goto timer_create_done;
     }
-    timer->segment_times = calloc(timer->game->split_count,
-        sizeof(long long));
+    timer->segment_times = calloc(split_count, sizeof(long long));
     if (!timer->segment_times) {
         error = 1;
         goto timer_create_done;
     }
-    timer->segment_deltas = calloc(timer->game->split_count,
-        sizeof(long long));
+    timer->segment_deltas = calloc(split_count, sizeof(long long));
     if (!timer->segment_deltas) {
         error = 1;
         goto timer_create_done;
     }
-    timer->best_splits = calloc(timer->game->split_count,
-        sizeof(long long));
+    timer->best_splits = calloc(split_count, sizeof(long long));
     if (!timer->best_splits) {
         error = 1;
         goto timer_create_done;
     }
-    timer->best_segments = calloc(timer->game->split_count,
-        sizeof(long long));
+    timer->best_segments = calloc(split_count, sizeof(long long));
     if (!timer->best_segments) {
         error = 1;
         goto timer_create_done;
     }
-    timer->split_info = calloc(timer->game->split_count,
-        sizeof(int));
+    timer->split_info = calloc(split_count, sizeof(int));
     if (!timer->split_info) {
         error = 1;
         goto timer_create_done;
