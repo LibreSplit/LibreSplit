@@ -215,66 +215,69 @@ void ls_delta_string(char* string, long long time)
 }
 
 /**
- * Frees the memory allocated for a game struct.
+ * Frees the memory allocated for a game struct and sets all its pointers to NULL.
  *
  * @param game
  */
-void ls_game_release(const ls_game* game)
+void ls_game_release(ls_game* game)
 {
-    if (game->path) {
-        free(game->path);
-    }
     if (game->title) {
         free(game->title);
+        game->title = 0;
     }
     if (game->theme) {
         free(game->theme);
+        game->theme = 0;
     }
     if (game->theme_variant) {
         free(game->theme_variant);
+        game->theme_variant = 0;
     }
     if (game->split_titles) {
         for (unsigned int i = 0; i < game->split_count; ++i) {
             if (game->split_titles[i]) {
                 free(game->split_titles[i]);
-                free(game->split_icon_paths[i]);
+                game->split_titles[i] = 0;
             }
         }
         free(game->split_titles);
+        game->split_titles = 0;
     }
     if (game->split_times) {
         free(game->split_times);
+        game->split_times = 0;
     }
     if (game->segment_times) {
         free(game->segment_times);
+        game->segment_times = 0;
     }
     if (game->best_splits) {
         free(game->best_splits);
+        game->best_splits = 0;
     }
     if (game->best_segments) {
         free(game->best_segments);
+        game->best_segments = 0;
     }
+
+    free(game);
 }
 
 int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
 {
     int error = 0;
-    ls_game* game;
     json_t* json = 0;
     json_t* ref;
     json_error_t json_error;
     // allocate game
-    game = calloc(1, sizeof(ls_game));
+    ls_game* game = calloc(1, sizeof(ls_game));
     if (!game) {
         error = 1;
-        goto game_create_done;
+        goto game_create_error;
     }
     // copy path to file
-    game->path = strdup(path);
-    if (!game->path) {
-        error = 1;
-        goto game_create_done;
-    }
+    strncpy(game->path, path, PATH_MAX - 1);
+    game->path[PATH_MAX - 1] = '\0';
     // load json
     json = json_load_file(game->path, 0, &json_error);
     if (!json) {
@@ -282,7 +285,7 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
         size_t msg_len = snprintf(NULL, 0, "%s (%d:%d)", json_error.text, json_error.line, json_error.column);
         *error_msg = calloc(msg_len + 1, sizeof(char));
         sprintf(*error_msg, "%s (%d:%d)", json_error.text, json_error.line, json_error.column);
-        goto game_create_done;
+        goto game_create_error;
     }
     // copy title
     ref = json_object_get(json, "title");
@@ -290,7 +293,7 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
         game->title = strdup(json_string_value(ref));
         if (!game->title) {
             error = 1;
-            goto game_create_done;
+            goto game_create_error;
         }
     }
     // copy theme
@@ -299,7 +302,7 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
         game->theme = strdup(json_string_value(ref));
         if (!game->theme) {
             error = 1;
-            goto game_create_done;
+            goto game_create_error;
         }
     }
     // copy theme variant
@@ -308,7 +311,7 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
         game->theme_variant = strdup(json_string_value(ref));
         if (!game->theme_variant) {
             error = 1;
-            goto game_create_done;
+            goto game_create_error;
         }
     }
     // get attempt count
@@ -347,42 +350,40 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
     ref = json_object_get(json, "splits");
     if (ref) {
         game->split_count = json_array_size(ref);
+
+        int split_count = game->split_count + 1; // +1 for the final split to end cursor on
+
         // allocate titles
-        game->split_titles = calloc(game->split_count,
-            sizeof(char*));
+        game->split_titles = calloc(split_count, sizeof(char*));
         if (!game->split_titles) {
             error = 1;
-            goto game_create_done;
+            goto game_create_error;
         }
         // allocate splits
-        game->split_times = calloc(game->split_count,
-            sizeof(long long));
+        game->split_times = calloc(split_count, sizeof(long long));
         if (!game->split_times) {
             error = 1;
-            goto game_create_done;
+            goto game_create_error;
         }
-        game->split_icon_paths = calloc(game->split_count, sizeof(char*));
+        game->split_icon_paths = calloc(split_count, sizeof(char*));
         if (!game->split_icon_paths) {
             error = 1;
-            goto game_create_done;
+            goto game_create_error;
         }
-        game->segment_times = calloc(game->split_count,
-            sizeof(long long));
+        game->segment_times = calloc(split_count, sizeof(long long));
         if (!game->segment_times) {
             error = 1;
-            goto game_create_done;
+            goto game_create_error;
         }
-        game->best_splits = calloc(game->split_count,
-            sizeof(long long));
+        game->best_splits = calloc(split_count, sizeof(long long));
         if (!game->best_splits) {
             error = 1;
-            goto game_create_done;
+            goto game_create_error;
         }
-        game->best_segments = calloc(game->split_count,
-            sizeof(long long));
+        game->best_segments = calloc(split_count, sizeof(long long));
         if (!game->best_segments) {
             error = 1;
-            goto game_create_done;
+            goto game_create_error;
         }
         game->contains_icons = false;
         // copy splits
@@ -396,7 +397,7 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
                     json_string_value(split_ref));
                 if (!game->split_titles[i]) {
                     error = 1;
-                    goto game_create_done;
+                    goto game_create_error;
                 }
             }
 
@@ -405,7 +406,7 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
                 game->split_icon_paths[i] = strdup(json_string_value(split_ref));
                 if (!game->split_icon_paths[i]) {
                     error = 1;
-                    goto game_create_done;
+                    goto game_create_error;
                 }
                 game->contains_icons = true;
             }
@@ -449,16 +450,27 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
             }
         }
     }
-game_create_done:
-    if (!error) {
-        *game_ptr = game;
-    } else if (game) {
-        ls_game_release(game);
-    }
+game_create_error:
     if (json) {
         json_decref(json);
     }
-    return error;
+
+    if (error) {
+        if (game) {
+            ls_game_release(game);
+            game = 0;
+        }
+        return error;
+    }
+
+    // Free all of the old game's data before replacing the pointer
+    if (*game_ptr) {
+        ls_game_release(*game_ptr);
+        *game_ptr = 0;
+    }
+    *game_ptr = game;
+
+    return 0;
 }
 
 /**
@@ -683,7 +695,7 @@ int ls_run_save(ls_timer* timer, const char* reason)
  *
  * @param timer The timer instance
  */
-void ls_timer_release(const ls_timer* timer)
+void ls_timer_release(ls_timer* timer)
 {
     if (timer->split_times) {
         free(timer->split_times);
@@ -706,6 +718,8 @@ void ls_timer_release(const ls_timer* timer)
     if (timer->best_segments) {
         free(timer->best_segments);
     }
+
+    free(timer);
 }
 
 /**
@@ -764,62 +778,66 @@ int ls_timer_create(ls_timer** timer_ptr, ls_game* game)
     timer = calloc(1, sizeof(ls_timer));
     if (!timer) {
         error = 1;
-        goto timer_create_done;
+        goto timer_create_error;
     }
     timer->game = game;
     timer->attempt_count = &game->attempt_count;
     timer->finished_count = &game->finished_count;
     // alloc splits
-    timer->split_times = calloc(timer->game->split_count,
-        sizeof(long long));
+    int split_count = timer->game->split_count + 1; // +1 for the last invisible "split" that exists to signify no split
+
+    timer->split_times = calloc(split_count, sizeof(long long));
     if (!timer->split_times) {
         error = 1;
-        goto timer_create_done;
+        goto timer_create_error;
     }
-    timer->split_deltas = calloc(timer->game->split_count,
-        sizeof(long long));
+    timer->split_deltas = calloc(split_count, sizeof(long long));
     if (!timer->split_deltas) {
         error = 1;
-        goto timer_create_done;
+        goto timer_create_error;
     }
-    timer->segment_times = calloc(timer->game->split_count,
-        sizeof(long long));
+    timer->segment_times = calloc(split_count, sizeof(long long));
     if (!timer->segment_times) {
         error = 1;
-        goto timer_create_done;
+        goto timer_create_error;
     }
-    timer->segment_deltas = calloc(timer->game->split_count,
-        sizeof(long long));
+    timer->segment_deltas = calloc(split_count, sizeof(long long));
     if (!timer->segment_deltas) {
         error = 1;
-        goto timer_create_done;
+        goto timer_create_error;
     }
-    timer->best_splits = calloc(timer->game->split_count,
-        sizeof(long long));
+    timer->best_splits = calloc(split_count, sizeof(long long));
     if (!timer->best_splits) {
         error = 1;
-        goto timer_create_done;
+        goto timer_create_error;
     }
-    timer->best_segments = calloc(timer->game->split_count,
-        sizeof(long long));
+    timer->best_segments = calloc(split_count, sizeof(long long));
     if (!timer->best_segments) {
         error = 1;
-        goto timer_create_done;
+        goto timer_create_error;
     }
-    timer->split_info = calloc(timer->game->split_count,
-        sizeof(int));
+    timer->split_info = calloc(split_count, sizeof(int));
     if (!timer->split_info) {
         error = 1;
-        goto timer_create_done;
+        goto timer_create_error;
     }
     reset_timer(timer);
-timer_create_done:
-    if (!error) {
-        *timer_ptr = timer;
-    } else if (timer) {
-        ls_timer_release(timer);
+timer_create_error:
+    if (error) {
+        if (timer) {
+            ls_timer_release(timer);
+            timer = 0;
+        }
+        return error;
     }
-    return error;
+
+    // Free old timer before replacing the pointer
+    if (*timer_ptr) {
+        ls_timer_release(*timer_ptr);
+        *timer_ptr = 0;
+    }
+    *timer_ptr = timer;
+    return 0;
 }
 
 /**

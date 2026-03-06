@@ -204,9 +204,11 @@ void ls_app_window_destroy(GtkWidget* widget, gpointer data)
     LSAppWindow* win = (LSAppWindow*)widget;
     if (win->timer) {
         ls_timer_release(win->timer);
+        win->timer = 0;
     }
     if (win->game) {
         ls_game_release(win->game);
+        win->game = 0;
     }
     atomic_store(&auto_splitter_enabled, 0);
     atomic_store(&exit_requested, 1);

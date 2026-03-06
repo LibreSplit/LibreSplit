@@ -12,7 +12,7 @@
 extern AppConfig cfg;
 
 typedef struct ls_game {
-    char* path;
+    char path[PATH_MAX];
     char* title;
     char* theme;
     char* theme_variant;
@@ -84,11 +84,11 @@ bool ls_timer_has_gold_split(const ls_timer* timer);
 
 int ls_game_save(const ls_game* game);
 
-void ls_game_release(const ls_game* game);
+void ls_game_release(ls_game* game);
 
 int ls_timer_create(ls_timer** timer_ptr, ls_game* game);
 
-void ls_timer_release(const ls_timer* timer);
+void ls_timer_release(ls_timer* timer);
 
 int ls_timer_start(ls_timer* timer);
 
