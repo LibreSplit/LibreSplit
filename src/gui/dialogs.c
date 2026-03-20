@@ -5,8 +5,8 @@
  *
  * @return False, to remove the function from the queue.
  */
-#include "gio/gio.h"
 #include "src/lasr/auto-splitter.h"
+#include <gio/gio.h>
 #include <glib.h>
 #include <gtk/gtk.h>
 #include <stdatomic.h>
