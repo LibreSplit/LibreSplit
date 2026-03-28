@@ -110,15 +110,20 @@ void open_activated(GSimpleAction* action,
 
     res = gtk_dialog_run(GTK_DIALOG(dialog));
     if (res == GTK_RESPONSE_ACCEPT) {
-        char* filename;
         GtkFileChooser* chooser = GTK_FILE_CHOOSER(dialog);
         char last_folder[PATH_MAX];
-        filename = gtk_file_chooser_get_filename(chooser);
-        strcpy(last_folder, gtk_file_chooser_get_current_folder(chooser));
-        CFG_SET_STR(cfg.history.last_split_folder.value.s, last_folder);
-        ls_app_window_open(win, filename);
-        CFG_SET_STR(cfg.history.split_file.value.s, filename);
-        g_free(filename);
+        char* filename = gtk_file_chooser_get_filename(chooser);
+        const char* current_folder = gtk_file_chooser_get_current_folder(chooser);
+        if (current_folder) {
+            strncpy(last_folder, current_folder, sizeof(last_folder) - 1);
+            last_folder[sizeof(last_folder) - 1] = '\0';
+            CFG_SET_STR(cfg.history.last_split_folder.value.s, last_folder);
+        }
+        if (filename) {
+            ls_app_window_open(win, filename);
+            CFG_SET_STR(cfg.history.split_file.value.s, filename);
+            g_free(filename);
+        }
     }
     if (!win->game || !win->timer) {
         gtk_widget_show_all(win->welcome_box->box);
@@ -389,16 +394,21 @@ void open_auto_splitter(GSimpleAction* action,
         GtkFileChooser* chooser = GTK_FILE_CHOOSER(dialog);
         char* filename = gtk_file_chooser_get_filename(chooser);
         char last_folder[PATH_MAX];
-        strcpy(last_folder, gtk_file_chooser_get_current_folder(chooser));
-        CFG_SET_STR(cfg.history.last_auto_splitter_folder.value.s, last_folder);
-        CFG_SET_STR(cfg.history.auto_splitter_file.value.s, filename);
-        strcpy(auto_splitter_file, filename);
+        const char* current_folder = gtk_file_chooser_get_current_folder(chooser);
+        if (current_folder) {
+            strncpy(last_folder, current_folder, sizeof(last_folder) - 1);
+            last_folder[sizeof(last_folder) - 1] = '\0';
+            CFG_SET_STR(cfg.history.last_auto_splitter_folder.value.s, last_folder);
+        }
+        if (filename) {
+            CFG_SET_STR(cfg.history.auto_splitter_file.value.s, filename);
+            strcpy(auto_splitter_file, filename);
+            g_free(filename);
+        }
         config_save();
 
         // Restart auto-splitter if it was running
         restart_auto_splitter();
-
-        g_free(filename);
     }
     gtk_widget_destroy(dialog);
 }
