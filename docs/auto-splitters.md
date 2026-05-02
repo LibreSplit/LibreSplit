@@ -557,7 +557,9 @@ local maps = getMaps()
 
 ## processExists
 
-If you have multiple version of the game with different process name. You can use `processExists` function in a conditional statement to detect which game version that is running.
+Check if a process is running without attaching to it.
+
+Useful if you have multiple version of the game with different process names.
 
 For example:
 
@@ -573,3 +575,5 @@ elseif processExists(version.Remake) then
     process(version.Remake)
 end
 ```
+
+`processExists()` will return `true` or `false`
