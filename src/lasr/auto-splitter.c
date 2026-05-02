@@ -118,6 +118,7 @@ static const lasr_function luac_functions[] = {
     { "b_rshift", b_rshift },
     { "getMaps", getMaps },
     { "str2ida", str2ida },
+    { "processExists", check_process_id },
     { NULL, NULL }
 };
 

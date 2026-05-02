@@ -138,3 +138,49 @@ int find_cmdline_id(lua_State* L)
 
     return 0;
 }
+
+/**
+ * Checks the ID of the process indicated by the Lua Auto Splitter is running without attaching to it.
+ * Used for making conditional statement when there is multiple game versions with different process ID.
+ *
+ * @param L The Lua State.
+ *
+ * @return is 1, returning a boolean value. True if process ID was found and false the otherwise.
+ */
+int check_process_id(lua_State* L)
+{
+    printf("\033[2J\033[1;1H"); // Clear the console
+                                //
+    const char* name = lua_tostring(L, 1);
+    const char* sort = lua_tostring(L, 2);
+    char sortCmd[16] = "";
+
+    char pid_output[PATH_MAX + 100];
+    pid_output[0] = '\0';
+
+    if (!sort) {
+        sort = "first";
+    } else {
+        if (strcmp(sort, "first") != 0 && strcmp(sort, "last") != 0) {
+            printf("[process] Invalid sort argument '%s'. Use 'first' or 'last'. Falling back to first\n", sort);
+            sort = "first";
+        }
+    }
+
+    if (strcmp(sort, "first") == 0) {
+        sortCmd[0] = '\0';
+    }
+    if (strcmp(sort, "last") == 0) {
+        strcpy(sortCmd, " | sort -r");
+    }
+
+    char command[256];
+    snprintf(command, sizeof(command), "pgrep \"%.*s\"%s", (int)strnlen(name, sizeof(command) - strlen(sortCmd) - 1), name, sortCmd);
+
+    if (atomic_load(&auto_splitter_enabled)) {
+        execute_command(command, pid_output);
+    }
+    unsigned long pid = strtoul(pid_output, NULL, 10);
+    lua_pushboolean(L, pid != 0);
+    return 1;
+}
