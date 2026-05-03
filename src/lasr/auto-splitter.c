@@ -123,7 +123,7 @@ static const lasr_function luac_functions[] = {
 };
 
 /**
- * Clears the connection to the current process.
+ * Clears the connection to the current process by resetting the PID and base addresses, and clearing the maps cache so the next attach doesn't use an old cache by accident.
  */
 static void clear_process_binding(void)
 {
@@ -133,6 +133,11 @@ static void clear_process_binding(void)
     maps_clearCache();
 }
 
+/**
+ * Rebinds process state after an attach or re-attach.
+ *
+ * Verifies the current PID is alive, refreshes the main module and DLL base addresses for the current process and clears map caches. 
+ */
 static bool bind_process_state(void)
 {
     if (process.pid == 0 || !process_exists()) {
