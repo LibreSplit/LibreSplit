@@ -6,8 +6,11 @@
 #include <glib.h>
 #include <stdatomic.h>
 #include <stdio.h>
+#include <string.h>
 
 game_process process;
+bool process_lookup_configured = false;
+process_query process_lookup;
 
 /**
  * Restarts the auto splitter by disabling it and re-enabling it again
@@ -105,4 +108,23 @@ const char* value_to_c_string(lua_State* L, int index)
         default:
             return "??";
     }
+}
+
+/**
+ * Utility function that checks if the autosplitter runtime should stop.
+ */
+bool runtime_should_stop(const char* current_file)
+{
+    return !atomic_load(&auto_splitter_enabled) || strcmp(current_file, auto_splitter_file) != 0;
+}
+
+/**
+ * Utility function that checks if the lua script has the provided function.
+ */
+bool has_lua_function(lua_State* L, const char* name)
+{
+    lua_getglobal(L, name);
+    bool exists = lua_isfunction(L, -1);
+    lua_pop(L, 1);
+    return exists;
 }
