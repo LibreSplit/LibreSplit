@@ -23,10 +23,10 @@ process('GameBlaBlaBla.exe')
 
 - With this line, LibreSplit will repeatedly attempt to find this process and will not continue script execution until it is found. This is limited to 15 characters in length (the ones present in `/proc/<pid>/stat`).
 
-If you want to use longer names or check the entire command line use the `cmdline` function:
+If you want to use longer names or check the entire command line add `cmdline` on second parameter:
 
 ```lua
-cmdline('MyGameHasAVeryLongName.exe')
+process('MyGameHasAVeryLongName.exe', 'cmdline')
 ```
 
 - Next we have to define the basic functions. Not all are required and the ones that are required may change depending on the game or end goal, like if loading screens are included or not.
@@ -514,7 +514,7 @@ local array_size = sizeOf("byte25")
 
 **Warning:** As it is now, `sizeOf` returns the size in bytes. This may not be what is needed to properly work with pointers and may see some changes in the future for better integration with the rest of the Auto-Splitter Runtime.
 
-## getModuleSize
+## `getModuleSize`
 
 Given a certain module name (or nothing/nil), returns the size of the module.
 
@@ -524,7 +524,7 @@ local main_module_size_2 = getModuleSize(nil);
 local other_module_size = getModuleSize("other_module");
 ```
 
-## getMaps
+## `getMaps`
 
 Returns an array-like table that contains other tables: one for each of the process's memory maps.
 
@@ -555,7 +555,7 @@ Usage:
 local maps = getMaps()
 ```
 
-## processExists
+## `processExists`
 
 Check if a process is running without attaching to it.
 
@@ -576,4 +576,6 @@ elseif processExists(version.Remake) then
 end
 ```
 
-`processExists()` will return `true` or `false`
+`processExists()` will return `true` or `false`.
+
+_Note: If you want to use longer names, add `cmdline` on second parameter like in `process()` function._
