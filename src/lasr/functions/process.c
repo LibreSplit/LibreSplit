@@ -64,7 +64,7 @@ void stock_process_id(const char* pid_command)
  *
  * @param L The Lua State.
  * @param 1 The name of process to find.
- * @param 2 (optional) Force using full commandline grepping, pgrep -f.
+ * @param 2 (optional) Using full commandline grepping, pgrep -f.
  * @param 3 (optional) Sorting PID.
  *
  * Note: [AL] [2026-5-3] The sorting isn't documented or explained the use case. I'll leave it as it was before.
@@ -82,7 +82,7 @@ int find_process_id(lua_State* L)
     if (lua_isstring(L, 2)) {
         cmdLineFlag = lua_tostring(L, 2);
     }
-    int forceUseCmdLine = cmdLineFlag && strcmp(cmdLineFlag, "cmdline") == 0;
+    int useCmdLine = cmdLineFlag && strcmp(cmdLineFlag, "cmdline") == 0;
 
     const char* sort = lua_tostring(L, 3);
     char sortCmd[16] = "";
@@ -103,7 +103,7 @@ int find_process_id(lua_State* L)
     }
 
     char command[256];
-    if (forceUseCmdLine || strlen(process.name) > 15) {
+    if (useCmdLine) {
         snprintf(command, sizeof(command), "pgrep -f \"%.*s\"%s", (int)strnlen(process.name, sizeof(command) - strlen(sortCmd) - 1), process.name, sortCmd);
     } else {
         snprintf(command, sizeof(command), "pgrep \"%.*s\"%s", (int)strnlen(process.name, sizeof(command) - strlen(sortCmd) - 1), process.name, sortCmd);
@@ -119,7 +119,7 @@ int find_process_id(lua_State* L)
  *
  * @param L The Lua State.
  * @param 1 The name of process to find.
- * @param 2 (optional) Force using full commandline grepping, pgrep -f.
+ * @param 2 (optional) Using full commandline grepping, pgrep -f.
  * @param 3 (optional) Sorting PID.
  *
  * @return is 1, returning a boolean value. True if process ID was found and false the otherwise.
@@ -135,7 +135,7 @@ int check_process_id(lua_State* L)
     if (lua_isstring(L, 2)) {
         cmdLineFlag = lua_tostring(L, 2);
     }
-    int forceUseCmdLine = cmdLineFlag && strcmp(cmdLineFlag, "cmdline") == 0;
+    int useCmdLine = cmdLineFlag && strcmp(cmdLineFlag, "cmdline") == 0;
 
     const char* sort = lua_tostring(L, 3);
     char sortCmd[16] = "";
@@ -159,7 +159,7 @@ int check_process_id(lua_State* L)
     }
 
     char command[256];
-    if (forceUseCmdLine || strlen(name) > 15) {
+    if (useCmdLine) {
         snprintf(command, sizeof(command), "pgrep -f \"%.*s\"%s", (int)strnlen(name, sizeof(command) - strlen(sortCmd) - 1), name, sortCmd);
     } else {
         snprintf(command, sizeof(command), "pgrep \"%.*s\"%s", (int)strnlen(name, sizeof(command) - strlen(sortCmd) - 1), name, sortCmd);
