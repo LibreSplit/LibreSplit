@@ -136,7 +136,7 @@ static void clear_process_binding(void)
 /**
  * Rebinds process state after an attach or re-attach.
  *
- * Verifies the current PID is alive, refreshes the main module and DLL base addresses for the current process and clears map caches. 
+ * Verifies the current PID is alive, refreshes the main module and DLL base addresses for the current process and clears map caches.
  */
 static bool bind_process_state(void)
 {
