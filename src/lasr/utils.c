@@ -4,6 +4,7 @@
 #include "./maps/maps.h"
 
 #include <glib.h>
+#include <signal.h>
 #include <stdatomic.h>
 #include <stdio.h>
 #include <string.h>
@@ -127,4 +128,12 @@ bool has_lua_function(lua_State* L, const char* name)
     bool exists = lua_isfunction(L, -1);
     lua_pop(L, 1);
     return exists;
+}
+
+/**
+ * Helper function that checks if the runtime is still attached to the current process.
+ */
+bool process_is_attached(void)
+{
+    return process.pid == 0 && kill(process.pid, 0) == 0;
 }

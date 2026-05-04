@@ -54,3 +54,4 @@ bool try_find_process(const process_query* query);
 bool wait_for_process(const process_query* query, const char* current_file);
 bool runtime_should_stop(const char* current_file);
 bool has_lua_function(lua_State* L, const char* name);
+bool process_is_attached(void);

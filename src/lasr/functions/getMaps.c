@@ -1,6 +1,8 @@
 #include "getMaps.h"
 
 #include "../maps/maps.h"
+#include "../utils.h"
+#include "lua.h"
 
 #include <stdio.h>
 
@@ -11,6 +13,11 @@
  */
 int getMaps(lua_State* L)
 {
+    if (!process_is_attached()) {
+        lua_pushnil(L);
+        return 1;
+    }
+
     if (lua_gettop(L) != 0) {
         printf("[getMaps] No arguments accepted");
         lua_pushnil(L);
