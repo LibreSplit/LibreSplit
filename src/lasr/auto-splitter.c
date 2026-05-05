@@ -668,6 +668,7 @@ void run_auto_splitter(void)
         }
     }
 
+    process_lookup_configured = false;
     set_process_connected_global(L, false);
     clear_process_binding();
     lua_close(L);
