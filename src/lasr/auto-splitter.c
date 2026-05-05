@@ -586,9 +586,9 @@ void run_auto_splitter(void)
         struct timespec clock_start;
         clock_gettime(CLOCK_MONOTONIC, &clock_start);
 
+        // TODO figure out a way to avoid spinning in a loop of creating the lua rutime and tearing it down for autosplitters without a properly configured process lookup
         if (!process_lookup_configured) {
             fprintf(stderr, "Autosplitter didn't call process() or cmdline()\n");
-            atomic_store(&auto_splitter_enabled, false);
             break;
         }
 
