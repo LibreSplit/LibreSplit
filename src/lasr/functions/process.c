@@ -159,11 +159,14 @@ int find_process_id(lua_State* L)
  */
 int find_cmdline_id(lua_State* L)
 {
-    printf("\033[2J\033[1;1H");
+    printf("\033[2J\033[1;1H"); // Clean the console
+
     process_lookup.kind = PROCESS_LOOKUP_CMDLINE;
     strncpy(process_lookup.name, lua_tostring(L, 1), sizeof(process_lookup.name) - 1);
+
     process_lookup.name[sizeof(process_lookup.name) - 1] = '\0';
     strncpy(process_lookup.sort, normalize_sort(lua_tostring(L, 2)), sizeof(process_lookup.sort) - 1);
+
     process_lookup.sort[sizeof(process_lookup.sort) - 1] = '\0';
     process_lookup_configured = true;
     process.name = process_lookup.name;
