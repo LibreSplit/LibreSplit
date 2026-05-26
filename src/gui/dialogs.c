@@ -22,7 +22,7 @@
 static void dialog_response_cb(GtkWidget* dialog, gint response_id, gpointer user_data)
 {
     if (response_id == GTK_RESPONSE_OK) {
-        gtk_show_uri_on_window(GTK_WINDOW(NULL), "https://github.com/LibreSplit/LibreSplit/wiki/troubleshooting", 0, NULL);
+        gtk_show_uri_on_window(GTK_WINDOW(NULL), "https://libresplit.org/docs/troubleshooting.md", 0, NULL);
     }
     gtk_widget_destroy(dialog);
 }
