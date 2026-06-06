@@ -39,10 +39,14 @@ static void append_entry(ProcessMap e)
         new_block->used = 0;
         new_block->next = NULL;
 
-        if (!head)
+        if (!head) {
             head = new_block;
-        else
-            current->next = new_block;
+        } else {
+            if (current) {
+                // Guard to avoid null-dereferencing
+                current->next = new_block;
+            }
+        }
 
         current = new_block;
     }
@@ -113,7 +117,7 @@ void maps_clearCache(void)
  *
  * @return true if supported, false otherwise.
  */
-static bool maps_ioctlSupported()
+static bool maps_ioctlSupported(void)
 {
     const char* path = "/proc/self/maps";
     int f = open(path, O_RDONLY);
@@ -165,6 +169,7 @@ static size_t maps_getAll_ioctl(void)
             };
             strncpy(map.name, q.vma_name_addr ? map_name : "", sizeof(map.name));
             map.name[sizeof(map.name) - 1] = '\0';
+            map_name[0] = '\0';
             append_entry(map);
             // Advance past this mapping
             q.query_addr = q.vma_end;

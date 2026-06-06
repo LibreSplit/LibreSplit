@@ -2,7 +2,7 @@ project(
     'libresplit',
     'c',
     version: 'pre-release',
-    default_options: ['c_std=gnu23'],
+    default_options: ['c_std=gnu17'],
     meson_version: '>=1.1',
 )
 
@@ -10,6 +10,9 @@ add_project_arguments('-DAPP_VERSION="@0@"'.format(meson.project_version()), lan
 
 if get_option('buildtype') == 'debug'
     add_project_arguments('-DDEBUG', language: 'c')
+    add_project_arguments('-DLOG_LEVEL=0', language: 'c')
+else
+    add_project_arguments('-DLOG_LEVEL=2', language: 'c')
 endif
 
 cc = meson.get_compiler('c')
@@ -31,6 +34,7 @@ libresplit_sources = files(
     'src/server.c',
     'src/shared.c',
     'src/timer.c',
+    'src/logging.c',
 
     # Settings
     'src/settings/definitions.c',
@@ -49,6 +53,7 @@ libresplit_sources = files(
     'src/lasr/functions/print_tbl.c',
     'src/lasr/functions/process.c',
     'src/lasr/functions/readAddress.c',
+    'src/lasr/functions/strtoida.c',
     'src/lasr/functions/shallow_copy_tbl.c',
     'src/lasr/functions/signature.c',
     'src/lasr/functions/sizeOf.c',
@@ -60,6 +65,8 @@ libresplit_sources = files(
 
     # GUI
     'src/gui/utils.c',
+    'src/gui/actions.c',
+    'src/gui/context_menu.c',
     'src/gui/welcome_box.c',
     'src/gui/dialogs.c',
     'src/gui/theming.c',
@@ -95,26 +102,29 @@ css_o = custom_target(
     build_by_default: true,
 )
 
+shared_c_flags = [
+    '-DPREFIX="' + get_option('prefix') + '"',
+    '-DDATADIR="' + get_option('datadir') + '"',
+    '-Werror',
+    '-Wall',
+    '-Wbad-function-cast',
+    '-Wsign-compare',
+    '-Wpedantic',
+]
+
 executable(
     'libresplit',
     libresplit_sources,
     objects: [css_o],
     dependencies: [threads, gtk, luajit, x11, jansson],
-    c_args: [
-        '-DPREFIX="' + get_option('prefix') + '"',
-        '-DDATADIR="' + get_option('datadir') + '"',
-        '-Werror',
-        '-Wall',
-        '-Wbad-function-cast',
-        '-Wsign-compare',
-        '-Wpedantic',
-    ],
+    c_args: shared_c_flags,
     install: true,
 )
 
 executable(
     'libresplit-ctl',
     libresplit_ctl_sources,
+    c_args: shared_c_flags,
     install: true,
 )
 
@@ -186,7 +196,7 @@ cppcheck = find_program('cppcheck', required: false)
 if cppcheck.found()
     # Set args for analysing both sources.
     cppcheck_base_args = [
-        '--std=c23',
+        '--std=c17',
         '--language=c',
         '--enable=warning,performance',
         '--error-exitcode=1',

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <linux/limits.h>
+#include <stdbool.h>
 #include <stddef.h>
 
 typedef enum ConfigType {
@@ -34,6 +35,8 @@ typedef struct LibreSplitConfig {
     ConfigEntry theme_variant;
     ConfigEntry decimals;
     ConfigEntry save_run_history;
+    ConfigEntry ask_on_gold;
+    ConfigEntry ask_on_worse;
 } LibreSplitConfig;
 
 typedef struct KeybindConfig {

@@ -1,8 +1,8 @@
 #include "readAddress.h"
-
 #include "../utils.h"
 
 #include <errno.h>
+#include <lua.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -98,6 +98,18 @@ char* read_memory_string(uint64_t mem_address, int buffer_size, int32_t* err)
  */
 int readAddress(lua_State* L)
 {
+    if (lua_gettop(L) == 0) {
+        // There must be at least 2 arguments: type and address
+        printf("[readAddress] Two arguments are required: type and address. Check your auto splitter code.\n");
+        lua_pushnil(L);
+        return 1;
+    }
+    if (!lua_isstring(L, 1)) {
+        // The "type" argument is not a string. This will bring a segfault if left alone.
+        printf("[readAddress] The type to be read must be a string. Check your auto splitter code.\n");
+        lua_pushnil(L);
+        return 1;
+    }
     memory_error = false;
     uint64_t address;
     const char* value_type = lua_tostring(L, 1);

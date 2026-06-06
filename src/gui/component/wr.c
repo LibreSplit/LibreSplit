@@ -20,7 +20,7 @@ extern LSComponentOps ls_wr_operations;
 /**
  * Constructor
  */
-LSComponent* ls_component_wr_new()
+LSComponent* ls_component_wr_new(void)
 {
     LSWr* self;
 

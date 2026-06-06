@@ -38,6 +38,25 @@ static void mkdir_p(const char* dir, __mode_t permissions)
 }
 
 /**
+ * Copies the user's livesplit data path in a given string.
+ *
+ * @param out_path The string to copy the data path into.
+ */
+void get_libresplit_data_folder_path(char* out_path)
+{
+    struct passwd* pw = getpwuid(getuid());
+    char* XDG_DATA_HOME = getenv("XDG_DATA_HOME");
+    char* base_dir = strcat(pw->pw_dir, "/.local/share/libresplit");
+    if (XDG_DATA_HOME != NULL) {
+        char config_dir[PATH_MAX] = { 0 };
+        strcpy(config_dir, XDG_DATA_HOME);
+        strcat(config_dir, "/libresplit");
+        strcpy(base_dir, config_dir);
+    }
+    strcpy(out_path, base_dir);
+}
+
+/**
  * Copies the user's livesplit configuration path in a given string.
  *
  * @param out_path The string to copy the configuration path into.
@@ -67,6 +86,9 @@ void check_directories(void)
     char libresplit_directory[PATH_MAX] = { 0 };
     get_libresplit_folder_path(libresplit_directory);
 
+    char libresplit_data_directory[PATH_MAX] = { 0 };
+    get_libresplit_data_folder_path(libresplit_data_directory);
+
     char auto_splitters_directory[PATH_MAX];
     char themes_directory[PATH_MAX];
     char splits_directory[PATH_MAX];
@@ -84,7 +106,10 @@ void check_directories(void)
     strcpy(runs_directory, libresplit_directory);
     strcat(runs_directory, "/runs");
 
-    // Make the libresplit directory if it doesn't exist
+    // Make the libresplit data directory if it doesn't exist
+    mkdir_p(libresplit_data_directory, 0755);
+
+    // Make the libresplit config directory if it doesn't exist
     mkdir_p(libresplit_directory, 0755);
 
     // Make the autosplitters directory if it doesn't exist

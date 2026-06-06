@@ -21,7 +21,7 @@ extern LSComponentOps ls_prev_segment_operations;
 /**
  * Constructor
  */
-LSComponent* ls_component_prev_segment_new()
+LSComponent* ls_component_prev_segment_new(void)
 {
     LSPrevSegment* self;
 
@@ -117,8 +117,8 @@ static void prev_segment_draw(LSComponent* self_, const ls_game* game,
     LSPrevSegment* self = (LSPrevSegment*)self_;
     const char* label;
     char str[256];
-    int prev, curr = timer->curr_split;
-    if (curr == game->split_count) {
+    unsigned int prev, curr = timer->curr_split ? timer->curr_split - 1 : 0;
+    if (game->split_count && curr == game->split_count) {
         --curr;
     }
 
@@ -129,7 +129,7 @@ static void prev_segment_draw(LSComponent* self_, const ls_game* game,
     gtk_label_set_text(GTK_LABEL(self->previous_segment), "-");
 
     label = PREVIOUS_SEGMENT;
-    if (timer->segment_deltas[curr] > 0) {
+    if (timer->segment_deltas && timer->segment_deltas[curr] > 0) {
         // Live segment
         label = LIVE_SEGMENT;
         remove_class(self->previous_segment, "best-segment");
@@ -139,11 +139,10 @@ static void prev_segment_draw(LSComponent* self_, const ls_game* game,
         ls_delta_string(str, timer->segment_deltas[curr]);
         gtk_label_set_text(GTK_LABEL(self->previous_segment), str);
     } else if (curr) {
-        prev = timer->curr_split - 1;
         // Previous segment
         if (timer->curr_split) {
             prev = timer->curr_split - 1;
-            if (timer->segment_deltas[prev]) {
+            if (timer->segment_deltas && timer->segment_deltas[prev]) {
                 if (timer->split_info[prev]
                     & LS_INFO_BEST_SEGMENT) {
                     add_class(self->previous_segment, "best-segment");

@@ -40,11 +40,13 @@ int maps_cache_cycles_value = 1; /*!< The number of cycles the cache is active f
 atomic_bool auto_splitter_enabled = true; /*!< Defines if the auto splitter is enabled */
 atomic_bool auto_splitter_running = false; /*!< Defines if the auto splitter is running */
 atomic_bool call_start = false; /*!< True if the auto splitter is requesting for a run to start */
-atomic_bool run_started = false; /*!< Defines if a run is started */
-atomic_bool run_finished = false; // Disallows starting the timer again after finishing until reset
 atomic_bool call_split = false; /*!< True if the auto splitter is requesting to split */
 atomic_bool toggle_loading = false;
 atomic_bool call_reset = false; /*!< True if the auto splitter is requesting a run reset */
+atomic_bool run_using_game_time_call; /*!< True if startup has run and a new value for using game time has been set by the auto splitter */
+atomic_bool run_using_game_time; /*!< True if the auto splitter is requesting to use game time, false for real time */
+atomic_bool run_started = false; /*!< Wheter a run was started or not, same as timer->started but accessible from the auto splitter thread */
+atomic_bool run_running = false; /*!< Wheter we are running or not, same as timer->running but accessible from the auto splitter thread */
 bool prev_is_loading; /*!< The previous frame "is_loading" state */
 
 /**
@@ -74,7 +76,7 @@ static const char* disabled_functions[] = {
  *
  * @returns Zero if the process is not running, non-zero if it is.
  */
-int process_exists()
+static int process_exists(void)
 {
     int result = kill(process.pid, 0);
     return result == 0;
@@ -99,6 +101,7 @@ static const luaL_Reg lj_lib_load[] = {
  */
 static const lasr_function luac_functions[] = {
     { "process", find_process_id },
+    { "cmdline", find_cmdline_id },
     { "getBaseAddress", getBaseAddress },
     { "readAddress", readAddress },
     { "sizeOf", size_of },
@@ -114,6 +117,7 @@ static const lasr_function luac_functions[] = {
     { "b_lshift", b_lshift },
     { "b_rshift", b_rshift },
     { "getMaps", getMaps },
+    { "str2ida", str2ida },
     { NULL, NULL }
 };
 
@@ -206,6 +210,7 @@ bool call_va(lua_State* L, const char* func, const char* sig, ...)
 
             default:
                 printf("invalid option (%c)\n", *(sig - 1));
+                va_end(vl);
                 return false;
         }
         if (*(sig - 1) == '>')
@@ -232,6 +237,7 @@ bool call_va(lua_State* L, const char* func, const char* sig, ...)
                 case 'd': /* double result */
                     if (!lua_isnumber(L, nres)) {
                         printf("function '%s' wrong result type, expected double\n", func);
+                        va_end(vl);
                         return false;
                     }
                     *va_arg(vl, double*) = lua_tonumber(L, nres);
@@ -240,6 +246,7 @@ bool call_va(lua_State* L, const char* func, const char* sig, ...)
                 case 'i': /* int result */
                     if (!lua_isnumber(L, nres)) {
                         printf("function '%s' wrong result type, expected int\n", func);
+                        va_end(vl);
                         return false;
                     }
                     *va_arg(vl, int*) = lua_tointeger(L, nres);
@@ -248,6 +255,7 @@ bool call_va(lua_State* L, const char* func, const char* sig, ...)
                 case 's': /* string result */
                     if (!lua_isstring(L, nres)) {
                         printf("function '%s' wrong result type, expected string\n", func);
+                        va_end(vl);
                         return false;
                     }
                     *va_arg(vl, const char**) = lua_tostring(L, nres);
@@ -256,6 +264,7 @@ bool call_va(lua_State* L, const char* func, const char* sig, ...)
                 case 'b':
                     if (!lua_isboolean(L, nres)) {
                         printf("function '%s' wrong result type, expected boolean\n", func);
+                        va_end(vl);
                         return false;
                     }
                     *va_arg(vl, bool*) = lua_toboolean(L, nres);
@@ -263,6 +272,7 @@ bool call_va(lua_State* L, const char* func, const char* sig, ...)
 
                 default:
                     printf("invalid option (%c)\n", *(sig - 1));
+                    va_end(vl);
                     return false;
             }
             nres++;
@@ -304,6 +314,11 @@ void startup(lua_State* L)
     lua_getglobal(L, "useGameTime");
     if (lua_isboolean(L, -1)) {
         use_game_time = lua_toboolean(L, -1);
+        atomic_store(&run_using_game_time, use_game_time);
+        atomic_store(&run_using_game_time_call, true);
+    } else {
+        atomic_store(&run_using_game_time, false); // Default to real time if not specified
+        atomic_store(&run_using_game_time_call, true);
     }
     lua_pop(L, 1); // Remove 'useGameTime' from the stack
 }
@@ -344,9 +359,9 @@ void start(lua_State* L)
 {
     bool ret;
     if (call_va(L, "start", ">b", &ret)) {
-        atomic_store(&call_start, ret);
         if (ret) {
             atomic_store(&run_started, true);
+            atomic_store(&call_start, true);
         }
     }
     lua_pop(L, 1); // Remove the return value from the stack
@@ -400,8 +415,13 @@ void reset(lua_State* L)
 {
     bool shouldReset;
     if (call_va(L, "reset", ">b", &shouldReset)) {
-        if (shouldReset)
+        if (shouldReset) {
+
             atomic_store(&call_reset, true);
+            // Assume these happen instantly to avoid any desync
+            atomic_store(&run_started, false);
+            atomic_store(&run_running, false);
+        }
     }
     lua_pop(L, 1); // Remove the return value from the stack
 }
@@ -428,7 +448,7 @@ void gameTime(lua_State* L)
 /**
  * Loads the auto splitter Lua file and executes the auto splitter.
  */
-void run_auto_splitter()
+void run_auto_splitter(void)
 {
     lua_State* L = luaL_newstate();
     luaL_openlibs(L);
@@ -515,11 +535,11 @@ void run_auto_splitter()
             update(L);
         }
 
-        if (gameTime_exists && use_game_time && atomic_load(&run_started) && !atomic_load(&run_finished)) {
+        if (gameTime_exists && use_game_time && atomic_load(&run_started) && atomic_load(&run_running)) {
             gameTime(L);
         }
 
-        if (start_exists && !atomic_load(&run_started) && !atomic_load(&run_finished)) {
+        if (start_exists && !atomic_load(&run_started) && !atomic_load(&run_running)) {
             start(L);
         }
 
@@ -531,7 +551,7 @@ void run_auto_splitter()
             is_loading(L);
         }
 
-        if (reset_exists) {
+        if (reset_exists && atomic_load(&run_running)) {
             reset(L);
         }
 

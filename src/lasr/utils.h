@@ -2,6 +2,8 @@
 
 #include <linux/limits.h>
 #include <lua.h>
+
+#include <stdbool.h>
 #include <stdint.h>
 
 #include <sys/uio.h>
@@ -30,6 +32,7 @@ typedef struct ProcessMap {
     char name[PATH_MAX];
 } ProcessMap;
 
+bool restart_auto_splitter(void);
 uintptr_t find_base_address(const char* module);
 bool handle_memory_error(uint32_t err);
 const char* value_to_c_string(lua_State* L, int index);

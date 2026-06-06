@@ -6,6 +6,7 @@
  * @return False, to remove the function from the queue.
  */
 #include "src/lasr/auto-splitter.h"
+#include <gio/gio.h>
 #include <glib.h>
 #include <gtk/gtk.h>
 #include <stdatomic.h>
@@ -29,8 +30,13 @@ static void dialog_response_cb(GtkWidget* dialog, gint response_id, gpointer use
 gboolean display_non_capable_mem_read_dialog(gpointer data)
 {
     atomic_store(&auto_splitter_enabled, 0);
+    GtkApplication* app = GTK_APPLICATION(g_application_get_default());
+    GtkWindow* win = NULL;
+    if (app != NULL) {
+        win = gtk_application_get_active_window(app);
+    }
     GtkWidget* dialog = gtk_message_dialog_new(
-        GTK_WINDOW(NULL),
+        GTK_WINDOW(win),
         GTK_DIALOG_DESTROY_WITH_PARENT,
         GTK_MESSAGE_ERROR,
         GTK_BUTTONS_NONE,
@@ -57,10 +63,15 @@ gboolean display_non_capable_mem_read_dialog(gpointer data)
     return FALSE; // False removes this function from the queue
 }
 
-bool display_confirm_reset_dialog()
+bool display_confirm_reset_dialog(void)
 {
+    GtkApplication* app = GTK_APPLICATION(g_application_get_default());
+    GtkWindow* win = NULL;
+    if (app != NULL) {
+        win = gtk_application_get_active_window(app);
+    }
     GtkWidget* dialog = gtk_message_dialog_new(
-        NULL,
+        GTK_WINDOW(win),
         GTK_DIALOG_MODAL,
         GTK_MESSAGE_WARNING,
         GTK_BUTTONS_YES_NO,

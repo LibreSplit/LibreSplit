@@ -97,3 +97,18 @@ has_pizza = my_table["pizza"] ~= nil
 ```
 
 And it's faster too!
+
+### str2ida
+
+When you're working with `sig_scan`, many times the signature is just an identifying string purposefully inserted by the game programmer for speedrun timers.
+
+In those cases you may want, for the sake of readability to use the string itself instead of its binary representation. If that's the case, `str2ida` is what you're looking for.
+
+```.lua
+-- This string is actually used in Pizza Tower
+local signature = str2ida("magic id for speedrun data for livesplit")
+print(signature)
+-- It will print "6D 61 67 69 63 20 69 64 20 66 6F 72 20 73 70 65 65 64 72 75 6E 20 64 61 74 61 20 66 6F 72 20 6C 69 76 65 73 70 6C 69 74"
+local speedrundata_pointer = sig_scan(signature, 0)
+-- Continue with the auto splitter
+```

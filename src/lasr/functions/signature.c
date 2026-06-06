@@ -122,6 +122,11 @@ uint16_t* convert_signature(const char* signature, size_t* pattern_size)
     }
 
     char* token = strtok(signature_copy, " ");
+    if (token == NULL) {
+        // Signature is all delimiters or empty
+        free(signature_copy);
+        return NULL;
+    }
     size_t size = 0;
     size_t capacity = 10;
     uint16_t* pattern = (uint16_t*)malloc(capacity * sizeof(uint16_t));

@@ -10,7 +10,7 @@ void getXDGruntimeDir(char* buffer, size_t size);
 /**
  * Available Libresplitctl commands
  */
-typedef enum CTLCommand : uint8_t {
+typedef enum CTLCommand {
     CTL_CMD_START_SPLIT, /*!< Start or split */
     CTL_CMD_STOP_RESET, /*!< Stop or reset */
     CTL_CMD_CANCEL, /*!< Cancel run */
@@ -24,5 +24,5 @@ typedef enum CTLCommand : uint8_t {
  */
 typedef struct __attribute__((__packed__)) CTLMessage {
     uint32_t length; /*!< Size of message in bytes */
-    uint8_t message[]; /*!< The message sent */
+    CTLCommand message[]; /*!< The message sent */
 } CTLMessage;

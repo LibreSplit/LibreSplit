@@ -19,7 +19,7 @@ extern LSComponentOps ls_best_sum_operations;
 /**
  * Constructor
  */
-LSComponent* ls_component_best_sum_new()
+LSComponent* ls_component_best_sum_new(void)
 {
     LSBestSum* self;
     GtkWidget* label;

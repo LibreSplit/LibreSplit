@@ -27,7 +27,7 @@ extern LSComponentOps ls_detailed_timer_operations;
 /**
  * Constructor
  */
-LSComponent* ls_component_detailed_timer_new()
+LSComponent* ls_component_detailed_timer_new(void)
 {
     LSDetailedTimer* self;
     GtkWidget* spacer;
@@ -175,14 +175,15 @@ static void detailed_timer_clear_game(LSComponent* self_)
 static void detailed_timer_draw(LSComponent* self_, const ls_game* game, const ls_timer* timer)
 {
     LSDetailedTimer* self = (LSDetailedTimer*)self_;
-    char str[256], millis[10] = {}, seg[256], seg_millis[10] = {};
+
+    
     char pb[256] = "PB: ";
     char best_seg[256] = "BestSeg: ";
     char best_split[256] = "BestSplit: ";
-    
     int curr;
+    char str[256], millis[10] = { 0 }, seg[256], seg_millis[10] = { 0 };
 
-    curr = timer->curr_split;
+    unsigned int curr = timer->curr_split;
     if (curr == game->split_count) {
         --curr;
     }
@@ -195,7 +196,7 @@ static void detailed_timer_draw(LSComponent* self_, const ls_game* game, const l
     if (curr == game->split_count) {
         curr = game->split_count - 1;
     }
-    if (timer->time <= 0) {
+    if (ls_timer_get_time(timer, true) <= 0) {
         add_class(self->time, "delay");
     } else {
         if (timer->curr_split == game->split_count
@@ -213,7 +214,7 @@ static void detailed_timer_draw(LSComponent* self_, const ls_game* game, const l
             }
         }
     }
-    ls_time_millis_string(str, &millis[1], timer->time);
+    ls_time_millis_string(str, &millis[1], ls_timer_get_time(timer, true));
     if (millis[1] != '\0')
         millis[0] = '.';
     gtk_label_set_text(GTK_LABEL(self->time_seconds), str);

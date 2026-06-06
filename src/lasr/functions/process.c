@@ -96,3 +96,45 @@ int find_process_id(lua_State* L)
 
     return 0;
 }
+
+/**
+ * Finds the ID of the process indicated by the Lua Auto Splitter using full commandline grepping.
+ *
+ *  NOTE: [Penaz] [2026-04-25] This differs from find_process_id only by the -f argument. Consider
+ *  ^ merging the command creation into a single function instead of duplicating code.
+ *
+ * @param L The Lua State.
+ *
+ * @return Always zero.
+ */
+int find_cmdline_id(lua_State* L)
+{
+    printf("\033[2J\033[1;1H"); // Clear the console
+
+    process.name = lua_tostring(L, 1);
+    const char* sort = lua_tostring(L, 2);
+    char sortCmd[16] = "";
+
+    if (!sort) {
+        sort = "first";
+    } else {
+        if (strcmp(sort, "first") != 0 && strcmp(sort, "last") != 0) {
+            printf("[process] Invalid sort argument '%s'. Use 'first' or 'last'. Falling back to first\n", sort);
+            sort = "first";
+        }
+    }
+
+    if (strcmp(sort, "first") == 0) {
+        sortCmd[0] = '\0'; // No sorting
+    }
+    if (strcmp(sort, "last") == 0) {
+        strcpy(sortCmd, " | sort -r"); // Reverse the sorting to get latest PID
+    }
+
+    char command[256];
+    snprintf(command, sizeof(command), "pgrep -f \"%.*s\"%s", (int)strnlen(process.name, sizeof(command) - strlen(sortCmd) - 1), process.name, sortCmd);
+
+    stock_process_id(command);
+
+    return 0;
+}

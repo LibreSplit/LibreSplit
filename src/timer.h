@@ -2,16 +2,17 @@
 
 #include "src/settings/definitions.h"
 #include <stdatomic.h>
+#include <stdbool.h>
 
-#define LS_INFO_BEHIND_TIME (1)
-#define LS_INFO_LOSING_TIME (2)
-#define LS_INFO_BEST_SPLIT (4)
-#define LS_INFO_BEST_SEGMENT (8)
+#define LS_INFO_BEHIND_TIME (1 << 0)
+#define LS_INFO_LOSING_TIME (1 << 1)
+#define LS_INFO_BEST_SPLIT (1 << 2)
+#define LS_INFO_BEST_SEGMENT (1 << 3) // Gold split
 
 extern AppConfig cfg;
 
 typedef struct ls_game {
-    char* path;
+    char path[PATH_MAX];
     char* title;
     char* theme;
     char* theme_variant;
@@ -24,23 +25,28 @@ typedef struct ls_game {
     char** split_titles;
     char** split_icon_paths; // null if no icons
     bool contains_icons;
-    int split_count;
+    unsigned int split_count;
     long long* split_times;
     long long* segment_times;
     long long* best_splits;
     long long* best_segments;
 } ls_game;
 
+/**
+ * @brief Timer structure for managing game and time.
+ * Timer structure, it includes RTA, gametime, loading time, splits, deltas, and other relevant information for tracking the progress of a run.
+ */
 typedef struct ls_timer {
-    int started;
-    int running;
-    int loading;
-    int curr_split;
-    long long now;
-    long long start_time;
-    long long time;
-    long long sum_of_bests;
-    long long world_record;
+    bool usingGameTime; /*!< Splitter is using game time instead of real time. Only to be used internally */
+    long long gameTime; /*!< The current game time only usable in LASR. Only to be used internally */
+    long long realTime; /*!< Real time. Starts when run start and pauses while loading. Only to be used internally */
+    int loading; /*!< Currently loading? used for knowing if loadingTime should tick or not. Only to be used internally */
+    long long loadingTime; /*!< Time spent loading, used to subtract from real time when trying to get Load-Removed Time. Only to be used internally */
+    int started; /*!< Wether the run has started, either by LASR or manually, keeps being set to true after run finished */
+    bool running; /*!< Whether the runner is currently running. If this is false and started is true then the run finished. Mainly used to check if some actions are valid to perform (splits, pause, etc) */
+    unsigned int curr_split; /*!< Index of the current split, 0 for first split */
+    long long sum_of_bests; /*!< Sum of best segments */
+    long long world_record; /*!< World record time */
     long long* split_times;
     long long* split_deltas;
     long long* segment_times;
@@ -49,13 +55,14 @@ typedef struct ls_timer {
     long long* best_splits;
     long long* best_segments;
     const ls_game* game;
+    long long last_tick; // This NEEDS to be here for resetting
     int* attempt_count;
     int* finished_count;
 } ls_timer;
 
 extern atomic_bool run_started;
 
-long long ls_time_now(void);
+long long ls_timer_get_time(const ls_timer* timer, bool load_removed);
 
 long long ls_time_value(const char* string);
 
@@ -77,15 +84,15 @@ bool ls_timer_has_gold_split(const ls_timer* timer);
 
 int ls_game_save(const ls_game* game);
 
-void ls_game_release(const ls_game* game);
+void ls_game_release(ls_game* game);
 
 int ls_timer_create(ls_timer** timer_ptr, ls_game* game);
 
-void ls_timer_release(const ls_timer* timer);
+void ls_timer_release(ls_timer* timer);
 
 int ls_timer_start(ls_timer* timer);
 
-void ls_timer_step(ls_timer* timer, long long now);
+void ls_timer_step(ls_timer* timer);
 
 int ls_timer_split(ls_timer* timer);
 
@@ -93,10 +100,12 @@ int ls_timer_skip(ls_timer* timer);
 
 int ls_timer_unsplit(ls_timer* timer);
 
+void ls_timer_pause(ls_timer* timer);
+
+void ls_timer_unpause(ls_timer* timer);
+
 void ls_timer_stop(ls_timer* timer);
 
 int ls_timer_reset(ls_timer* timer);
 
 int ls_timer_cancel(ls_timer* timer);
-
-bool is_run_started(ls_timer* timer);

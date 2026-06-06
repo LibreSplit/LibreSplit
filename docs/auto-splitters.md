@@ -20,7 +20,13 @@
 ```lua
 process('GameBlaBlaBla.exe')
 ```
-* With this line, LibreSplit will repeatedly attempt to find this process and will not continue script execution until it is found.
+* With this line, LibreSplit will repeatedly attempt to find this process and will not continue script execution until it is found. This is limited to 15 characters in length (the ones present in `/proc/<pid>/stat`).
+
+If you want to use longer names or check the entire command line use the `cmdline` function:
+
+```lua
+cmdline('MyGameHasAVeryLongName.exe')
+```
 
 * Next we have to define the basic functions. Not all are required and the ones that are required may change depending on the game or end goal, like if loading screens are included or not.
     * The order at which these run is the same as they are documented below.
@@ -160,7 +166,8 @@ end
 * To solve that, we only want to split when we enter a loading screen (old is false, current is true), but we also don't want to split on the first loading screen as we have the assumption that the first loading screen is when the run starts. So that's where our loadCount comes in handy, we can just check if we are on the first one and only split when we aren't.
 
 ### `isLoading`
-Pauses the timer whenever true is being returned.
+Marks the timer as "loading"/"paused". When paused, it will start adding time to LT (Loading Time), effectively pausing RTA.
+Only has an effect on RTA/LRT (Load Removed Time). Doesnt affect splitter logic at all.
 * Runs every 1000 / `refreshRate` milliseconds.
 ```lua
 process('GameBlaBlaBla.exe')

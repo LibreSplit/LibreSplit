@@ -29,8 +29,8 @@
 LibreSplit is a speedrun timer based on [urn](https://github.com/3snowp7im/urn) that adds support for Lua-based auto splitters that are easy to port from ASL.
 
 <p align="center">
-<img src="https://github.com/LibreSplit/LibreSplit/assets/34382191/2adfdae5-9a21-4bdf-a4c4-f1d5962a0b63" width="350">
-<img src="https://github.com/LibreSplit/LibreSplit/assets/34382191/4455f57a-3d34-4fa3-9dff-2b342b6c56da" width="350">
+<img src="https://github.com/LibreSplit/LibreSplit-resources/blob/main/themes/standard/standard.png" width="45%" alt="Standard Theme: A grey theme with bright coloured timer background. Uses a sans serif font, has a bright pink border around the whole window">
+<img src="https://github.com/LibreSplit/LibreSplit-resources/blob/main/themes/minimalistic/minimalistic.png" width="45%" alt="Minimalistic Theme: A dark theme with bright curved edge outlines. Uses a thick sans serif font.">
 </p>
 
 ### If you are looking for the public repository of splits, auto splitters and themes. They are located [here](https://github.com/LibreSplit/LibreSplit-resources)
@@ -69,6 +69,11 @@ LibreSplit requires the following dependencies on your system to compile:
 - `x11`
 - `libjansson`
 - `luajit`
+
+and also the following (optional) runtime dependencies:
+
+- `gvfs` (for web split icons)
+- `glib-networking` (for web split icons)
 
 Install the required dependencies:
 

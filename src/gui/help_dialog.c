@@ -3,15 +3,25 @@
 #include <gtk/gtk.h>
 #include <stdio.h>
 
+static GtkWidget* help_window_singleton = NULL;
+
 static gboolean on_help_window_delete(GtkWidget* widget, GdkEvent* event, gpointer user_data)
 {
+    help_window_singleton = NULL;
     gtk_widget_destroy(widget);
     return TRUE;
 }
 
 static void build_help_dialog(GtkApplication* app, gpointer data)
 {
+    // Show already open window if another one is called.
+    if (help_window_singleton) {
+        gtk_window_present(GTK_WINDOW(help_window_singleton));
+        return;
+    }
+
     GtkWidget* window = gtk_application_window_new(app);
+    help_window_singleton = window;
     gtk_window_set_title(GTK_WINDOW(window), "About LibreSplit");
     gtk_window_set_default_size(GTK_WINDOW(window), 200, 320);
     gtk_window_set_resizable(GTK_WINDOW(window), FALSE);

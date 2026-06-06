@@ -61,7 +61,7 @@ gboolean ls_app_window_keypress(GtkWidget* widget,
     if (keybind_match(win->keybinds.start_split, event->key)) {
         timer_start_split(win);
     } else if (keybind_match(win->keybinds.stop_reset, event->key)) {
-        timer_stop_reset(win);
+        timer_stop_or_reset(win);
     } else if (keybind_match(win->keybinds.cancel, event->key)) {
         timer_cancel_run(win);
     } else if (keybind_match(win->keybinds.unsplit, event->key)) {

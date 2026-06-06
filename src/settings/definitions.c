@@ -61,6 +61,18 @@ AppConfig cfg = {
             .value.b = true,
             .desc = "Save run history JSON files",
         },
+        .ask_on_gold = {
+            .key = "ask_on_gold",
+            .type = CFG_BOOL,
+            .value.b = true,
+            .desc = "Ask before resetting a run with gold splits",
+        },
+        .ask_on_worse = {
+            .key = "ask_on_worse",
+            .type = CFG_BOOL,
+            .value.b = true,
+            .desc = "Ask before saving run worse than PB",
+        },
     },
     .keybinds = {
         .start_split = {

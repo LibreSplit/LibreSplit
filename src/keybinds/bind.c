@@ -21,6 +21,7 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+#include <inttypes.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -449,7 +450,7 @@ keymap_changed(GdkKeymap* map)
  * This function must be called after initializing GTK, before calling any
  * other function in the library. Can only be called once.
  */
-void keybinder_init()
+void keybinder_init(void)
 {
     GdkDisplay* display = gdk_display_get_default();
     GdkKeymap* keymap = gdk_keymap_get_for_display(display);
@@ -547,9 +548,8 @@ keybinder_bind_full(const char* keystring,
  */
 void keybinder_unbind(const char* keystring, KeybinderHandler handler)
 {
-    GSList* iter;
 
-    for (iter = bindings; iter != NULL; iter = iter->next) {
+    for (GSList* iter = bindings; iter != NULL; iter = iter->next) {
         struct Binding* binding = iter->data;
 
         if (strcmp(keystring, binding->keystring) != 0 || handler != binding->handler)
@@ -580,9 +580,8 @@ void keybinder_unbind(const char* keystring, KeybinderHandler handler)
  */
 void keybinder_unbind_all(const char* keystring)
 {
-    GSList* iter = bindings;
 
-    for (iter = bindings; iter != NULL; iter = iter->next) {
+    for (GSList* iter = bindings; iter != NULL; iter = iter->next) {
         struct Binding* binding = iter->data;
 
         if (strcmp(keystring, binding->keystring) != 0) {
