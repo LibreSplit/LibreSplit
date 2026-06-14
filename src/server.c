@@ -15,28 +15,21 @@
 extern atomic_bool exit_requested;
 
 /**
- * Structure to pass command data to main thread
- */
-typedef struct CommandData {
-    CTLCommand command; /*!< The command to send to the main thread */
-} CommandData;
-
-/**
  * External functions from main.c to handle commands
  *
  * @param command The command to be handled.
  */
-extern void handle_ctl_command(CTLCommand command);
+extern void handle_ctl_command(const char* command);
 
 /**
  * Command execution function that runs on the main thread
  */
 static gboolean execute_command_on_main_thread(gpointer data)
 {
-    CommandData* cmd_data = (CommandData*)data;
+    char* cmd_data = (char*)data;
 
     // Call the main.c function to handle the command
-    handle_ctl_command(cmd_data->command);
+    handle_ctl_command(cmd_data);
 
     g_free(cmd_data);
     return FALSE; // Remove from idle queue
@@ -64,7 +57,7 @@ int receive_message(int sockfd, CTLMessage** out)
     if (n != sizeof(len))
         return -1;
 
-    CTLMessage* msg = malloc(sizeof(CTLMessage) + len);
+    CTLMessage* msg = calloc(1, sizeof(CTLMessage) + len);
     if (!msg) {
         fprintf(stderr, "Failed to allocate memory for control message.\n");
         return -1;
@@ -164,21 +157,17 @@ void* ls_ctl_server(void* arg)
             int result = receive_message(client_fd, &msg);
 
             if (result == 0) {
-                if (msg->length == sizeof(CTLCommand)) {
-                    CTLCommand command = *(CTLCommand*)msg->message;
-                    CommandData* cmd_data = g_malloc(sizeof(CommandData));
-                    cmd_data->command = command;
+                char* command = msg->message;
+                char* cmd_data = g_malloc(strlen(command) + 1);
+                strcpy(cmd_data, command);
 
-                    // Queue command execution on main thread
-                    g_idle_add(execute_command_on_main_thread, cmd_data);
-                } else {
-                    printf("Invalid message length: %u (expected %zu)\n", msg->length, sizeof(CTLCommand));
-                }
+                // Queue command execution on main thread
+                g_idle_add(execute_command_on_main_thread, cmd_data);
 
-                free(msg);
             } else {
                 printf("Client closed without sending a full message.\n");
             }
+            free(msg);
 
             close(client_fd);
         }

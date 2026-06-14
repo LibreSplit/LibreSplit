@@ -37,7 +37,7 @@ void print_help(void)
  * @param cmd The LibreSplit command to send
  * @return True if the command is successfully sent, false otherwise.
  */
-bool sendToLibreSplit(const CTLCommand cmd)
+bool sendToLibreSplit(const char* cmd)
 {
     char runtime_dir[PATH_MAX - 17];
     getXDGruntimeDir(runtime_dir, sizeof(runtime_dir));
@@ -68,17 +68,20 @@ bool sendToLibreSplit(const CTLCommand cmd)
 
     // We can send arbitrarily long messages, but for now we only need to send a single byte
     // Could be useful for future extensions though
-    CTLMessage* ctl_msg = (CTLMessage*)malloc(sizeof(CTLMessage) + sizeof(cmd));
+    CTLMessage* ctl_msg = (CTLMessage*)malloc(sizeof(CTLMessage) + strlen(cmd));
     if (!ctl_msg) {
         fprintf(stderr, "Failed to allocate memory for control message.\n");
         close(sockfd);
         return false;
     }
-    ctl_msg->length = htonl(sizeof(cmd));
-    memcpy(ctl_msg->message, &cmd, sizeof(cmd));
 
-    int written = write(sockfd, ctl_msg, sizeof(CTLMessage) + sizeof(cmd));
-    if (written != sizeof(CTLMessage) + sizeof(cmd)) {
+    int32_t msg_len = strlen(cmd) + 1; // +1 for null terminator
+
+    ctl_msg->length = htonl(msg_len); // +1 for null terminator
+    memcpy(ctl_msg->message, cmd, msg_len);
+
+    int written = write(sockfd, ctl_msg, sizeof(CTLMessage) + msg_len);
+    if (written != (int)(sizeof(CTLMessage) + msg_len)) {
         fprintf(stderr, "Failed to send command to LibreSplit.\n");
         close(sockfd);
         free(ctl_msg);
@@ -110,23 +113,7 @@ int main(int argc, char* argv[])
 
     bool success = false;
 
-    if (strcmp(cmd, "startorsplit") == 0) {
-        success = sendToLibreSplit(CTL_CMD_START_SPLIT);
-    } else if (strcmp(cmd, "stoporreset") == 0) {
-        success = sendToLibreSplit(CTL_CMD_STOP_RESET);
-    } else if (strcmp(cmd, "cancel") == 0) {
-        success = sendToLibreSplit(CTL_CMD_CANCEL);
-    } else if (strcmp(cmd, "unsplit") == 0) {
-        success = sendToLibreSplit(CTL_CMD_UNSPLIT);
-    } else if (strcmp(cmd, "skipsplit") == 0) {
-        success = sendToLibreSplit(CTL_CMD_SKIP);
-    } else if (strcmp(cmd, "exit") == 0) {
-        success = sendToLibreSplit(CTL_CMD_EXIT);
-    } else {
-        fprintf(stderr, "Unknown command: %s\n", cmd);
-        fprintf(stderr, "Try 'help' for a list of valid commands.\n");
-        return 1;
-    }
+    success = sendToLibreSplit(cmd);
 
     if (!success) {
         return 1;
