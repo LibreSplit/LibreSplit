@@ -89,6 +89,11 @@ static void* ls_auto_splitter(void* arg)
 
 int main(int argc, char* argv[])
 {
+    // Check if app is running as root.
+    if (geteuid() == 0) {
+        return 1;
+    }
+
     initLogQueue();
     check_directories();
 
