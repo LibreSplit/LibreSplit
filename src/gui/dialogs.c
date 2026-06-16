@@ -63,6 +63,33 @@ gboolean display_non_capable_mem_read_dialog(gpointer data)
     return FALSE; // False removes this function from the queue
 }
 
+bool display_root_warning_dialog(void)
+{
+    GtkApplication* app = GTK_APPLICATION(g_application_get_default());
+    GtkWindow* win = NULL;
+
+    if (app != NULL) {
+        win = gtk_application_get_active_window(app);
+    }
+
+    GtkWidget* dialog = gtk_message_dialog_new(
+        GTK_WINDOW(win),
+        GTK_DIALOG_MODAL,
+        GTK_MESSAGE_WARNING,
+        GTK_BUTTONS_OK,
+        "Running LibreSplit as root is unsafe.\n\n"
+        "Running applications as root can lead to security issues "
+        "and may cause unintended file ownership problems.\n\n"
+        "Please run LibreSplit as a normal user.");
+
+    gtk_window_set_title(GTK_WINDOW(dialog), "Unsafe Configuration");
+
+    gtk_dialog_run(GTK_DIALOG(dialog));
+    gtk_widget_destroy(dialog);
+
+    return true;
+}
+
 bool display_confirm_reset_dialog(void)
 {
     GtkApplication* app = GTK_APPLICATION(g_application_get_default());
