@@ -63,6 +63,14 @@ gboolean display_non_capable_mem_read_dialog(gpointer data)
     return FALSE; // False removes this function from the queue
 }
 
+/**
+ * Displays a modal warning dialog explaining that LibreSplit should not be
+ * run as the root user due to potential security and file permission issues.
+ * The dialog is parented to the active application window when one exists.
+ *
+ * @return `true` to indicate that root execution was detected and the warning
+ *         dialog was shown.
+ */
 bool display_root_warning_dialog(void)
 {
     GtkApplication* app = GTK_APPLICATION(g_application_get_default());
