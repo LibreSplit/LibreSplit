@@ -358,7 +358,7 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
     // get splits
     ref = json_object_get(json, "splits");
     if (!json_is_array(ref) || json_array_size(ref) == 0) {
-		error = 1;
+        error = 1;
         size_t msg_len = snprintf(NULL, 0, "Split file must contain a non-empty splits array");
         *error_msg = calloc(msg_len + 1, sizeof(char));
         if (*error_msg == NULL) {
