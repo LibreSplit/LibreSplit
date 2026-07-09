@@ -13,6 +13,7 @@ typedef struct LSDetailedTimer {
     GtkWidget* detailed_info; /*!< Box */
     GtkWidget* segment_pb; /*!< Label */
     GtkWidget* segment_best; /*!< Label */
+    GtkWidget* split_best; /*!< Label */
     GtkWidget* detailed_time; /*!< Box */
     GtkWidget* time; /*!< Box */
     GtkWidget* time_seconds; /*!< Label */
@@ -45,15 +46,22 @@ LSComponent* ls_component_detailed_timer_new(void)
     gtk_widget_show(self->detailed_info);
     add_class(self->detailed_info, "detailed-timer");
 
+    //The order of the segment-best, segment-pb, and best-split are reversed in the timer to how they're listed here.
+    self->split_best = gtk_label_new(NULL);
+    add_class(self->split_best, "split-best");
+    gtk_box_pack_end(GTK_BOX(self->detailed_info), self->split_best, FALSE, FALSE, 0);
+    gtk_widget_show(self->split_best);
+    
     self->segment_best = gtk_label_new(NULL);
     add_class(self->segment_best, "segment-best");
     gtk_box_pack_end(GTK_BOX(self->detailed_info), self->segment_best, FALSE, FALSE, 0);
     gtk_widget_show(self->segment_best);
-
+    
     self->segment_pb = gtk_label_new(NULL);
     add_class(self->segment_pb, "segment-pb");
     gtk_box_pack_end(GTK_BOX(self->detailed_info), self->segment_pb, FALSE, FALSE, 0);
     gtk_widget_show(self->segment_pb);
+
     //
     self->detailed_time = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     add_class(self->detailed_time, "timer");
@@ -167,9 +175,12 @@ static void detailed_timer_clear_game(LSComponent* self_)
 static void detailed_timer_draw(LSComponent* self_, const ls_game* game, const ls_timer* timer)
 {
     LSDetailedTimer* self = (LSDetailedTimer*)self_;
+
+    
+    char pb[256] = "PB: ";
+    char best_seg[256] = "BestSeg: ";
+    char best_split[256] = "BestSplit: ";
     char str[256], millis[10] = { 0 }, seg[256], seg_millis[10] = { 0 };
-    char pb[256] = "PB:    ";
-    char best[256] = "Best: ";
 
     unsigned int curr = timer->curr_split;
     if (curr == game->split_count) {
@@ -219,11 +230,16 @@ static void detailed_timer_draw(LSComponent* self_, const ls_game* game, const l
         gtk_label_set_text(GTK_LABEL(self->segment_millis), seg_millis);
     }
 
-    ls_time_string(&pb[6], game->segment_times[timer->curr_split]);
+    //Set text on the PB/best seg/best split box
+    ls_time_string(&pb[4], game->segment_times[timer->curr_split]);
     gtk_label_set_text(GTK_LABEL(self->segment_pb), pb);
+    
+    ls_time_string(&best_seg[9], game->best_segments[timer->curr_split]);
+    gtk_label_set_text(GTK_LABEL(self->segment_best), best_seg);
 
-    ls_time_string(&best[6], game->best_segments[timer->curr_split]);
-    gtk_label_set_text(GTK_LABEL(self->segment_best), best);
+    ls_time_string(&best_split[11], game->best_splits[timer->curr_split]);
+    gtk_label_set_text(GTK_LABEL(self->split_best), best_split);
+    
 }
 
 LSComponentOps ls_detailed_timer_operations = {
