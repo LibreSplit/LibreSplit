@@ -130,7 +130,14 @@ static bool maps_ioctlSupported(void)
     q.query_flags = PROCMAP_QUERY_COVERING_OR_NEXT_VMA;
     q.query_addr = 0;
 
-    int ret = ioctl(f, PROCMAP_QUERY, &q);
+    // https://man7.org/linux/man-pages/man2/ioctl.2.html
+    // musl uses int instead of uint like glibc
+    int ret = ioctl(f,
+#ifndef __GLIBC__
+        (int)
+#endif
+            PROCMAP_QUERY,
+        &q);
     close(f);
     return ret >= 0;
 }
@@ -158,7 +165,12 @@ static size_t maps_getAll_ioctl(void)
         for (;;) {
             q.vma_name_addr = (uintptr_t)map_name;
             q.vma_name_size = sizeof(map_name);
-            int ret = ioctl(f, PROCMAP_QUERY, &q);
+            int ret = ioctl(f,
+#ifndef __GLIBC__
+                (int)
+#endif
+                    PROCMAP_QUERY,
+                &q);
             if (ret < 0) {
                 break;
             }

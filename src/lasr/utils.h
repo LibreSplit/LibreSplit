@@ -5,6 +5,8 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <sys/time.h>
+#include <unistd.h>
 
 #include <sys/uio.h>
 ssize_t process_vm_readv(pid_t pid,
