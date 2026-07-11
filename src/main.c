@@ -78,7 +78,6 @@ static void* ls_auto_splitter(void* arg)
     prctl(PR_SET_NAME, "LS LASR", 0, 0, 0);
     while (1) {
         if (atomic_load(&auto_splitter_enabled) && auto_splitter_file[0] != '\0') {
-            atomic_store(&auto_splitter_running, true);
             run_auto_splitter();
         }
         atomic_store(&auto_splitter_running, false);

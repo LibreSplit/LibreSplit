@@ -208,6 +208,55 @@ end
 ```
 * Pretty self explanatory, since we want to return whenever we are currently in a loading screen, we can just send our current isLoading status, same as start.
 
+
+### `game_init`
+The purpose of this function is to run code when the game starts or restarts.
+
+_Note: The function `resumeTimer()` resumes a paused run (optional)._
+
+```lua
+process('GameBlaBlaBla.exe')
+local game_died = false
+
+function game_init()
+    if game_died then
+        loading = true
+        resumeTimer()
+        game_died = false
+    end
+end
+```
+
+### `game_stop`
+The purpose of this function is to run code when the game is killed, crashes or otherwise stops.
+
+Returning `true` will reset the run, similar to the `reset` function above. Otherwise returning `false` can be handled manaully by pausing the timer with `pauseTimer()` or leaving the timer going by doing nothing. If the run is not reset, the autosplitter waits for the process according to the last `Process(name)` used.
+
+```lua
+process('GameBlaBlaBla.exe')
+local game_died = false
+
+function game_stop()
+    loading = true
+    game_died = true
+    pauseTimer()
+    process('GameBlaBlaBla.exe')
+    return false
+end
+```
+
+### `script_stop`
+
+The purpose of this function is to run code when the autosplitter is disabled or stops.
+
+```lua
+process('GameBlaBlaBla.exe')
+
+function script_stop()
+    print("Quit autosplitting")
+end
+```
+
 # `reset`
 Instantly resets the timer. Use with caution.
 * Runs every 1000 / `refreshRate` milliseconds.
