@@ -22,12 +22,6 @@ process('GameBlaBlaBla.exe')
 ```
 * With this line, LibreSplit will repeatedly attempt to find this process and will not continue script execution until it is found. This is limited to 15 characters in length (the ones present in `/proc/<pid>/stat`).
 
-If you want to use longer names or check the entire command line use the `cmdline` function:
-
-```lua
-cmdline('MyGameHasAVeryLongName.exe')
-```
-
 * Next we have to define the basic functions. Not all are required and the ones that are required may change depending on the game or end goal, like if loading screens are included or not.
     * The order at which these run is the same as they are documented below.
 

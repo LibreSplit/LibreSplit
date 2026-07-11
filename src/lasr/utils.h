@@ -20,8 +20,9 @@ ssize_t process_vm_readv(pid_t pid,
  * \struct game_process The game process read by the Auto Splitter
  */
 typedef struct game_process {
-    const char* name; /*!< The name of the process */
-    unsigned int pid; /*!< The PID of the process */
+    char* name; /*!< The name of the process */
+    pid_t pid; /*!< The PID of the process */
+    int sort_fl; /*!< First or last PID for multi-process. 0 default is first, 1 is last */
     uintptr_t base_address; /*!< The detected base address of the process */
     uintptr_t dll_address; /*!< The detected base address of the last requested module */
 } game_process;
