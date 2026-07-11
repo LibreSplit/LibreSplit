@@ -41,13 +41,12 @@ atomic_bool auto_splitter_enabled = true; /*!< Defines if the auto splitter is e
 atomic_bool auto_splitter_running = false; /*!< Defines if the auto splitter is running */
 atomic_bool call_start = false; /*!< True if the auto splitter is requesting for a run to start */
 atomic_bool call_split = false; /*!< True if the auto splitter is requesting to split */
-atomic_bool toggle_loading = false;
+atomic_bool b_is_loading = true; /*!< True if the game is loading to pause the timer */
 atomic_bool call_reset = false; /*!< True if the auto splitter is requesting a run reset */
 atomic_bool run_using_game_time_call; /*!< True if startup has run and a new value for using game time has been set by the auto splitter */
 atomic_bool run_using_game_time; /*!< True if the auto splitter is requesting to use game time, false for real time */
 atomic_bool run_started = false; /*!< Wheter a run was started or not, same as timer->started but accessible from the auto splitter thread */
 atomic_bool run_running = false; /*!< Wheter we are running or not, same as timer->running but accessible from the auto splitter thread */
-bool prev_is_loading; /*!< The previous frame "is_loading" state */
 
 /**
  * Disable possibly dangerous functions in LASR.
@@ -395,11 +394,9 @@ void split(lua_State* L)
 void is_loading(lua_State* L)
 {
     bool loading;
-    if (call_va(L, "isLoading", ">b", &loading)) {
-        if (loading != prev_is_loading) {
-            atomic_store(&toggle_loading, true);
-            prev_is_loading = !prev_is_loading;
-        }
+    if (call_va(L, "isLoading", ">b", &loading)
+        && loading != b_is_loading) {
+        atomic_store(&b_is_loading, loading);
     }
     lua_pop(L, 1); // Remove the return value from the stack
 }

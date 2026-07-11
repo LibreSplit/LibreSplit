@@ -270,17 +270,13 @@ gboolean ls_app_window_step(gpointer data)
                 timer_split(win);
                 atomic_store(&call_split, 0);
             }
-            if (atomic_load(&toggle_loading)) {
-                win->timer->loading = !win->timer->loading;
-
-                if (win->timer->running) {
-                    if (win->timer->loading) {
-                        timer_pause(win);
-                    } else {
-                        timer_unpause(win);
-                    }
+            win->timer->loading = atomic_load(&b_is_loading);
+            if (win->timer->running) {
+                if (win->timer->loading) {
+                    timer_pause(win);
+                } else {
+                    timer_unpause(win);
                 }
-                atomic_store(&toggle_loading, 0);
             }
             if (atomic_load(&update_game_time)) {
                 // Update the timer with the game time from auto-splitter
