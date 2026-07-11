@@ -283,6 +283,11 @@ gboolean ls_app_window_step(gpointer data)
                 win->timer->gameTime = atomic_load(&game_time_value);
                 atomic_store(&update_game_time, false);
             }
+            if (!atomic_load(&run_running)) {
+                timer_stop(win);
+            } else if (atomic_load(&run_started)) {
+                timer_start(win);
+            }
             if (atomic_load(&call_reset)) {
                 timer_stop_and_reset(win);
                 atomic_store(&run_using_game_time_call, true);
