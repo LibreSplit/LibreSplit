@@ -98,6 +98,11 @@ char* read_memory_string(uint64_t mem_address, int buffer_size, int32_t* err)
  */
 int readAddress(lua_State* L)
 {
+    if (!process_is_attached()) {
+        lua_pushnil(L);
+        return 1;
+    }
+
     if (lua_gettop(L) == 0) {
         // There must be at least 2 arguments: type and address
         printf("[readAddress] Two arguments are required: type and address. Check your auto splitter code.\n");

@@ -186,6 +186,11 @@ bool validate_process_memory(pid_t pid, uintptr_t address, void* buffer, size_t 
  */
 int perform_sig_scan(lua_State* L)
 {
+    if (!process_is_attached()) {
+        lua_pushnil(L);
+        return 1;
+    }
+
     if (lua_gettop(L) != 2) {
         log_error("Invalid number of arguments: expected 2 (signature, offset)");
         lua_pushnil(L);

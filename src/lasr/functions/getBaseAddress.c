@@ -2,6 +2,7 @@
 
 #include "../maps/maps.h"
 #include "../utils.h"
+#include "lua.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -16,6 +17,11 @@
  */
 int getBaseAddress(lua_State* L)
 {
+    if (!process_is_attached()) {
+        lua_pushnil(L);
+        return 1;
+    }
+
     char module_name[PATH_MAX];
 
     if (lua_gettop(L) == 0 || lua_isnil(L, 1)) {
