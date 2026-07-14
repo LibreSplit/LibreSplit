@@ -18,7 +18,7 @@
  * @param permissions The attributes used to create the directories.
  */
 // I have no idea how this works
-static void mkdir_p(const char* dir, __mode_t permissions)
+static void mkdir_p(const char* dir, mode_t permissions)
 {
     char tmp[256] = { 0 };
     char* p = NULL;

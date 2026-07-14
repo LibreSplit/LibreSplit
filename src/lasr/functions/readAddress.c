@@ -64,7 +64,7 @@ READ_MEMORY_FUNCTION(bool)
  */
 char* read_memory_string(uint64_t mem_address, int buffer_size, int32_t* err)
 {
-    char* buffer = (char*)malloc(buffer_size);
+    char* buffer = (char*)calloc(buffer_size + 1, sizeof(char));
     if (buffer == NULL) {
         // Handle memory allocation failure
         return NULL;
@@ -186,8 +186,8 @@ int readAddress(lua_State* L)
         lua_pushboolean(L, value ? 1 : 0);
     } else if (strstr(value_type, "string") != NULL) {
         int buffer_size = atoi(value_type + 6);
-        if (buffer_size < 2) {
-            printf("[readAddress] Invalid string size, please read documentation");
+        if (buffer_size < 2 || buffer_size > 10000) {
+            printf("[readAddress] Invalid string size, please read documentation.\n");
             exit(1);
         }
         char* value = read_memory_string(address, buffer_size, &error);
@@ -196,7 +196,7 @@ int readAddress(lua_State* L)
     } else if (strstr(value_type, "byte")) {
         int array_size = atoi(value_type + 4);
         if (array_size < 1) {
-            printf("[readAddress] Invalid byte array size, please read documentation");
+            printf("[readAddress] Invalid byte array size, please read documentation.\n");
             exit(1);
         }
         uint8_t* results = malloc(array_size * sizeof(uint8_t));
