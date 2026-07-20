@@ -90,7 +90,7 @@ int find_process_id(lua_State* L)
     if (strcmp(sort, "first") == 0)
         stock_process_id((const char*[]) { "pgrep", process.name, NULL });
     else
-        stock_process_id((const char*[]) { "sh", "-c", "pgrep \"$1\" | sort --reverse", "sh", process.name, NULL });
+        stock_process_id((const char*[]) { "sh", "-c", "pgrep \"$1\" | sort --reverse --numeric-sort", "sh", process.name, NULL });
 
     return 0;
 }
@@ -124,7 +124,7 @@ int find_cmdline_id(lua_State* L)
     if (strcmp(sort, "first") == 0)
         stock_process_id((const char*[]) { "pgrep", "--full", process.name, NULL });
     else
-        stock_process_id((const char*[]) { "sh", "-c", "pgrep --full \"$1\" | sort --reverse", "sh", process.name, NULL });
+        stock_process_id((const char*[]) { "sh", "-c", "pgrep --full \"$1\" | sort --reverse --numeric-sort", "sh", process.name, NULL });
 
     return 0;
 }
