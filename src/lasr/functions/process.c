@@ -124,7 +124,8 @@ int find_cmdline_id(lua_State* L)
     if (strcmp(sort, "first") == 0)
         stock_process_id((const char*[]) { "pgrep", "--full", process.name, NULL });
     else
-        stock_process_id((const char*[]) { "sh", "-c", "pgrep --full \"$1\" | sort --reverse --numeric-sort", "sh", process.name, NULL });
+        // We pass --ignore-ancestors to stop pgrep from detecting itself
+        stock_process_id((const char*[]) { "sh", "-c", "pgrep --ignore-ancestors --full \"$1\" | sort --reverse --numeric-sort", "sh", process.name, NULL });
 
     return 0;
 }
