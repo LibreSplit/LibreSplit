@@ -15,10 +15,10 @@ extern atomic_bool auto_splitter_enabled; /*!< Defines if the auto splitter is e
  *
  * @param command The command to execute.
  * @param output Pointer to a string that will contain the command output.
+ * @param size The size of `output` including the terminating null byte.
  */
-void execute_command(const char* const argv[], char* output)
+void execute_command(const char* const argv[], char* output, size_t size)
 {
-    char buffer[4096];
     pid_t pid;
     FILE* pipe = pvopen(argv, "r", &pid);
     if (!pipe) {
@@ -29,9 +29,11 @@ void execute_command(const char* const argv[], char* output)
         exit(1);
     }
 
-    while (fgets(buffer, 128, pipe) != NULL) {
-        strcat(output, buffer);
-    }
+    size_t read = fread(output, 1, size - 1, pipe);
+    output[read] = 0;
+    char* newline = strrchr(output, '\n');
+    if (newline != NULL)
+        *(newline + 1) = 0;
 
     pvclose(pipe, pid);
 }
@@ -42,7 +44,7 @@ void stock_process_id(const char* const argv[])
     pid_output[0] = '\0';
 
     while (atomic_load(&auto_splitter_enabled)) {
-        execute_command(argv, pid_output);
+        execute_command(argv, pid_output, sizeof(pid_output));
         process.pid = strtoul(pid_output, NULL, 10);
         if (process.pid) {
             size_t newlinePos = strcspn(pid_output, "\n");
