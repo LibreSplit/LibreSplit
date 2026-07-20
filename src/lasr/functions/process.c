@@ -16,12 +16,16 @@ extern atomic_bool auto_splitter_enabled; /*!< Defines if the auto splitter is e
  * @param command The command to execute.
  * @param output Pointer to a string that will contain the command output.
  */
-void execute_command(const char* command, char* output)
+void execute_command(const char* const argv[], char* output)
 {
     char buffer[4096];
-    FILE* pipe = popen(command, "r");
+    pid_t pid;
+    FILE* pipe = pvopen(argv, "r", &pid);
     if (!pipe) {
-        fprintf(stderr, "Error executing command: %s\n", command);
+        fprintf(stderr, "Error executing command: { ");
+        while (*argv != NULL)
+            fprintf(stderr, "'%s', ", *argv++);
+        fprintf(stderr, "}");
         exit(1);
     }
 
@@ -29,16 +33,16 @@ void execute_command(const char* command, char* output)
         strcat(output, buffer);
     }
 
-    pclose(pipe);
+    pvclose(pipe, pid);
 }
 
-void stock_process_id(const char* pid_command)
+void stock_process_id(const char* const argv[])
 {
     char pid_output[PATH_MAX + 100];
     pid_output[0] = '\0';
 
     while (atomic_load(&auto_splitter_enabled)) {
-        execute_command(pid_command, pid_output);
+        execute_command(argv, pid_output);
         process.pid = strtoul(pid_output, NULL, 10);
         if (process.pid) {
             size_t newlinePos = strcspn(pid_output, "\n");
@@ -71,7 +75,6 @@ int find_process_id(lua_State* L)
 
     process.name = lua_tostring(L, 1);
     const char* sort = lua_tostring(L, 2);
-    char sortCmd[16] = "";
 
     if (!sort) {
         sort = "first";
@@ -82,17 +85,10 @@ int find_process_id(lua_State* L)
         }
     }
 
-    if (strcmp(sort, "first") == 0) {
-        sortCmd[0] = '\0'; // No sorting
-    }
-    if (strcmp(sort, "last") == 0) {
-        strcpy(sortCmd, " | sort -r"); // Reverse the sorting to get latest PID
-    }
-
-    char command[256];
-    snprintf(command, sizeof(command), "pgrep \"%.*s\"%s", (int)strnlen(process.name, sizeof(command) - strlen(sortCmd) - 1), process.name, sortCmd);
-
-    stock_process_id(command);
+    if (strcmp(sort, "first") == 0)
+        stock_process_id((const char*[]) { "pgrep", process.name, NULL });
+    else
+        stock_process_id((const char*[]) { "sh", "-c", "pgrep \"$1\" | sort --reverse", "sh", process.name, NULL });
 
     return 0;
 }
@@ -113,7 +109,6 @@ int find_cmdline_id(lua_State* L)
 
     process.name = lua_tostring(L, 1);
     const char* sort = lua_tostring(L, 2);
-    char sortCmd[16] = "";
 
     if (!sort) {
         sort = "first";
@@ -124,17 +119,10 @@ int find_cmdline_id(lua_State* L)
         }
     }
 
-    if (strcmp(sort, "first") == 0) {
-        sortCmd[0] = '\0'; // No sorting
-    }
-    if (strcmp(sort, "last") == 0) {
-        strcpy(sortCmd, " | sort -r"); // Reverse the sorting to get latest PID
-    }
-
-    char command[256];
-    snprintf(command, sizeof(command), "pgrep -f \"%.*s\"%s", (int)strnlen(process.name, sizeof(command) - strlen(sortCmd) - 1), process.name, sortCmd);
-
-    stock_process_id(command);
+    if (strcmp(sort, "first") == 0)
+        stock_process_id((const char*[]) { "pgrep", "--full", process.name, NULL });
+    else
+        stock_process_id((const char*[]) { "sh", "-c", "pgrep --full \"$1\" | sort --reverse", "sh", process.name, NULL });
 
     return 0;
 }
