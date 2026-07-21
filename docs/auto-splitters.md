@@ -20,10 +20,27 @@
 ```lua
 process('GameBlaBlaBla.exe')
 ```
-* With this line, LibreSplit will repeatedly attempt to find this process and will not continue script execution until it is found. This is limited to 15 characters in length (the ones present in `/proc/<pid>/stat`).
 
-* Next we have to define the basic functions. Not all are required and the ones that are required may change depending on the game or end goal, like if loading screens are included or not.
-    * The order at which these run is the same as they are documented below.
+* With this line, LibreSplit will repeatedly attempt to find this process and will not continue script execution until it is found.
+
+The `process()` function has a few arguments it accepts.
+
+```lua
+process(<gamename>, [first/last], [{ignore, table}])
+
+process('GameBlaBlaBla.exe', 'first', {'wine', 'start.exe', 'GameUtil'})
+```
+
+1. The name of the game to find.
+
+2. The first or last PID found, in the case of multiple matches PID 20 vs 200. The default is `first`.
+
+3. Processes to ignore. The default is `{'wine', 'start.exe'}`.
+IT IS IMPORTANT TO INCLUDE THESE IF YOU PASS A VALUE.
+`wine` launches programs with Window's `start.exe`, if you attach to either of these you clearly will not find addresses you're looking for.
+
+Next we have to define the basic functions. Not all are required and the ones that are required may change depending on the game or end goal, like if loading screens are included or not.
+(The order at which these run is the same as they are documented below.)
 
 ### `startup`
  The purpose of this function is to specify how many times LibreSplit checks memory values and executes functions each second, the default is 60Hz. Usually, 60Hz is fine and this function can remain undefined. However, it's there if you need it. Its also useful to change other configuration about the script.

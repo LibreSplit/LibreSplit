@@ -588,6 +588,24 @@ void run_auto_splitter(void)
             lua_pushstring(L, process.name);
             // currently 0 means first, above means last
             lua_pushstring(L, process.sort_fl > 0 ? "last" : "first");
+            // rebuild ignore table, not the best efficiency
+            // could pass arg to find_process_id() ? or fake lua string to say 'leave table alone' ?
+            if (process.ignore_names[0] != 0) {
+                int ignore_cnt = 1, i = 1; // lua index
+                while (process.ignore_names[ignore_cnt] != 0) {
+                    ignore_cnt++;
+                }
+                lua_newtable(L);
+                ignore_cnt = 0;
+                i = lua_gettop(L);
+                while (process.ignore_names[ignore_cnt] != 0) {
+                    lua_pushinteger(L, i);
+                    lua_pushstring(L, process.ignore_names[ignore_cnt]);
+                    ignore_cnt++;
+                    i++;
+                    lua_settable(L, -3); // because you pushed 2 values, back 1 more is -3
+                }
+            }
             find_process_id(L);
         }
 

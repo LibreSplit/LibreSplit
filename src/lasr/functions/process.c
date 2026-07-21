@@ -13,6 +13,21 @@
 extern atomic_bool auto_splitter_enabled; /*!< Defines if the auto splitter is enabled */
 
 /**
+ * Compares string against ignore names
+ *
+ * @param n the name of the process to compare
+ *
+ * @return 1 for not in ignore names, 0 for found in ignore names
+ */
+int name_okay(const char* n)
+{
+    int i = 0;
+    while (process.ignore_names[i] != 0 && strstr(n, process.ignore_names[i]) == 0)
+        i++;
+    return process.ignore_names[i] == 0;
+}
+
+/**
  * Finds a process by crawling /proc for proc_name
  *
  * @param proc_name the name of the process
@@ -33,46 +48,20 @@ pid_t find_process_by_name(const char* proc_name, int fl)
         return pid;
     }
 
-    // skip '.', '..', and non-digit paths, these should always come before PIDs, procfs is special
+    // procfs is special so the order should always be : "." ".." "a-Z" "PIDs 1..10..15..22..230"
+    // skip '.', '..', and non-digit paths - NOP, formatter doesn't like { } below while
     while ((entry = readdir(dir)) != NULL && !isdigit(*entry->d_name)) { }
-    // NOP, formatter doesn't like readability of { } down here
 
     entry = readdir(dir); // pid 1, init may be running stuff
     // gets rid of a strcmp() every loop :)
 
     while ((entry = readdir(dir)) != NULL) {
-        int match = 0; // used more for inside the loop to skip checking comm AND cmdline
-        char comm_path[PATH_MAX + 100];
         char cmdl_path[PATH_MAX + 100];
-
-        snprintf(comm_path, sizeof(comm_path), "/proc/%s/comm", entry->d_name);
-        FILE* fp = fopen(comm_path, "r");
-        if (fp) {
-            char comm[512] = { 0 };
-            if (fgets(comm, sizeof(comm), fp) != NULL) {
-                // ignore wine starting processes (see HACK below)
-                if (strstr(comm, proc_name) != 0
-                    && strstr(comm, "wine") == 0
-                    && strstr(comm, "start.exe") == 0) {
-                    match = 1;
-                    pid = strtoul(entry->d_name, NULL, 10);
-                    if (fl == 0) {
-                        fclose(fp);
-                        break; // first hit, otherwise keep going for last
-                    }
-                }
-            }
-            fclose(fp);
-        }
-
-        if (match) {
-            continue; // skip lengthy cmdline check if comm matches
-        }
-
         snprintf(cmdl_path, sizeof(cmdl_path), "/proc/%s/cmdline", entry->d_name);
-        fp = fopen(cmdl_path, "r");
+
+        FILE* fp = fopen(cmdl_path, "r");
         if (fp) {
-            char cmdl[2048] = { ' ' }; // can be much bigger than comm
+            char cmdl[2048] = { ' ' }; // only seen discord and chromium get bigger than this
             cmdl[2047] = 0x0;
             if (fgets(cmdl, 2048, fp) != NULL) {
                 // turn the 0x0 spaces into ascii 0x20 spaces
@@ -81,10 +70,7 @@ pid_t find_process_by_name(const char* proc_name, int fl)
                         cmdl[i] = 0x20;
                     }
                 }
-                // ignore wine starting processes (see HACK below)
-                if (strstr(cmdl, proc_name) != 0
-                    && strstr(cmdl, "wine") == 0
-                    && strstr(cmdl, "start.exe") == 0) {
+                if (strstr(cmdl, proc_name) && name_okay(cmdl)) {
                     pid = strtoul(entry->d_name, NULL, 10);
                     if (fl == 0) {
                         fclose(fp);
@@ -130,14 +116,46 @@ int find_process_id(lua_State* L)
         printf("[process] Invalid sort argument '%s'. Use 'first' or 'last'. Falling back to first\n", sort);
     }
 
+    // clear any old buffers before rebuilding ignore list
+    // TODO: see run_auto_splitter, restarting a game rebuilds the table =/
+    memset(process.mono_ignore_names, 0, 2048); // sizes in utils.h
+    memset(process.ignore_names, 0, sizeof(char*) * 100);
+
+    if (lua_istable(L, 3)) {
+        size_t ignore_pos = 0; // ^inside mono array
+        size_t ignore_cnt = 0; // hardcode of words in default_ignore_list
+        size_t name_len = 0;
+        ignore_cnt = 0;
+
+        lua_pushnil(L); // bootstraps lua_next - see print_tbl.c
+        while (lua_next(L, 3) != 0) {
+            lua_pushvalue(L, -2); // key/index + value
+            // __attribute__((unused)) const char* jnk = lua_tostring(L, -1); // key
+            const char* ignore_name = lua_tostring(L, -2); // value, process name to ignore
+            name_len = strlen(ignore_name);
+            if (ignore_pos + name_len > 2047 || ignore_cnt > 98) {
+                printf("[process] oversized ignore list! Currently hardcoded max size of 2048 for all names and 100 max names. Ignoring from %s on\n", ignore_name);
+                lua_pop(L, 2);
+                break;
+            }
+            memcpy(&process.mono_ignore_names[ignore_pos], ignore_name, name_len);
+            process.ignore_names[ignore_cnt] = &process.mono_ignore_names[ignore_pos];
+            ignore_pos += name_len + 1; // skip null byte - text1\0text
+            ignore_cnt++;
+            lua_pop(L, 2);
+        }
+    } else {
+        // TODO: I'm sure "steam" also has some conflicts? (default list below)
+        memcpy(process.mono_ignore_names, "wine\0start.exe", 14);
+        process.ignore_names[0] = process.mono_ignore_names;
+        process.ignore_names[1] = process.mono_ignore_names + 5; // sizeof("wine") + 1(null byte)
+    }
+
     while (atomic_load(&auto_splitter_enabled)) {
         process.pid = find_process_by_name(process.name, process.sort_fl);
         pid_t last_pid = process.pid;
 
-        // HACK: wine can run a 'start.exe' command to launch a game
-        // at that time, the game's process name is in wine's cmdline args
-        // also, some games launch and then change names, or launch the game proper
-        // that's not the game :)
+        // HACK: some games run from launchers and change names after launch
         // may also be good enough to check the base/dll addys ? 0 indicates wine?
         usleep(200000); // Sleep for 200ms ? may be game/hardware dependant
         process.pid = find_process_by_name(process.name, process.sort_fl);

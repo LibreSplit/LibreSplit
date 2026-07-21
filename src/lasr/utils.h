@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include <sys/uio.h>
+
 ssize_t process_vm_readv(pid_t pid,
     const struct iovec* local_iov,
     unsigned long liovcnt,
@@ -25,6 +26,8 @@ typedef struct game_process {
     int sort_fl; /*!< First or last PID for multi-process. 0 default is first, 1 is last */
     uintptr_t base_address; /*!< The detected base address of the process */
     uintptr_t dll_address; /*!< The detected base address of the last requested module */
+    char mono_ignore_names[2048]; /*!< Single memory block of process names to ignore searching for */
+    char* ignore_names[100]; /*!< Pointers of each name inside mono_ignore_list, ends in 0 */
 } game_process;
 extern game_process process;
 
