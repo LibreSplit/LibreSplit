@@ -509,13 +509,25 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
         if (!error) {
             int split_count = game->split_count + 1;
             game->split_display_titles = calloc(split_count, sizeof(char*));
-            if (!game->split_display_titles) { error = 1; goto game_create_error; }
+            if (!game->split_display_titles) {
+                error = 1;
+                goto game_create_error;
+            }
             game->split_is_subsplit = calloc(split_count, sizeof(bool));
-            if (!game->split_is_subsplit) { error = 1; goto game_create_error; }
+            if (!game->split_is_subsplit) {
+                error = 1;
+                goto game_create_error;
+            }
             game->split_group_names = calloc(split_count, sizeof(char*));
-            if (!game->split_group_names) { error = 1; goto game_create_error; }
+            if (!game->split_group_names) {
+                error = 1;
+                goto game_create_error;
+            }
             game->split_group_index = calloc(split_count, sizeof(int));
-            if (!game->split_group_index) { error = 1; goto game_create_error; }
+            if (!game->split_group_index) {
+                error = 1;
+                goto game_create_error;
+            }
             for (unsigned int i = 0; i < game->split_count; ++i) {
                 game->split_group_index[i] = -1;
             }
@@ -531,33 +543,52 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
                 }
                 if (title[0] == '-') {
                     const char* p = title + 1;
-                    while (*p == ' ') ++p;
+                    while (*p == ' ')
+                        ++p;
                     game->split_display_titles[i] = strdup(p);
-                    if (!game->split_display_titles[i]) { error = 1; goto game_create_error; }
+                    if (!game->split_display_titles[i]) {
+                        error = 1;
+                        goto game_create_error;
+                    }
                     game->split_is_subsplit[i] = true;
-                    if (subsplit_start == UINT_MAX) subsplit_start = i;
+                    if (subsplit_start == UINT_MAX)
+                        subsplit_start = i;
                 } else if (title[0] == '{') {
                     const char* close = strchr(title, '}');
                     if (close) {
                         size_t name_len = close - title - 1;
                         char* group_name = strndup(title + 1, name_len);
-                        if (!group_name) { error = 1; goto game_create_error; }
+                        if (!group_name) {
+                            error = 1;
+                            goto game_create_error;
+                        }
                         game->split_group_names[i] = group_name;
                         const char* p = close + 1;
-                        while (*p == ' ') ++p;
+                        while (*p == ' ')
+                            ++p;
                         game->split_display_titles[i] = strdup(*p ? p : close + 1);
-                        if (!game->split_display_titles[i]) { error = 1; goto game_create_error; }
+                        if (!game->split_display_titles[i]) {
+                            error = 1;
+                            goto game_create_error;
+                        }
                     } else {
                         game->split_display_titles[i] = strdup(title);
-                        if (!game->split_display_titles[i]) { error = 1; goto game_create_error; }
+                        if (!game->split_display_titles[i]) {
+                            error = 1;
+                            goto game_create_error;
+                        }
                     }
                     game->split_is_subsplit[i] = true;
-                    if (subsplit_start == UINT_MAX) subsplit_start = i;
+                    if (subsplit_start == UINT_MAX)
+                        subsplit_start = i;
                     ++group_count;
                     subsplit_start = UINT_MAX;
                 } else {
                     game->split_display_titles[i] = strdup(title);
-                    if (!game->split_display_titles[i]) { error = 1; goto game_create_error; }
+                    if (!game->split_display_titles[i]) {
+                        error = 1;
+                        goto game_create_error;
+                    }
                     game->split_is_subsplit[i] = false;
                     subsplit_start = UINT_MAX;
                 }
@@ -573,15 +604,22 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
             game->group_count = actual_group_count;
             if (actual_group_count > 0) {
                 game->groups = calloc(actual_group_count, sizeof(ls_group));
-                if (!game->groups) { error = 1; goto game_create_error; }
+                if (!game->groups) {
+                    error = 1;
+                    goto game_create_error;
+                }
                 unsigned int g = 0;
                 int group_start = -1;
                 for (unsigned int i = 0; i < game->split_count; ++i) {
                     if (game->split_is_subsplit[i]) {
-                        if (group_start == -1) group_start = i;
+                        if (group_start == -1)
+                            group_start = i;
                         if (game->split_group_names[i]) {
                             game->groups[g].name = strdup(game->split_group_names[i]);
-                            if (!game->groups[g].name) { error = 1; goto game_create_error; }
+                            if (!game->groups[g].name) {
+                                error = 1;
+                                goto game_create_error;
+                            }
                             game->groups[g].start_idx = group_start;
                             game->groups[g].end_idx = i;
                             // Map all splits in this group to this group index

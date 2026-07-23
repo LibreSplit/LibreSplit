@@ -427,7 +427,7 @@ static void splits_draw(LSComponent* self_, const ls_game* game, const ls_timer*
         if (game->split_group_index && game->split_group_index[i] >= 0) {
             int g = game->split_group_index[i];
             bool active = timer->curr_split >= game->groups[g].start_idx
-                       && timer->curr_split <= game->groups[g].end_idx;
+                && timer->curr_split <= game->groups[g].end_idx;
             gtk_widget_set_visible(self->split_rows[i], active);
         }
 
@@ -546,7 +546,7 @@ static void splits_draw(LSComponent* self_, const ls_game* game, const ls_timer*
     for (unsigned int g = 0; g < self->group_count; ++g) {
         const ls_group* group = &game->groups[g];
         bool group_active = timer->curr_split >= group->start_idx
-                         && timer->curr_split <= group->end_idx;
+            && timer->curr_split <= group->end_idx;
 
         remove_class(self->group_header_times[g], "time");
         remove_class(self->group_header_times[g], "done");
