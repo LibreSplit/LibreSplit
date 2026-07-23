@@ -12,6 +12,7 @@
 typedef struct LSSplits {
     LSComponent base; /*!< The base struct that is extended */
     unsigned int split_count; /*!< The number of splits */
+    unsigned int group_count;
     GtkWidget* container; /*!< The container for the splits */
     GtkWidget* splits;
     GtkWidget* split_last;
@@ -23,6 +24,10 @@ typedef struct LSSplits {
     GtkWidget** split_icons;
     GtkWidget** split_deltas;
     GtkWidget** split_times;
+    GtkWidget** group_header_rows;
+    GtkWidget** group_header_titles;
+    GtkWidget** group_header_times;
+    GtkWidget** group_header_deltas;
     GtkCssProvider* icons_css_provider;
 } LSSplits;
 extern LSComponentOps ls_splits_operations;
@@ -44,6 +49,18 @@ void free_all(LSSplits* self_)
     }
     if (self->split_times) {
         free(self->split_times);
+    }
+    if (self->group_header_rows) {
+        free(self->group_header_rows);
+    }
+    if (self->group_header_titles) {
+        free(self->group_header_titles);
+    }
+    if (self->group_header_times) {
+        free(self->group_header_times);
+    }
+    if (self->group_header_deltas) {
+        free(self->group_header_deltas);
     }
 }
 
@@ -197,13 +214,29 @@ static void splits_show_game(LSComponent* self_, const ls_game* game,
     GString* icons_css_src = g_string_new(".split-icon { background-repeat: no-repeat; background-position: center; min-width: 20px; min-height: 20px; background-size: 20px; margin-right: 4px; }");
 
     for (unsigned int i = 0; i < self->split_count; ++i) {
+        const char* display_title = game->split_display_titles
+            ? game->split_display_titles[i]
+            : game->split_titles[i];
+
         self->split_rows[i] = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
         add_class(self->split_rows[i], "split");
         gtk_widget_set_hexpand(self->split_rows[i], TRUE);
         gtk_container_add(GTK_CONTAINER(self->splits),
             self->split_rows[i]);
 
-        self->split_titles[i] = gtk_label_new(game->split_titles[i]);
+        if (game->split_is_subsplit && game->split_is_subsplit[i]) {
+            add_class(self->split_rows[i], "subsplit");
+            // spacer box for physical indentation
+            GtkWidget* indent = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+            gtk_widget_set_size_request(indent, 24, -1);
+            gtk_container_add(GTK_CONTAINER(self->split_rows[i]), indent);
+            gtk_widget_show(indent);
+        }
+
+        self->split_titles[i] = gtk_label_new(display_title);
+        if (game->split_is_subsplit && game->split_is_subsplit[i]) {
+            add_class(self->split_titles[i], "subsplit-title");
+        }
         add_class(self->split_titles[i], "split-title");
         gtk_widget_set_halign(self->split_titles[i], GTK_ALIGN_START);
         gtk_widget_set_hexpand(self->split_titles[i], TRUE);
@@ -227,7 +260,6 @@ static void splits_show_game(LSComponent* self_, const ls_game* game,
 
         if (game->contains_icons) {
             if (game->split_icon_paths[i]) {
-                // g_string_append_printf(icons_css_src, ".split:nth-child(%d) .split-icon { background-image: url('%s'); }", i+1, game->split_icon_paths[i]);
                 g_string_append_printf(
                     icons_css_src,
                     ".%s .split-icon { background-image: url('%s'); }",
@@ -235,7 +267,6 @@ static void splits_show_game(LSComponent* self_, const ls_game* game,
             }
             self->split_icons[i] = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
             add_class(self->split_icons[i], "split-icon");
-            // set size but allow to dinamically change it from css with min-width and min-height
             gtk_widget_set_size_request(self->split_icons[i], 20, 20);
             gtk_container_add(GTK_CONTAINER(self->split_rows[i]), self->split_icons[i]);
             gtk_widget_show(self->split_icons[i]);
@@ -260,6 +291,67 @@ static void splits_show_game(LSComponent* self_, const ls_game* game,
         }
 
         gtk_widget_show_all(self->split_rows[i]);
+    }
+
+    // Create group header rows
+    self->group_count = game->group_count;
+    if (self->group_count > 0) {
+        self->group_header_rows = calloc(self->group_count, sizeof(GtkWidget*));
+        self->group_header_titles = calloc(self->group_count, sizeof(GtkWidget*));
+        self->group_header_times = calloc(self->group_count, sizeof(GtkWidget*));
+        self->group_header_deltas = calloc(self->group_count, sizeof(GtkWidget*));
+        if (!self->group_header_rows || !self->group_header_titles
+            || !self->group_header_times || !self->group_header_deltas) {
+            free_all((LSSplits*)self_);
+            return;
+        }
+        for (unsigned int g = 0; g < self->group_count; ++g) {
+            const ls_group* group = &game->groups[g];
+            self->group_header_rows[g] = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+            add_class(self->group_header_rows[g], "split");
+            add_class(self->group_header_rows[g], "split-group-header");
+            gtk_widget_set_hexpand(self->group_header_rows[g], TRUE);
+
+            self->group_header_titles[g] = gtk_label_new(group->name);
+            add_class(self->group_header_titles[g], "split-title");
+            add_class(self->group_header_titles[g], "split-group-header-title");
+            gtk_widget_set_halign(self->group_header_titles[g], GTK_ALIGN_START);
+            gtk_widget_set_hexpand(self->group_header_titles[g], TRUE);
+            gtk_container_add(GTK_CONTAINER(self->group_header_rows[g]),
+                self->group_header_titles[g]);
+
+            self->group_header_deltas[g] = gtk_label_new(NULL);
+            add_class(self->group_header_deltas[g], "split-delta");
+            add_class(self->group_header_deltas[g], "split-group-header-delta");
+            gtk_widget_set_size_request(self->group_header_deltas[g], 1, -1);
+            gtk_container_add(GTK_CONTAINER(self->group_header_rows[g]),
+                self->group_header_deltas[g]);
+
+            self->group_header_times[g] = gtk_label_new(NULL);
+            add_class(self->group_header_times[g], "split-time");
+            add_class(self->group_header_times[g], "split-group-header-time");
+            gtk_widget_set_halign(self->group_header_times[g], GTK_ALIGN_END);
+            gtk_container_add(GTK_CONTAINER(self->group_header_rows[g]),
+                self->group_header_times[g]);
+
+            // Insert header before the first subsplit of the group
+            gtk_container_add(GTK_CONTAINER(self->splits),
+                self->group_header_rows[g]);
+            unsigned int insert_pos = group->start_idx + g;
+            gtk_box_reorder_child(GTK_BOX(self->splits),
+                self->group_header_rows[g], insert_pos);
+
+            gtk_widget_show_all(self->group_header_rows[g]);
+        }
+    }
+
+    // Initially hide all subsplit rows (draw will show the active ones)
+    if (game->split_is_subsplit) {
+        for (unsigned int i = 0; i < self->split_count; ++i) {
+            if (game->split_is_subsplit[i]) {
+                gtk_widget_set_visible(self->split_rows[i], FALSE);
+            }
+        }
     }
 
     if (self->icons_css_provider) {
@@ -307,9 +399,15 @@ static void splits_clear_game(LSComponent* self_)
             GTK_CONTAINER(gtk_widget_get_parent(self->split_rows[i])),
             self->split_rows[i]);
     }
+    for (unsigned int g = 0; g < self->group_count; ++g) {
+        gtk_container_remove(
+            GTK_CONTAINER(gtk_widget_get_parent(self->group_header_rows[g])),
+            self->group_header_rows[g]);
+    }
     gtk_adjustment_set_value(self->split_adjust, 0);
     free_all(self);
     self->split_count = 0;
+    self->group_count = 0;
 }
 
 #define SHOW_DELTA_THRESHOLD (-30 * 1000000LL)
@@ -325,6 +423,14 @@ static void splits_draw(LSComponent* self_, const ls_game* game, const ls_timer*
     LSSplits* self = (LSSplits*)self_;
     char str[256];
     for (unsigned int i = 0; i < self->split_count; ++i) {
+        // Show/hide subsplit rows based on group activity
+        if (game->split_group_index && game->split_group_index[i] >= 0) {
+            int g = game->split_group_index[i];
+            bool active = timer->curr_split >= game->groups[g].start_idx
+                       && timer->curr_split <= game->groups[g].end_idx;
+            gtk_widget_set_visible(self->split_rows[i], active);
+        }
+
         if (i == timer->curr_split
             && timer->started) {
             add_class(self->split_rows[i], "current-split");
@@ -400,6 +506,16 @@ static void splits_draw(LSComponent* self_, const ls_game* game, const ls_timer*
                 time_width = width;
             }
         }
+        for (unsigned int g = 0; g < self->group_count; ++g) {
+            width = gtk_widget_get_allocated_width(self->group_header_deltas[g]);
+            if (width > delta_width) {
+                delta_width = width;
+            }
+            width = gtk_widget_get_allocated_width(self->group_header_times[g]);
+            if (width > time_width) {
+                time_width = width;
+            }
+        }
         for (unsigned int i = 0; i < self->split_count; ++i) {
             if (delta_width) {
                 gtk_widget_set_size_request(
@@ -410,6 +526,91 @@ static void splits_draw(LSComponent* self_, const ls_game* game, const ls_timer*
                     self->split_times[i]);
                 gtk_widget_set_margin_start(self->split_times[i],
                     /*WINDOW_PAD*/ 8 * 2 + (time_width - width));
+            }
+        }
+        for (unsigned int g = 0; g < self->group_count; ++g) {
+            if (delta_width) {
+                gtk_widget_set_size_request(
+                    self->group_header_deltas[g], delta_width, -1);
+            }
+            if (time_width) {
+                width = gtk_widget_get_allocated_width(
+                    self->group_header_times[g]);
+                gtk_widget_set_margin_start(self->group_header_times[g],
+                    8 * 2 + (time_width - width));
+            }
+        }
+    }
+
+    // Update group header times and deltas
+    for (unsigned int g = 0; g < self->group_count; ++g) {
+        const ls_group* group = &game->groups[g];
+        bool group_active = timer->curr_split >= group->start_idx
+                         && timer->curr_split <= group->end_idx;
+
+        remove_class(self->group_header_times[g], "time");
+        remove_class(self->group_header_times[g], "done");
+        long long display_time = 0;
+
+        if (group_active) {
+            // Active group: show segment sum
+            if (game->split_times[group->end_idx] && game->split_times[group->end_idx] < LLONG_MAX) {
+                display_time = game->split_times[group->end_idx];
+                if (group->start_idx > 0 && game->split_times[group->start_idx - 1]
+                    && game->split_times[group->start_idx - 1] < LLONG_MAX) {
+                    display_time -= game->split_times[group->start_idx - 1];
+                }
+            }
+        } else {
+            // Inactive group: show cumulative time at end of group
+            if (timer->curr_split > group->end_idx && timer->split_times[group->end_idx]) {
+                display_time = timer->split_times[group->end_idx];
+                add_class(self->group_header_times[g], "done");
+            } else if (game->split_times[group->end_idx] && game->split_times[group->end_idx] < LLONG_MAX) {
+                display_time = game->split_times[group->end_idx];
+            }
+        }
+
+        if (display_time > 0 && display_time < LLONG_MAX) {
+            add_class(self->group_header_times[g], "time");
+            ls_split_string(str, display_time, 0);
+            gtk_label_set_text(GTK_LABEL(self->group_header_times[g]), str);
+        } else {
+            gtk_label_set_text(GTK_LABEL(self->group_header_times[g]), "");
+        }
+
+        // Delta: shown when group is fully completed, or live progress when active
+        remove_class(self->group_header_deltas[g], "best-split");
+        remove_class(self->group_header_deltas[g], "best-segment");
+        remove_class(self->group_header_deltas[g], "behind");
+        remove_class(self->group_header_deltas[g], "losing");
+        remove_class(self->group_header_deltas[g], "delta");
+        remove_class(self->group_header_deltas[g], "subsplit-progress");
+        gtk_label_set_text(GTK_LABEL(self->group_header_deltas[g]), "");
+        if (group_active && timer->curr_split >= group->start_idx
+            && timer->started && timer->split_times[timer->curr_split]) {
+            // Show live progress within the group (dim grey)
+            long long progress = timer->split_times[timer->curr_split];
+            if (group->start_idx > 0 && timer->split_times[group->start_idx - 1]) {
+                progress -= timer->split_times[group->start_idx - 1];
+            }
+            if (progress > 0) {
+                add_class(self->group_header_deltas[g], "subsplit-progress");
+                ls_split_string(str, progress, 0);
+                gtk_label_set_text(GTK_LABEL(self->group_header_deltas[g]), str);
+            }
+        } else if (timer->curr_split > group->end_idx && display_time > 0 && timer->curr_split > 0) {
+            long long pb_cum = game->split_times[group->end_idx];
+            long long delta = display_time - pb_cum;
+            if (delta > 0) {
+                add_class(self->group_header_deltas[g], "behind");
+            } else {
+                remove_class(self->group_header_deltas[g], "behind");
+            }
+            if (delta) {
+                add_class(self->group_header_deltas[g], "delta");
+                ls_delta_string(str, delta);
+                gtk_label_set_text(GTK_LABEL(self->group_header_deltas[g]), str);
             }
         }
     }

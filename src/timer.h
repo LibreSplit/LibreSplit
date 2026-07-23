@@ -11,6 +11,12 @@
 
 extern AppConfig cfg;
 
+typedef struct ls_group {
+    char* name;
+    unsigned int start_idx;
+    unsigned int end_idx;
+} ls_group;
+
 typedef struct ls_game {
     char path[PATH_MAX];
     char* title;
@@ -30,6 +36,12 @@ typedef struct ls_game {
     long long* segment_times;
     long long* best_splits;
     long long* best_segments;
+    char** split_display_titles;  // display titles with subsplit prefixes stripped
+    bool* split_is_subsplit;      // whether each split is a subsplit (indented)
+    char** split_group_names;     // group name if this split ends a group (NULL otherwise)
+    int* split_group_index;       // group index for each split (-1 if not in a group)
+    unsigned int group_count;
+    ls_group* groups;
 } ls_game;
 
 /**

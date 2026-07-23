@@ -87,6 +87,24 @@
 	padding-left: 8px;
 	padding-bottom: 4px;
 }
+.split-title.subsplit-title {
+	padding-left: 24px;
+}
+.split-group-header {
+	border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.split-group-header-time {
+    opacity: 0.7;
+}
+.split-group-header > .subsplit-progress {
+    color: rgba(255,255,255,0.35);
+}
+.split-group-header > .delta {
+	color: #4CAF50;
+}
+.split-group-header > .behind {
+	color: #F44336;
+}
 .split-time {
 	padding-right: 8px;
 }
