@@ -263,6 +263,7 @@ void ls_game_release(ls_game* game)
         free(game->best_segments);
         game->best_segments = 0;
     }
+
     free(game);
 }
 
