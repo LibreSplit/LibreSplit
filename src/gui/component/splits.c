@@ -2,101 +2,68 @@
  *
  * Implementation of the splits component.
  */
+#include "splits.h"
 #include "split_groups.h"
 #include <gtk/gtk.h>
 #include <limits.h>
 
 extern LSComponentOps ls_splits_operations;
 
-static void free_all(LSSplits* self)
+void free_all(LSSplits* self_)
 {
-    free(self->split_rows);
-    free(self->split_titles);
-    free(self->split_icons);
-    free(self->split_deltas);
-    free(self->split_times);
-    free(self->group_header_rows);
-    free(self->group_header_titles);
-    free(self->group_header_times);
-    free(self->group_header_deltas);
-
+    LSSplits* self = (LSSplits*)self_;
+    if (self->split_rows) {
+        free(self->split_rows);
+    }
+    if (self->split_titles) {
+        free(self->split_titles);
+    }
+    if (self->split_icons) {
+        free(self->split_icons);
+    }
+    if (self->split_deltas) {
+        free(self->split_deltas);
+    }
+    if (self->split_times) {
+        free(self->split_times);
+    }
+    if (self->group_header_rows) {
+        free(self->group_header_rows);
+    }
+    if (self->group_header_titles) {
+        free(self->group_header_titles);
+    }
+    if (self->group_header_times) {
+        free(self->group_header_times);
+    }
+    if (self->group_header_deltas) {
+        free(self->group_header_deltas);
+    }
     if (self->split_display_titles) {
-        for (unsigned int i = 0; i < self->split_count; ++i)
-            free(self->split_display_titles[i]);
+        for (unsigned int i = 0; i < self->split_count; ++i) {
+            if (self->split_display_titles[i]) {
+                free(self->split_display_titles[i]);
+            }
+        }
         free(self->split_display_titles);
+        self->split_display_titles = NULL;
     }
-    free(self->split_is_subsplit);
-    free(self->split_group_index);
-
+    if (self->split_is_subsplit) {
+        free(self->split_is_subsplit);
+        self->split_is_subsplit = NULL;
+    }
+    if (self->split_group_index) {
+        free(self->split_group_index);
+        self->split_group_index = NULL;
+    }
     if (self->groups) {
-        for (unsigned int i = 0; i < self->group_count; ++i)
-            free(self->groups[i].name);
+        for (unsigned int i = 0; i < self->group_count; ++i) {
+            if (self->groups[i].name) {
+                free(self->groups[i].name);
+            }
+        }
         free(self->groups);
-    }
-
-    self->split_count = 0;
-    self->group_count = 0;
-    self->split_display_titles = NULL;
-    self->split_is_subsplit = NULL;
-    self->split_group_index = NULL;
-    self->groups = NULL;
-    self->split_rows = NULL;
-    self->split_titles = NULL;
-    self->split_icons = NULL;
-    self->split_deltas = NULL;
-    self->split_times = NULL;
-    self->group_header_rows = NULL;
-    self->group_header_titles = NULL;
-    self->group_header_times = NULL;
-    self->group_header_deltas = NULL;
-}
-
-/**
- * Synchronizes column widths across all split rows and group headers.
- */
-static void sync_column_widths(LSSplits* self)
-{
-    int width;
-    int time_width = 0, delta_width = 0;
-
-    for (unsigned int i = 0; i < self->split_count; ++i) {
-        width = gtk_widget_get_allocated_width(self->split_deltas[i]);
-        if (width > delta_width)
-            delta_width = width;
-        width = gtk_widget_get_allocated_width(self->split_times[i]);
-        if (width > time_width)
-            time_width = width;
-    }
-    for (unsigned int g = 0; g < self->group_count; ++g) {
-        width = gtk_widget_get_allocated_width(self->group_header_deltas[g]);
-        if (width > delta_width)
-            delta_width = width;
-        width = gtk_widget_get_allocated_width(self->group_header_times[g]);
-        if (width > time_width)
-            time_width = width;
-    }
-
-    for (unsigned int i = 0; i < self->split_count; ++i) {
-        if (delta_width)
-            gtk_widget_set_size_request(
-                self->split_deltas[i], delta_width, -1);
-        if (time_width) {
-            width = gtk_widget_get_allocated_width(
-                self->split_times[i]);
-            gtk_widget_set_margin_start(self->split_times[i],
-                8 * 2 + (time_width - width));
-        }
-    }
-    for (unsigned int g = 0; g < self->group_count; ++g) {
-        if (delta_width)
-            gtk_widget_set_size_request(
-                self->group_header_deltas[g], delta_width, -1);
-        if (time_width) {
-            width = gtk_widget_get_allocated_width(
-                self->group_header_times[g]);
-            gtk_widget_set_margin_start(self->group_header_times[g],
-                8 * 2 + (time_width - width));
-        }
+        self->groups = NULL;
     }
 }
 
@@ -387,7 +354,10 @@ static void splits_show_game(LSComponent* self_, const ls_game* game,
 static void splits_clear_game(LSComponent* self_)
 {
     LSSplits* self = (LSSplits*)self_;
-    for (int i = self->split_count - 1; i >= 0; --i) {
+    int i;
+    gtk_widget_hide(self->splits);
+    gtk_widget_hide(self->split_last);
+    for (i = self->split_count - 1; i >= 0; --i) {
         gtk_container_remove(
             GTK_CONTAINER(gtk_widget_get_parent(self->split_rows[i])),
             self->split_rows[i]);
@@ -397,10 +367,23 @@ static void splits_clear_game(LSComponent* self_)
             GTK_CONTAINER(gtk_widget_get_parent(self->group_header_rows[g])),
             self->group_header_rows[g]);
     }
-    gtk_widget_hide(self->splits);
-    gtk_widget_hide(self->split_last);
     gtk_adjustment_set_value(self->split_adjust, 0);
     free_all(self);
+    self->split_count = 0;
+    self->group_count = 0;
+    self->split_display_titles = NULL;
+    self->split_is_subsplit = NULL;
+    self->split_group_index = NULL;
+    self->groups = NULL;
+    self->split_rows = NULL;
+    self->split_titles = NULL;
+    self->split_icons = NULL;
+    self->split_deltas = NULL;
+    self->split_times = NULL;
+    self->group_header_rows = NULL;
+    self->group_header_titles = NULL;
+    self->group_header_times = NULL;
+    self->group_header_deltas = NULL;
 }
 
 #define SHOW_DELTA_THRESHOLD (-30 * 1000000LL)
@@ -487,7 +470,52 @@ static void splits_draw(LSComponent* self_, const ls_game* game, const ls_timer*
 
     // keep split sizes in sync
     if (self->split_count) {
-        sync_column_widths(self);
+        int width;
+        int time_width = 0, delta_width = 0;
+        for (unsigned int i = 0; i < self->split_count; ++i) {
+            width = gtk_widget_get_allocated_width(self->split_deltas[i]);
+            if (width > delta_width) {
+                delta_width = width;
+            }
+            width = gtk_widget_get_allocated_width(self->split_times[i]);
+            if (width > time_width) {
+                time_width = width;
+            }
+        }
+        for (unsigned int g = 0; g < self->group_count; ++g) {
+            width = gtk_widget_get_allocated_width(self->group_header_deltas[g]);
+            if (width > delta_width) {
+                delta_width = width;
+            }
+            width = gtk_widget_get_allocated_width(self->group_header_times[g]);
+            if (width > time_width) {
+                time_width = width;
+            }
+        }
+        for (unsigned int i = 0; i < self->split_count; ++i) {
+            if (delta_width) {
+                gtk_widget_set_size_request(
+                    self->split_deltas[i], delta_width, -1);
+            }
+            if (time_width) {
+                width = gtk_widget_get_allocated_width(
+                    self->split_times[i]);
+                gtk_widget_set_margin_start(self->split_times[i],
+                    /*WINDOW_PAD*/ 8 * 2 + (time_width - width));
+            }
+        }
+        for (unsigned int g = 0; g < self->group_count; ++g) {
+            if (delta_width) {
+                gtk_widget_set_size_request(
+                    self->group_header_deltas[g], delta_width, -1);
+            }
+            if (time_width) {
+                width = gtk_widget_get_allocated_width(
+                    self->group_header_times[g]);
+                gtk_widget_set_margin_start(self->group_header_times[g],
+                    8 * 2 + (time_width - width));
+            }
+        }
     }
 
     // Update group header times and deltas

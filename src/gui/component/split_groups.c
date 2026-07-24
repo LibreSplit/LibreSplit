@@ -3,8 +3,6 @@
  * Implementation of subsplit group parsing, rendering, and drawing.
  */
 #include "split_groups.h"
-#include <gtk/gtk.h>
-#include <limits.h>
 
 int parse_subsplits(LSSplits* self, const ls_game* game)
 {
