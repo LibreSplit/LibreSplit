@@ -358,6 +358,13 @@ end
 
         * Cheat Engine is a tool that allows you to easily find Addresses and Pointer Paths for those Addresses, so you don't need to debug the game to figure out the structure of the memory.
 
+    * Lua's default `'number'` type cannot accurately represent some very large addresses. If you need
+      to pass values greater than `2^53 - 1` (`0x001F_FFFF_FFFF_FFFF`), you should use LuaJIT's 64-bit
+      [FFI integers](https://luajit.org/ext_ffi_api.html#literals) through the `LL` suffix:
+      ```lua
+      local far_away = readAddress('uint', 0x0020000000000000LL)
+      ```
+
 ## sig_scan
 
 `sig_scan` performs a signature/pattern scan using the provided IDA-style byte array and an integer offset, It returns a numeric representation of the found address.
@@ -368,9 +375,9 @@ Example:
 
 Returns:
 
-`5387832857`
+`5387832857LL`
 
-(Which is the decimal representation of the address `0x14123ce19`)
+(Which is the decimal representation of the address `0x14123ce19LL`)
 
 ### Notes
 
@@ -500,15 +507,15 @@ The array will have a structure similar to this:
 {
     {
         name="something",
-        start=123456,
-        end=789456,
-        size=666000
+        start=123456ULL,
+        end=789456ULL,
+        size=666000ULL
     },
     {
         name="something_else",
-        start=123456,
-        end=789456,
-        size=666000
+        start=123456ULL,
+        end=789456ULL,
+        size=666000ULL
     }
 }
 ```
