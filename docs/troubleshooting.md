@@ -39,12 +39,12 @@ Here, `readAddress()` throws an error because it cannot distinguish between the 
 `0x0020000000000000` (`2^53`) and `0x0020000000000001` (`2^53 + 1`) as floating-point values. By
 passing 64-bit integers with the `LL` suffix, we can represent all possible addresses.
 
-### `bad argument #1 to 'abs' (number expected, got cdata)`
+### `bad argument #1 to '<function>' (number expected, got cdata)`
 For reasons described in the previous section, many auto splitter functions (`sizeOf()`,
 `readAddress('long', ...)`, etc.) return 64-bit [FFI integers](https://luajit.org/ext_ffi_api.html#literals)
 rather than regular (floating-point) `'number'`s. These values have a `type()` of `'cdata'` and
-cannot be passed directly to most Lua standard library functions. Pass them first to `tonumber()`,
-but be aware that this may result in rounding if the input is larger than `2^53`.
+cannot be passed directly to most Lua standard library functions. Pass them first through
+`tonumber()`, but be aware that this may result in rounding if the input is larger than `2^53`.
 
 ```lua
 local index = readAddress('ulong', 0x1234)

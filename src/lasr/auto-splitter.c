@@ -137,6 +137,7 @@ void push_lasr_functions(lua_State* L, const lasr_function* functions)
     }
 }
 
+#ifndef DEBUG
 /**
  * Override of the standard openlibs functions to open only a subset
  * of libraries in the Lua Runtime.
@@ -152,6 +153,7 @@ LUALIB_API void luaL_openlibs(lua_State* L)
         lua_call(L, 1, 0);
     }
 }
+#endif
 
 /**
  * Disables possibly dangerous functions in the Lua Runtime.
@@ -452,9 +454,13 @@ void gameTime(lua_State* L)
  */
 void run_auto_splitter(void)
 {
+    (void)disabled_functions;
+    (void)lj_lib_load;
     lua_State* L = luaL_newstate();
     luaL_openlibs(L);
+#ifndef DEBUG
     disable_functions(L, disabled_functions);
+#endif
     push_lasr_functions(L, luac_functions);
     setup_int64_overloads(L);
 
