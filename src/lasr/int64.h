@@ -33,5 +33,7 @@ bool lua_isaddress(lua_State* L, int idx);
 bool lua_isaddress_print(lua_State* L, int idx, const char* function);
 uintptr_t lua_toaddress(lua_State* L, int idx);
 
+void setup_int64_overloads(lua_State* L);
+
 /** Convenience macro for invoking `lua_isaddress_print()` passing the current function name. */
 #define LUA_ISADDRESS_PRINT(L, idx) lua_isaddress_print((L), (idx), __func__)

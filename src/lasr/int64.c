@@ -12,10 +12,12 @@
  * for integer literals syntax (`42LL`, `0xffULL`). These values have a `type()` of `"cdata"` and a
  * `lua_type()` value of #LUA_TCDATA (10). They natively support arithmetic and comparisons with
  * standard Lua `number`s as well as being passed to `tostring()`, `print()`, `string.format()` and
- * the `bit.*` functions, but cannot be concatenated with `..`.
+ * the `bit.*` functions, but cannot be concatenated with `..`. We add support for string
+ * concatenation in setup_int64_overloads().
  */
 
 #include "int64.h"
+#include "utils.h"
 
 #include <lauxlib.h>
 #include <lua.h>
@@ -23,6 +25,8 @@
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 /**
  * @brief Determine whether a value on the Lua stack represents a LuaJIT 64-bit integer.
@@ -157,4 +161,60 @@ uintptr_t lua_toaddress(lua_State* L, int idx)
         return lua_toint64(L, idx);
     uintptr_t addr = lua_tonumber(L, idx);
     return addr;
+}
+
+/**
+ * @brief Alternative implementation of Lua's concatenation (`..`) operator; see
+ * setup_int64_overloads() for more details.
+ *
+ * Takes two arguments `x` and `y` of type `string | number | int64` from the Lua stack and returns
+ * a single string representing `x .. y`.
+ *
+ * @param L The Lua state
+ */
+static int int64_concat_metamethod(lua_State* L)
+{
+    assert(lua_gettop(L) == 2);
+    for (int i = 1; i <= 2; i++) {
+        if (!lua_isnumber(L, i) && !lua_isstring(L, i) && !lua_isint64(L, i)) {
+            char* error;
+            int status = asprintf(&error, "attempt to concatenate '%s' and '%s'", lua_typename(L, 1), lua_typename(L, 2));
+            if (status == -1) {
+                perror("Failed to generate error message");
+                exit(EXIT_FAILURE);
+            }
+            lua_pushstring(L, error);
+            free(error);
+            lua_error(L);
+        }
+    }
+    stringify(L, 1);
+    stringify(L, 2);
+    lua_concat(L, 2);
+    assert(lua_gettop(L) == 1);
+    return 1;
+}
+
+/**
+ * @brief Integrate FFI integers with Lua operators such as string concatenation.
+ *
+ * Lua actually allows you to set metatables on primitive types like `number`, `string` and
+ * `cdata`, but only from the C API. (See [§2.8 of the Lua manual](https://www.lua.org/manual/5.1/manual.html#2.8).)
+ * The metatable applies to _all_ instances of the type, so metamethods can be used to change the
+ * implementation for operators like `..` or `tostring()`. This method sets a metatable on `cdata`
+ * values, overriding the `__concat` metamethod to support concatenation with FFI integers.
+ *
+ * @param L The Lua state.
+ */
+void setup_int64_overloads(lua_State* L)
+{
+    int initial_top = lua_gettop(L);
+    lua_pushsint64(L, 0);
+    if (!lua_getmetatable(L, -1))
+        lua_createtable(L, 0, 1);
+    lua_pushcfunction(L, int64_concat_metamethod);
+    lua_setfield(L, -2, "__concat");
+    lua_setmetatable(L, -2); // this sets the metatable on _all_ values of type `cdata`, not just the target one.
+    lua_pop(L, 1);
+    assert(lua_gettop(L) == initial_top);
 }

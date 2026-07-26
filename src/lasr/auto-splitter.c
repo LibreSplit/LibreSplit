@@ -6,6 +6,7 @@
 
 #include "./maps/maps.h"
 #include "functions.h"
+#include "int64.h"
 #include "utils.h"
 
 #include <lauxlib.h>
@@ -455,6 +456,7 @@ void run_auto_splitter(void)
     luaL_openlibs(L);
     disable_functions(L, disabled_functions);
     push_lasr_functions(L, luac_functions);
+    setup_int64_overloads(L);
 
     char current_file[PATH_MAX];
     strcpy(current_file, auto_splitter_file);
