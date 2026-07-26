@@ -1,9 +1,12 @@
 #include "utils.h"
 #include "../gui/dialogs.h"
 #include "./auto-splitter.h"
+#include "./int64.h"
 #include "./maps/maps.h"
 
 #include <glib.h>
+#include <lua.h>
+
 #include <stdatomic.h>
 #include <stdio.h>
 
@@ -85,6 +88,30 @@ bool handle_memory_error(uint32_t err)
 }
 
 /**
+ * @brief Convert a Lua value in-place to a string by calling `tostring()`.
+ *
+ * Like `lua_tostring()`, the value at `index` is replaced with a string value if it is not already
+ * a string.
+ *
+ * @param L The Lua state.
+ * @param index An index into the Lua stack.
+ * @return A pointer to a string inside the Lua state.
+ */
+const char* stringify(lua_State* L, int index)
+{
+    int initial_top = lua_gettop(L);
+    if (lua_isstring(L, index) || lua_isnumber(L, index))
+        return lua_tostring(L, index);
+    lua_getglobal(L, "tostring");
+    int new_index = index < 0 ? index - 1 : index;
+    lua_pushvalue(L, new_index);
+    lua_call(L, 1, 1);
+    lua_replace(L, new_index);
+    assert(lua_gettop(L) == initial_top && lua_isstring(L, index));
+    return lua_tostring(L, index);
+}
+
+/**
  * Utility function to convert a lua value to a string.
  *
  * Converts a value to a printable C string according to its type.
@@ -98,6 +125,10 @@ const char* value_to_c_string(lua_State* L, int index)
             return lua_tostring(L, index);
         case LUA_TNUMBER:
             return lua_tostring(L, index);
+        case LUA_TCDATA:
+            if (lua_isint64(L, index))
+                return stringify(L, index);
+            return "??";
         case LUA_TBOOLEAN:
             return lua_toboolean(L, index) ? "true" : "false";
         case LUA_TNIL:

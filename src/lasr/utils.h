@@ -37,4 +37,5 @@ typedef struct ProcessMap {
 bool restart_auto_splitter(void);
 uintptr_t find_base_address(const char* module);
 bool handle_memory_error(uint32_t err);
+const char* stringify(lua_State* L, int index);
 const char* value_to_c_string(lua_State* L, int index);

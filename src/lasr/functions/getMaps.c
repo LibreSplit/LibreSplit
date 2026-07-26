@@ -1,5 +1,6 @@
 #include "getMaps.h"
 
+#include "../int64.h"
 #include "../maps/maps.h"
 
 #include <stdio.h>
@@ -34,15 +35,15 @@ int getMaps(lua_State* L)
         lua_setfield(L, -2, "name");
         // Stack: array, table
         // Push "start"
-        lua_pushnumber(L, map.start);
+        lua_pushuint64(L, map.start);
         // Stack: array, table, value
         lua_setfield(L, -2, "start");
         // Stack: array, table
         // Push "end"
-        lua_pushnumber(L, map.end);
+        lua_pushuint64(L, map.end);
         lua_setfield(L, -2, "end");
         // Push "size"
-        lua_pushnumber(L, map.size);
+        lua_pushuint64(L, map.size);
         lua_setfield(L, -2, "size");
 
         // Stack: Array, Table, [TopOfStack]

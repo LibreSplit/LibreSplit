@@ -1,8 +1,12 @@
 #include "readAddress.h"
+#include "../int64.h"
 #include "../utils.h"
 
-#include <errno.h>
+#include <lauxlib.h>
 #include <lua.h>
+
+#include <assert.h>
+#include <errno.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -122,23 +126,31 @@ int readAddress(lua_State* L)
         return 1;
     }
 
-    if (lua_isnumber(L, 2)) {
-        address = process.base_address + lua_tointeger(L, 2);
+    if (LUA_ISADDRESS_PRINT(L, 2)) {
+        address = process.base_address + lua_toaddress(L, 2);
         i = 3;
-    } else {
+    } else if (lua_isstring(L, 2)) {
         const char* module = lua_tostring(L, 2);
         if (strcmp(process.name, module) != 0) {
             process.dll_address = find_base_address(module);
         }
-        address = process.dll_address + lua_tointeger(L, 3);
+        if (!LUA_ISADDRESS_PRINT(L, 3)) {
+            lua_pushnil(L);
+            return 1;
+        }
+        address = process.dll_address + lua_toaddress(L, 3);
         i = 4;
+    } else {
+        printf("[readAddress] The second argument must be either a module name or a base address. Check your autosplitter code.\n");
+        lua_pushnil(L);
+        return 1;
     }
 
     int error = 0;
 
     for (; i <= lua_gettop(L); i++) {
         if (address <= UINT32_MAX) {
-            address = read_memory_uint32_t((uint64_t)address, &error);
+            address = read_memory_uint32_t(address, &error);
             if (memory_error)
                 break;
         } else {
@@ -146,7 +158,11 @@ int readAddress(lua_State* L)
             if (memory_error)
                 break;
         }
-        address += lua_tointeger(L, i);
+        if (!LUA_ISADDRESS_PRINT(L, i)) {
+            lua_pushnil(L);
+            return 1;
+        }
+        address += lua_toaddress(L, i);
     }
 
     if (strcmp(value_type, "sbyte") == 0) {
@@ -168,13 +184,11 @@ int readAddress(lua_State* L)
         uint32_t value = read_memory_uint32_t(address, &error);
         lua_pushinteger(L, value);
     } else if (strcmp(value_type, "long") == 0) {
-        // TODO: Fix 64 bit numbers, luajit 5.1 doesnt support 64 bit numbers natively
         int64_t value = read_memory_int64_t(address, &error);
-        lua_pushinteger(L, value);
+        lua_pushsint64(L, value);
     } else if (strcmp(value_type, "ulong") == 0) {
-        // TODO: Fix 64 bit numbers, luajit 5.1 doesnt support 64 bit numbers natively
         uint64_t value = read_memory_uint64_t(address, &error);
-        lua_pushinteger(L, value);
+        lua_pushuint64(L, value);
     } else if (strcmp(value_type, "float") == 0) {
         float value = read_memory_float(address, &error);
         lua_pushnumber(L, value);

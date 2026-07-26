@@ -1,5 +1,6 @@
 #include "getModuleSize.h"
 
+#include "../int64.h"
 #include "../maps/maps.h"
 #include "../utils.h"
 
@@ -32,7 +33,7 @@ int getModuleSize(lua_State* L)
 
     ProcessMap map;
     if (maps_findMapByName(module_name, &map)) {
-        lua_pushinteger(L, (lua_Integer)map.size);
+        lua_pushuint64(L, (lua_Integer)map.size);
         return 1;
     }
     lua_pushnil(L);
