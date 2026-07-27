@@ -85,7 +85,6 @@ libresplit_sources = files(
     'src/gui/component/pb.c',
     'src/gui/component/prev-segment.c',
     'src/gui/component/splits.c',
-    'src/gui/component/split_groups.c',
     'src/gui/component/title.c',
     'src/gui/component/wr.c',
     'src/gui/component/detailed-timer.c',

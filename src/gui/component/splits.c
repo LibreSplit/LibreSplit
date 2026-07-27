@@ -3,9 +3,106 @@
  * Implementation of the splits component.
  */
 #include "components.h"
-#include "split_groups.h"
 #include <gtk/gtk.h>
 #include <limits.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "../../timer.h"
+
+typedef struct split_group {
+    char* name;
+    unsigned int start_idx;
+    unsigned int end_idx;
+} split_group;
+
+typedef struct SubsplitData {
+    unsigned int group_count;
+    int* split_group_index;
+    split_group* groups;
+} SubsplitData;
+
+static const char* subsplit_display_title(const char* title)
+{
+    if (!title || !title[0])
+        return "";
+    if (title[0] == '-') {
+        const char* p = title + 1;
+        while (*p == ' ')
+            p++;
+        return p;
+    }
+    if (title[0] == '{') {
+        const char* close = strchr(title, '}');
+        if (close) {
+            const char* p = close + 1;
+            while (*p == ' ')
+                p++;
+            return p;
+        }
+    }
+    return title;
+}
+
+static int parse_subsplits(SubsplitData* subsplit, const struct ls_game* game,
+    unsigned int split_count)
+{
+    subsplit->split_group_index = calloc(split_count, sizeof(int));
+    if (!subsplit->split_group_index)
+        return -1;
+
+    for (unsigned int i = 0; i < split_count; ++i)
+        subsplit->split_group_index[i] = -1;
+
+    subsplit->group_count = 0;
+    subsplit->groups = NULL;
+
+    int group_start = -1;
+
+    for (unsigned int i = 0; i < split_count; ++i) {
+        const char* title = game->split_titles[i];
+        if (!title || !title[0]) {
+            group_start = -1;
+            continue;
+        }
+
+        if (title[0] == '-') {
+            if (group_start == -1)
+                group_start = i;
+        } else if (title[0] == '{') {
+            const char* close = strchr(title, '}');
+            if (close) {
+                char* group_name = strndup(title + 1, close - title - 1);
+                if (!group_name)
+                    return -1;
+
+                if (group_start == -1)
+                    group_start = i;
+
+                split_group* new_groups = realloc(subsplit->groups,
+                    (subsplit->group_count + 1) * sizeof(split_group));
+                if (!new_groups) {
+                    free(group_name);
+                    return -1;
+                }
+                subsplit->groups = new_groups;
+                subsplit->groups[subsplit->group_count].name = group_name;
+                subsplit->groups[subsplit->group_count].start_idx = group_start;
+                subsplit->groups[subsplit->group_count].end_idx = i;
+                for (unsigned int s = group_start; s <= i; ++s)
+                    subsplit->split_group_index[s] = subsplit->group_count;
+                ++subsplit->group_count;
+                group_start = -1;
+            } else {
+                group_start = -1;
+            }
+        } else {
+            group_start = -1;
+        }
+    }
+
+    return 0;
+}
 
 /**
  * @brief The component containing all the splits for the game.
@@ -63,19 +160,6 @@ void free_all(LSSplits* self_)
     }
     if (self->group_header_deltas) {
         free(self->group_header_deltas);
-    }
-    if (self->subsplit_data.split_display_titles) {
-        for (unsigned int i = 0; i < self->split_count; ++i) {
-            if (self->subsplit_data.split_display_titles[i]) {
-                free(self->subsplit_data.split_display_titles[i]);
-            }
-        }
-        free(self->subsplit_data.split_display_titles);
-        self->subsplit_data.split_display_titles = NULL;
-    }
-    if (self->subsplit_data.split_is_subsplit) {
-        free(self->subsplit_data.split_is_subsplit);
-        self->subsplit_data.split_is_subsplit = NULL;
     }
     if (self->subsplit_data.split_group_index) {
         free(self->subsplit_data.split_group_index);
@@ -248,9 +332,7 @@ static void splits_show_game(LSComponent* self_, const ls_game* game,
     GString* icons_css_src = g_string_new(".split-icon { background-repeat: no-repeat; background-position: center; min-width: 20px; min-height: 20px; background-size: 20px; margin-right: 4px; }");
 
     for (unsigned int i = 0; i < self->split_count; ++i) {
-        const char* display_title = self->subsplit_data.split_display_titles
-            ? self->subsplit_data.split_display_titles[i]
-            : game->split_titles[i];
+        const char* display_title = subsplit_display_title(game->split_titles[i]);
 
         self->split_rows[i] = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
         add_class(self->split_rows[i], "split");
@@ -258,7 +340,7 @@ static void splits_show_game(LSComponent* self_, const ls_game* game,
         gtk_container_add(GTK_CONTAINER(self->splits),
             self->split_rows[i]);
 
-        if (self->subsplit_data.split_is_subsplit && self->subsplit_data.split_is_subsplit[i]) {
+        if (self->subsplit_data.split_group_index[i] >= 0) {
             add_class(self->split_rows[i], "subsplit");
             GtkWidget* indent = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
             gtk_widget_set_size_request(indent, 24, -1);
@@ -267,7 +349,7 @@ static void splits_show_game(LSComponent* self_, const ls_game* game,
         }
 
         self->split_titles[i] = gtk_label_new(display_title);
-        if (self->subsplit_data.split_is_subsplit && self->subsplit_data.split_is_subsplit[i]) {
+        if (self->subsplit_data.split_group_index[i] >= 0) {
             add_class(self->split_titles[i], "subsplit-title");
         }
         add_class(self->split_titles[i], "split-title");
@@ -568,74 +650,68 @@ static void splits_draw(LSComponent* self_, const ls_game* game, const ls_timer*
     }
 
     // Update group header times and deltas
-    {
-        char str[256];
 
-        for (unsigned int g = 0; g < self->subsplit_data.group_count; ++g) {
-            const split_group* group = &self->subsplit_data.groups[g];
-            bool group_active = timer->curr_split >= group->start_idx
-                && timer->curr_split <= group->end_idx;
+    for (unsigned int g = 0; g < self->subsplit_data.group_count; ++g) {
+        const split_group* group = &self->subsplit_data.groups[g];
+        bool group_active = timer->curr_split >= group->start_idx
+            && timer->curr_split <= group->end_idx;
 
-            remove_class(self->group_header_times[g], "time");
-            remove_class(self->group_header_times[g], "done");
-            long long display_time = 0;
+        remove_class(self->group_header_times[g], "time");
+        remove_class(self->group_header_times[g], "done");
+        long long display_time = 0;
 
-            if (group_active) {
-                if (game->split_times[group->end_idx] && game->split_times[group->end_idx] < LLONG_MAX) {
-                    display_time = game->split_times[group->end_idx];
-                    if (group->start_idx > 0 && game->split_times[group->start_idx - 1]
-                        && game->split_times[group->start_idx - 1] < LLONG_MAX) {
-                        display_time -= game->split_times[group->start_idx - 1];
-                    }
-                }
-            } else {
-                if (timer->curr_split > group->end_idx && timer->split_times[group->end_idx]) {
-                    display_time = timer->split_times[group->end_idx];
-                    add_class(self->group_header_times[g], "done");
-                } else if (game->split_times[group->end_idx] && game->split_times[group->end_idx] < LLONG_MAX) {
-                    display_time = game->split_times[group->end_idx];
+        if (group_active) {
+            if (game->split_times[group->end_idx] && game->split_times[group->end_idx] < LLONG_MAX) {
+                display_time = game->split_times[group->end_idx];
+                if (group->start_idx > 0 && game->split_times[group->start_idx - 1]
+                    && game->split_times[group->start_idx - 1] < LLONG_MAX) {
+                    display_time -= game->split_times[group->start_idx - 1];
                 }
             }
-
-            if (display_time > 0 && display_time < LLONG_MAX) {
-                add_class(self->group_header_times[g], "time");
-                ls_split_string(str, display_time, 0);
-                gtk_label_set_text(GTK_LABEL(self->group_header_times[g]), str);
-            } else {
-                gtk_label_set_text(GTK_LABEL(self->group_header_times[g]), "");
+        } else {
+            if (timer->curr_split > group->end_idx && timer->split_times[group->end_idx]) {
+                display_time = timer->split_times[group->end_idx];
+                add_class(self->group_header_times[g], "done");
+            } else if (game->split_times[group->end_idx] && game->split_times[group->end_idx] < LLONG_MAX) {
+                display_time = game->split_times[group->end_idx];
             }
+        }
 
-            remove_class(self->group_header_deltas[g], "best-split");
-            remove_class(self->group_header_deltas[g], "best-segment");
-            remove_class(self->group_header_deltas[g], "behind");
-            remove_class(self->group_header_deltas[g], "losing");
-            remove_class(self->group_header_deltas[g], "delta");
-            remove_class(self->group_header_deltas[g], "subsplit-progress");
-            gtk_label_set_text(GTK_LABEL(self->group_header_deltas[g]), "");
+        if (display_time > 0 && display_time < LLONG_MAX) {
+            add_class(self->group_header_times[g], "time");
+            ls_split_string(str, display_time, 0);
+            gtk_label_set_text(GTK_LABEL(self->group_header_times[g]), str);
+        } else {
+            gtk_label_set_text(GTK_LABEL(self->group_header_times[g]), "");
+        }
 
-            if (group_active && timer->curr_split >= group->start_idx
-                && timer->started && timer->split_times[timer->curr_split]) {
-                long long progress = timer->split_times[timer->curr_split];
-                if (group->start_idx > 0 && timer->split_times[group->start_idx - 1])
-                    progress -= timer->split_times[group->start_idx - 1];
-                if (progress > 0) {
-                    add_class(self->group_header_deltas[g], "subsplit-progress");
-                    ls_split_string(str, progress, 0);
-                    gtk_label_set_text(GTK_LABEL(self->group_header_deltas[g]), str);
-                }
-            } else if (timer->curr_split > group->end_idx && display_time > 0
-                && timer->curr_split > 0) {
-                long long pb_cum = game->split_times[group->end_idx];
-                long long delta = display_time - pb_cum;
-                if (delta > 0)
-                    add_class(self->group_header_deltas[g], "behind");
-                else
-                    remove_class(self->group_header_deltas[g], "behind");
-                if (delta) {
-                    add_class(self->group_header_deltas[g], "delta");
-                    ls_delta_string(str, delta);
-                    gtk_label_set_text(GTK_LABEL(self->group_header_deltas[g]), str);
-                }
+        remove_class(self->group_header_deltas[g], "behind");
+        remove_class(self->group_header_deltas[g], "delta");
+        remove_class(self->group_header_deltas[g], "subsplit-progress");
+        gtk_label_set_text(GTK_LABEL(self->group_header_deltas[g]), "");
+
+        if (group_active && timer->curr_split >= group->start_idx
+            && timer->started && timer->split_times[timer->curr_split]) {
+            long long progress = timer->split_times[timer->curr_split];
+            if (group->start_idx > 0 && timer->split_times[group->start_idx - 1])
+                progress -= timer->split_times[group->start_idx - 1];
+            if (progress > 0) {
+                add_class(self->group_header_deltas[g], "subsplit-progress");
+                ls_split_string(str, progress, 0);
+                gtk_label_set_text(GTK_LABEL(self->group_header_deltas[g]), str);
+            }
+        } else if (timer->curr_split > group->end_idx && display_time > 0
+            && timer->curr_split > 0) {
+            long long pb_cum = game->split_times[group->end_idx];
+            long long delta = display_time - pb_cum;
+            if (delta > 0)
+                add_class(self->group_header_deltas[g], "behind");
+            else
+                remove_class(self->group_header_deltas[g], "behind");
+            if (delta) {
+                add_class(self->group_header_deltas[g], "delta");
+                ls_delta_string(str, delta);
+                gtk_label_set_text(GTK_LABEL(self->group_header_deltas[g]), str);
             }
         }
     }
