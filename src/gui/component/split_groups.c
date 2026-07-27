@@ -6,117 +6,83 @@
 
 int parse_subsplits(LSSplits* self, const ls_game* game)
 {
-    char** temp_group_names = NULL;
-    int err = 0;
-
     self->split_display_titles = calloc(self->split_count, sizeof(char*));
     self->split_is_subsplit = calloc(self->split_count, sizeof(bool));
     self->split_group_index = calloc(self->split_count, sizeof(int));
-    temp_group_names = calloc(self->split_count, sizeof(char*));
 
     if (!self->split_display_titles || !self->split_is_subsplit
-        || !self->split_group_index || !temp_group_names) {
-        err = -1;
-        goto cleanup;
-    }
+        || !self->split_group_index)
+        return -1;
+
     for (unsigned int i = 0; i < self->split_count; ++i)
         self->split_group_index[i] = -1;
 
-    // First pass: parse prefixes and extract display names
+    self->group_count = 0;
+    self->groups = NULL;
+
+    int group_start = -1;
+
     for (unsigned int i = 0; i < self->split_count; ++i) {
         const char* title = game->split_titles[i];
         if (!title || !title[0]) {
             self->split_display_titles[i] = strdup("");
+            if (!self->split_display_titles[i]) return -1;
+            group_start = -1;
             continue;
         }
+
         if (title[0] == '-') {
             const char* p = title + 1;
             while (*p == ' ')
                 ++p;
             self->split_display_titles[i] = strdup(p);
-            if (!self->split_display_titles[i]) {
-                err = -1;
-                goto cleanup;
-            }
+            if (!self->split_display_titles[i]) return -1;
             self->split_is_subsplit[i] = true;
+            if (group_start == -1)
+                group_start = i;
         } else if (title[0] == '{') {
             const char* close = strchr(title, '}');
+            self->split_is_subsplit[i] = true;
             if (close) {
-                temp_group_names[i] = strndup(title + 1, close - title - 1);
-                if (!temp_group_names[i]) {
-                    err = -1;
-                    goto cleanup;
-                }
+                char* group_name = strndup(title + 1, close - title - 1);
+                if (!group_name) return -1;
                 const char* p = close + 1;
                 while (*p == ' ')
                     ++p;
                 self->split_display_titles[i] = strdup(*p ? p : close + 1);
                 if (!self->split_display_titles[i]) {
-                    err = -1;
-                    goto cleanup;
+                    free(group_name);
+                    return -1;
                 }
-            } else {
-                self->split_display_titles[i] = strdup(title);
-                if (!self->split_display_titles[i]) {
-                    err = -1;
-                    goto cleanup;
-                }
-            }
-            self->split_is_subsplit[i] = true;
-        } else {
-            self->split_display_titles[i] = strdup(title);
-            if (!self->split_display_titles[i]) {
-                err = -1;
-                goto cleanup;
-            }
-            self->split_is_subsplit[i] = false;
-        }
-    }
-
-    // Count groups (splits with both a group name and subsplit flag)
-    self->group_count = 0;
-    for (unsigned int i = 0; i < self->split_count; ++i) {
-        if (temp_group_names[i] && self->split_is_subsplit[i])
-            ++self->group_count;
-    }
-
-    if (self->group_count > 0) {
-        self->groups = calloc(self->group_count, sizeof(split_group));
-        if (!self->groups) {
-            err = -1;
-            goto cleanup;
-        }
-
-        // Second pass: build group objects, assign split_group_index
-        unsigned int g = 0;
-        int group_start = -1;
-        for (unsigned int i = 0; i < self->split_count; ++i) {
-            if (self->split_is_subsplit[i]) {
                 if (group_start == -1)
                     group_start = i;
-                if (temp_group_names[i]) {
-                    self->groups[g].name = temp_group_names[i];
-                    temp_group_names[i] = NULL;
-                    self->groups[g].start_idx = group_start;
-                    self->groups[g].end_idx = i;
-                    for (unsigned int s = group_start; s <= i; ++s)
-                        self->split_group_index[s] = g;
-                    ++g;
-                    group_start = -1;
+                split_group* new_groups = realloc(self->groups,
+                    (self->group_count + 1) * sizeof(split_group));
+                if (!new_groups) {
+                    free(group_name);
+                    return -1;
                 }
-            } else {
+                self->groups = new_groups;
+                self->groups[self->group_count].name = group_name;
+                self->groups[self->group_count].start_idx = group_start;
+                self->groups[self->group_count].end_idx = i;
+                for (unsigned int s = group_start; s <= i; ++s)
+                    self->split_group_index[s] = self->group_count;
+                ++self->group_count;
                 group_start = -1;
+            } else {
+                self->split_display_titles[i] = strdup(title);
+                if (!self->split_display_titles[i]) return -1;
             }
+        } else {
+            self->split_display_titles[i] = strdup(title);
+            if (!self->split_display_titles[i]) return -1;
+            self->split_is_subsplit[i] = false;
+            group_start = -1;
         }
     }
 
-cleanup:
-    if (temp_group_names) {
-        for (unsigned int i = 0; i < self->split_count; ++i)
-            free(temp_group_names[i]);
-        free(temp_group_names);
-    }
-    return err;
+    return 0;
 }
 
 int create_group_headers(LSSplits* self)
