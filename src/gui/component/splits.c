@@ -269,6 +269,7 @@ static void splits_show_game(LSComponent* self_, const ls_game* game,
 
         if (game->contains_icons) {
             if (game->split_icon_paths[i]) {
+                // g_string_append_printf(icons_css_src, ".split:nth-child(%d) .split-icon { background-image: url('%s'); }", i+1, game->split_icon_paths[i]);
                 g_string_append_printf(
                     icons_css_src,
                     ".%s .split-icon { background-image: url('%s'); }",
@@ -276,6 +277,7 @@ static void splits_show_game(LSComponent* self_, const ls_game* game,
             }
             self->split_icons[i] = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
             add_class(self->split_icons[i], "split-icon");
+            // set size but allow to dinamically change it from css with min-width and min-height
             gtk_widget_set_size_request(self->split_icons[i], 20, 20);
             gtk_container_add(GTK_CONTAINER(self->split_rows[i]), self->split_icons[i]);
             gtk_widget_show(self->split_icons[i]);
@@ -306,15 +308,6 @@ static void splits_show_game(LSComponent* self_, const ls_game* game,
     if (create_group_headers(self) != 0) {
         free_all(self);
         return;
-    }
-
-    // Initially hide all subsplit rows (draw will show the active ones)
-    if (self->split_is_subsplit) {
-        for (unsigned int i = 0; i < self->split_count; ++i) {
-            if (self->split_is_subsplit[i]) {
-                gtk_widget_set_visible(self->split_rows[i], FALSE);
-            }
-        }
     }
 
     if (self->icons_css_provider) {
@@ -371,19 +364,6 @@ static void splits_clear_game(LSComponent* self_)
     free_all(self);
     self->split_count = 0;
     self->group_count = 0;
-    self->split_display_titles = NULL;
-    self->split_is_subsplit = NULL;
-    self->split_group_index = NULL;
-    self->groups = NULL;
-    self->split_rows = NULL;
-    self->split_titles = NULL;
-    self->split_icons = NULL;
-    self->split_deltas = NULL;
-    self->split_times = NULL;
-    self->group_header_rows = NULL;
-    self->group_header_titles = NULL;
-    self->group_header_times = NULL;
-    self->group_header_deltas = NULL;
 }
 
 #define SHOW_DELTA_THRESHOLD (-30 * 1000000LL)
