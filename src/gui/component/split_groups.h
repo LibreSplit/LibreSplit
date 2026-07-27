@@ -5,7 +5,9 @@
 #ifndef __SPLIT_GROUPS_H__
 #define __SPLIT_GROUPS_H__
 
-#include "splits.h"
+#include <stdbool.h>
+
+struct ls_game;
 
 /**
  * @brief Describes one subsplit group: a consecutive run of indented
@@ -18,33 +20,30 @@ typedef struct split_group {
 } split_group;
 
 /**
+ * @brief Container for subsplit metadata parsed from split titles.
+ *
+ * Holds display titles, subsplit flags, group indices, and group
+ * definitions.  An instance of this struct is embedded in LSSplits.
+ */
+typedef struct SubsplitData {
+    unsigned int group_count;
+    char** split_display_titles;
+    bool* split_is_subsplit;
+    int* split_group_index;
+    split_group* groups;
+} SubsplitData;
+
+/**
  * Parses subsplit prefixes and builds subsplit groups.
  *
- * On success, fills in split_display_titles, split_is_subsplit,
- * split_group_index, groups, and group_count.
+ * On success fills in the subsplit_data fields.
  *
- * @param self The splits component.
- * @param game The game struct (for split_titles).
+ * @param subsplit The subsplit data struct to fill.
+ * @param game     The game struct (for split_titles).
+ * @param split_count Number of splits.
  * @return 0 on success, -1 on allocation failure.
  */
-int parse_subsplits(LSSplits* self, const ls_game* game);
-
-/**
- * Creates group header widget rows and inserts them into the splits box.
- *
- * @param self The splits component.
- * @return 0 on success, -1 on allocation failure.
- */
-int create_group_headers(LSSplits* self);
-
-/**
- * Updates group header times and deltas based on timer state.
- *
- * @param self The splits component.
- * @param game The game struct.
- * @param timer The timer instance.
- */
-void draw_group_headers(LSSplits* self, const ls_game* game,
-    const ls_timer* timer);
+int parse_subsplits(SubsplitData* subsplit, const struct ls_game* game,
+    unsigned int split_count);
 
 #endif /* __SPLIT_GROUPS_H__ */
