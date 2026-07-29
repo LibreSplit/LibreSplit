@@ -544,3 +544,5 @@ The following functions are event handlers that will be called on certain events
 - `onUnsplit()`
 - `onPause()`
 - `onUnpause()`
+
+These functions are run at the end of each Lua runtime loop, if the related event has been triggered.
