@@ -1,7 +1,7 @@
 #include "signature.h"
 
+#include "../maps/maps.h"
 #include "../utils.h"
-#include "src/lasr/maps/maps.h"
 
 #include <fcntl.h>
 #include <inttypes.h>
