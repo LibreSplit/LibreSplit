@@ -7,6 +7,7 @@ project(
 )
 
 add_project_arguments('-DAPP_VERSION="@0@"'.format(meson.project_version()), language: 'c')
+add_project_arguments('-D_GNU_SOURCE=1 ', language: 'c')
 
 if get_option('buildtype') == 'debug'
     add_project_arguments('-DDEBUG', language: 'c')
