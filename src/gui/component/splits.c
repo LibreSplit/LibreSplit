@@ -349,7 +349,6 @@ static void splits_show_game(LSComponent* self_, const ls_game* game,
             GtkWidget* indent = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
             gtk_widget_set_size_request(indent, 24, -1);
             gtk_container_add(GTK_CONTAINER(self->split_rows[i]), indent);
-            gtk_widget_show(indent);
         }
 
         self->split_titles[i] = gtk_label_new(display_title);
@@ -695,14 +694,11 @@ static void splits_draw(LSComponent* self_, const ls_game* game, const ls_timer*
                 ls_split_string(str, progress, 0);
                 gtk_label_set_text(GTK_LABEL(self->group_headers[g].delta), str);
             }
-        } else if (timer->curr_split > group->end_idx && display_time > 0
-            && timer->curr_split > 0) {
+        } else if (timer->curr_split > group->end_idx && display_time > 0) {
             long long pb_cum = game->split_times[group->end_idx];
             long long delta = display_time - pb_cum;
             if (delta > 0)
                 add_class(self->group_headers[g].delta, "behind");
-            else
-                remove_class(self->group_headers[g].delta, "behind");
             if (delta) {
                 add_class(self->group_headers[g].delta, "delta");
                 ls_delta_string(str, delta);
