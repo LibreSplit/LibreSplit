@@ -1,10 +1,3 @@
-/**
- * Shows a message dialog in case of a memory read error.
- *
- * @param data Unused.
- *
- * @return False, to remove the function from the queue.
- */
 #include "src/lasr/auto-splitter.h"
 #include <gio/gio.h>
 #include <glib.h>
@@ -27,6 +20,13 @@ static void dialog_response_cb(GtkWidget* dialog, gint response_id, gpointer use
     gtk_widget_destroy(dialog);
 }
 
+/**
+ * Shows a message dialog in case of a memory read error.
+ *
+ * @param data Unused.
+ *
+ * @return False, to remove the function from the queue.
+ */
 gboolean display_non_capable_mem_read_dialog(gpointer data)
 {
     atomic_store(&auto_splitter_enabled, 0);
