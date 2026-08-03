@@ -40,7 +40,7 @@ Splits can be grouped into subsplit groups using special prefixes in the `title`
 
 - **Normal split**: A title with no prefix is displayed as a regular split.
 - **Subsplit item**: A title starting with `-` (e.g., `"- Map 1"`) marks that split as a subsplit item. It will be displayed indented under its group header. The `-` prefix is stripped from the display name.
-- **Group ender**: A title starting with `{group_name}` (e.g., `"{Campaign} Finale"`) closes a subsplit group. The text inside the curly braces becomes the group header name, and the text after the braces becomes the split's display name. This split is also indented as part of the group.
+- **Group header**: A title starting with `{group_name}` (e.g., `"{Campaign} Finale"`) closes a subsplit group. The text inside the curly braces becomes the group header name, and the text after the braces becomes the split's display name. This split is also indented as part of the group.
 
 A group consists of one or more consecutive `-` prefixed subsplit items followed by a `{group_name}` prefixed split. The group header displays the group name with the cumulative time for all splits in the group.
 

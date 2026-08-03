@@ -12,36 +12,57 @@
 
 #define NO_SUBSPLIT_GROUP (-1)
 
+/**
+ * @brief A subsplit group: a range of consecutive splits grouped under a
+ *        common header.
+ */
 typedef struct split_group {
-    char* name;
-    unsigned int start_idx;
-    unsigned int end_idx;
+    char* name; /*!< The group header name */
+    unsigned int start_idx; /*!< Index of the first split in the group */
+    unsigned int end_idx; /*!< Index of the split that closes the group */
 } split_group;
 
+/**
+ * @brief Parsed subsplit group data, derived from split title prefixes.
+ */
 typedef struct SubsplitData {
-    unsigned int group_count;
-    int* split_group_index;
-    split_group* groups;
+    unsigned int group_count; /*!< The number of subsplit groups */
+    int* split_group_index; /*!< For each split, its group index or NO_SUBSPLIT_GROUP */
+    split_group* groups; /*!< Array of group_count subsplit groups */
 } SubsplitData;
 
+/**
+ * @brief The GTK widgets that make up a group header row.
+ */
 typedef struct GroupHeaderWidgets {
-    GtkWidget* row;
-    GtkWidget* title;
-    GtkWidget* time;
-    GtkWidget* delta;
+    GtkWidget* row; /*!< The header row widget */
+    GtkWidget* title; /*!< The group name label */
+    GtkWidget* time; /*!< The group total time label */
+    GtkWidget* delta; /*!< The group delta label */
 } GroupHeaderWidgets;
 
+/**
+ * @brief Returns the display title for a split, stripping any subsplit
+ *        group prefix ("-" or "{group_name}").
+ *
+ * @param title The raw split title.
+ * @return The title without its prefix; the pointer returned points inside
+ *         the original title string (or a static "" if empty).
+ */
 static const char* subsplit_display_title(const char* title)
 {
     if (!title || !title[0])
         return "";
     if (title[0] == '-') {
+        // skip the "-" and any leading spaces: points to the subsplit name
         const char* p = title + 1;
         while (*p == ' ')
             p++;
         return p;
     }
     if (title[0] == '{') {
+        // same as above, but for group header: skip "{group_name}" and any
+        // leading spaces, pointing to the split's own name
         const char* close = strchr(title, '}');
         if (close) {
             const char* p = close + 1;
@@ -53,12 +74,32 @@ static const char* subsplit_display_title(const char* title)
     return title;
 }
 
+/**
+ * @brief Checks whether the current split is inside the given group.
+ *
+ * @param group The group to check.
+ * @param timer The timer instance.
+ * @return True if the current split is between the group's start and end.
+ */
 static bool group_is_active(const split_group* group, const ls_timer* timer)
 {
     return timer->curr_split >= group->start_idx
         && timer->curr_split <= group->end_idx;
 }
 
+/**
+ * @brief Parses split titles for subsplit group markers and builds the
+ *        group data.
+ *
+ * Splits prefixed with "-" are subsplit items; a split prefixed with
+ * "{group_name}" holds the group header (followed by the last split). The group spans the first subsplit item
+ * after the previous group through to the last split.
+ *
+ * @param subsplit The SubsplitData to fill in.
+ * @param game The game whose split titles are parsed.
+ * @param split_count The number of splits in the game.
+ * @return 0 on success, -1 on allocation failure.
+ */
 static int parse_subsplits(SubsplitData* subsplit, const struct ls_game* game,
     unsigned int split_count)
 {
@@ -126,7 +167,7 @@ typedef struct LSSplits {
     LSComponent base; /*!< The base struct that is extended */
     unsigned int split_count; /*!< The number of splits */
     GtkWidget* container; /*!< The container for the splits */
-    struct SubsplitData subsplit_data;
+    SubsplitData subsplit_data; /*!< The data required to render subsplits for the run*/
     GtkWidget* splits;
     GtkWidget* split_last;
     GtkAdjustment* split_adjust;
