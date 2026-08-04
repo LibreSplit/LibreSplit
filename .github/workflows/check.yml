@@ -82,6 +82,8 @@ jobs:
               run: |
                   set -euo pipefail
 
+                  git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+
                   rpm_topdir="${RUNNER_TEMP}/rpmbuild"
                   install -d \
                     "${rpm_topdir}/BUILD" \
