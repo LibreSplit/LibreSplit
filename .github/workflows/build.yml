@@ -1,14 +1,46 @@
-on: [push, pull_request]
+name: Build
+
+on:
+    push:
+    pull_request:
+    workflow_call:
+        inputs:
+            version:
+                required: true
+                type: string
+            rpm_release:
+                required: true
+                type: string
+            source_sha:
+                required: true
+                type: string
+            packaging_sha:
+                required: true
+                type: string
+
+permissions: {}
 
 jobs:
     build:
         runs-on: ubuntu-24.04
         name: Build
+        permissions:
+            contents: read
         steps:
             - name: "Checkout"
               uses: actions/checkout@v4
               with:
                   fetch-depth: 0
+                  ref: ${{ inputs.source_sha }}
+
+            - name: "Set release version"
+              if: inputs.version != ''
+              env:
+                  VERSION: ${{ inputs.version }}
+              run: |
+                  # Replace pre-release version with semantic versioning
+                  sed -i "s/version: 'pre-release'/version: '${VERSION}'/" meson.build
+                  grep -Fq "version: '${VERSION}'" meson.build
 
             - name: "Install and cache C dependencies"
               uses: awalsh128/cache-apt-pkgs-action@latest
@@ -35,6 +67,24 @@ jobs:
               shell: bash
               run: echo "git_short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
+            - name: Set artifact names
+              id: artifacts
+              env:
+                  STABLE_RELEASE: ${{ inputs.version != '' }}
+                  VERSION: ${{ inputs.version }}
+              run: |
+                  if [[ "${STABLE_RELEASE}" == "true" ]]; then
+                    echo "standalone=LibreSplit-${VERSION}-standalone-x86_64" >> "${GITHUB_OUTPUT}"
+                    echo "appimage=LibreSplit-${VERSION}-x86_64.AppImage" >> "${GITHUB_OUTPUT}"
+                    echo "zsync=LibreSplit-${VERSION}-x86_64.AppImage.zsync" >> "${GITHUB_OUTPUT}"
+                    echo "update_channel=latest" >> "${GITHUB_OUTPUT}"
+                  else
+                    echo "standalone=LibreSplit-${build_number}-${git_short_sha}-standalone" >> "${GITHUB_OUTPUT}"
+                    echo "appimage=LibreSplit-${build_number}-${git_short_sha}-nightly-x86_64.AppImage" >> "${GITHUB_OUTPUT}"
+                    echo "zsync=LibreSplit-nightly-x86_64.AppImage.zsync" >> "${GITHUB_OUTPUT}"
+                    echo "update_channel=nightly" >> "${GITHUB_OUTPUT}"
+                  fi
+
             - name: "Bundle extra files"
               run: |
                   rm -rf release
@@ -44,16 +94,21 @@ jobs:
                   # Include extra non-installed files
                   cp -r assets release/
 
+            - name: "Create standalone archive"
+              env:
+                  STANDALONE_NAME: ${{ steps.artifacts.outputs.standalone }}
+              run: cd release && zip -qr "../${STANDALONE_NAME}.zip" .
+
             - name: "Upload artifacts"
               uses: actions/upload-artifact@v4
               with:
-                  name: LibreSplit-${{ env.build_number }}-${{ env.git_short_sha }}-standalone
-                  path: release/
+                  name: ${{ steps.artifacts.outputs.standalone }}
+                  path: ${{ steps.artifacts.outputs.standalone }}.zip
 
             - name: "Install AppImage dependencies"
               run: |
                   sudo apt -y update
-                  sudo apt -y install desktop-file-utils libluajit-5.1-dev
+                  sudo apt -y install desktop-file-utils libluajit-5.1-dev zsync
 
             - name: "Prepare AppDir from release artifact"
               run: |
@@ -86,34 +141,147 @@ jobs:
                   chmod +x linuxdeploy-plugin-appimage-x86_64.AppImage
 
             - name: "Create AppImage"
+              env:
+                  APPIMAGE_NAME: ${{ steps.artifacts.outputs.appimage }}
+                  UPDATE_CHANNEL: ${{ steps.artifacts.outputs.update_channel }}
+                  ZSYNC_NAME: ${{ steps.artifacts.outputs.zsync }}
               run: |
-                  LDAI_UPDATE_INFORMATION="gh-releases-zsync|${{ github.repository_owner }}|LibreSplit|nightly|LibreSplit-*x86_64.AppImage.zsync" \
+                  LDAI_OUTPUT="${APPIMAGE_NAME}" \
+                  LDAI_UPDATE_INFORMATION="gh-releases-zsync|${{ github.repository_owner }}|LibreSplit|${UPDATE_CHANNEL}|LibreSplit-*x86_64.AppImage.zsync" \
                   ./linuxdeploy-x86_64.AppImage --appdir AppDir --desktop-file AppDir/libresplit.desktop --icon-file AppDir/libresplit.png --output appimage
-                  mv LibreSplit-x86_64.AppImage LibreSplit-${{ env.build_number }}-${{ env.git_short_sha }}-nightly-x86_64.AppImage
-                  mv LibreSplit-x86_64.AppImage.zsync LibreSplit-nightly-x86_64.AppImage.zsync
+                  if [[ "${APPIMAGE_NAME}.zsync" != "${ZSYNC_NAME}" ]]; then
+                    mv "${APPIMAGE_NAME}.zsync" "${ZSYNC_NAME}"
+                  fi
 
             - name: "Upload AppImage"
               uses: actions/upload-artifact@v4
               with:
-                  path: LibreSplit-${{ env.build_number }}-${{ env.git_short_sha }}-nightly-x86_64.AppImage
-                  name: LibreSplit-${{ env.build_number }}-${{ env.git_short_sha }}-nightly-x86_64.AppImage
+                  path: ${{ steps.artifacts.outputs.appimage }}
+                  name: ${{ steps.artifacts.outputs.appimage }}
 
             - name: "Upload AppImage zsync"
               uses: actions/upload-artifact@v4
               with:
-                  path: LibreSplit-nightly-x86_64.AppImage.zsync
-                  name: LibreSplit-nightly-x86_64.AppImage.zsync
+                  path: ${{ steps.artifacts.outputs.zsync }}
+                  name: ${{ steps.artifacts.outputs.zsync }}
+
+    rpm:
+        if: inputs.version != ''
+        name: Build RPM (${{ matrix.architecture }})
+        runs-on: ${{ matrix.runner }}
+        container: registry.fedoraproject.org/fedora:44
+        permissions:
+            contents: write
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - architecture: x86_64
+                      runner: ubuntu-24.04
+                    - architecture: aarch64
+                      runner: ubuntu-24.04-arm
+        env:
+            PACKAGING_SHA: ${{ inputs.packaging_sha }}
+            RPM_RELEASE: ${{ inputs.rpm_release }}
+            SOURCE_SHA: ${{ inputs.source_sha }}
+            VERSION: ${{ inputs.version }}
+        steps:
+            - name: Check out LibreSplit source
+              uses: actions/checkout@v7
+              with:
+                  fetch-depth: 1
+                  path: source
+                  persist-credentials: false
+                  ref: ${{ inputs.source_sha }}
+
+            - name: Check out RPM packaging
+              uses: actions/checkout@v7
+              with:
+                  fetch-depth: 1
+                  path: packaging-policy
+                  persist-credentials: false
+                  ref: ${{ inputs.packaging_sha }}
+                  repository: LibreSplit/rpm.libresplit.org
+
+            - name: Install Fedora tooling
+              run: >-
+                  dnf install --assumeyes
+                  dnf5-plugins
+                  gh
+                  git-core
+                  rpm-build
+
+            - name: Prepare RPM sources
+              run: |
+                  set -euo pipefail
+
+                  rpm_topdir="${RUNNER_TEMP}/rpmbuild"
+                  install -d \
+                    "${rpm_topdir}/BUILD" \
+                    "${rpm_topdir}/BUILDROOT" \
+                    "${rpm_topdir}/RPMS" \
+                    "${rpm_topdir}/SOURCES" \
+                    "${rpm_topdir}/SPECS" \
+                    "${rpm_topdir}/SRPMS"
+
+                  git -C source archive \
+                    --format=tar.gz \
+                    --prefix="libresplit-${VERSION}/" \
+                    --output="${rpm_topdir}/SOURCES/libresplit-${VERSION}.tar.gz" \
+                    "${SOURCE_SHA}"
+
+                  cp packaging-policy/packaging/libresplit.spec "${rpm_topdir}/SPECS/libresplit.spec"
+                  cp \
+                    packaging-policy/packaging/libresplit.repo \
+                    packaging-policy/packaging/RPM-GPG-KEY-libresplit \
+                    packaging-policy/packaging/org.libresplit.LibreSplit.metainfo.xml \
+                    "${rpm_topdir}/SOURCES/"
+
+            - name: Install RPM build dependencies
+              run: |
+                  rpm_topdir="${RUNNER_TEMP}/rpmbuild"
+                  dnf --assumeyes builddep \
+                    -D "libresplit_version ${VERSION}" \
+                    -D "libresplit_release ${RPM_RELEASE}" \
+                    --spec "${rpm_topdir}/SPECS/libresplit.spec"
+
+            - name: Build RPM
+              run: |
+                  rpm_topdir="${RUNNER_TEMP}/rpmbuild"
+                  rpmbuild -bb \
+                    --define "_topdir ${rpm_topdir}" \
+                    --define "libresplit_version ${VERSION}" \
+                    --define "libresplit_release ${RPM_RELEASE}" \
+                    "${rpm_topdir}/SPECS/libresplit.spec"
+
+            - name: Upload unsigned RPM
+              env:
+                  ARCHITECTURE: ${{ matrix.architecture }}
+                  GH_TOKEN: ${{ github.token }}
+              run: |
+                  rpm_topdir="${RUNNER_TEMP}/rpmbuild"
+                  built_rpm="${rpm_topdir}/RPMS/${ARCHITECTURE}/libresplit-${VERSION}-${RPM_RELEASE}.${ARCHITECTURE}.rpm"
+                  unsigned_rpm="${RUNNER_TEMP}/libresplit-${VERSION}-${RPM_RELEASE}.${ARCHITECTURE}.unsigned.rpm"
+
+                  cp "${built_rpm}" "${unsigned_rpm}"
+                  gh release upload \
+                    "v${VERSION}" \
+                    "${unsigned_rpm}" \
+                    --clobber \
+                    --repo "${GITHUB_REPOSITORY}"
 
     create-nightly-release:
         name: "Upload nightly release"
         needs: [build]
         runs-on: ubuntu-latest
         permissions:
-            contents: write 
+            contents: write
         concurrency:
             group: create-release
             cancel-in-progress: false
         if: |
+            github.event_name == 'push' &&
+            inputs.version == '' &&
             github.ref == 'refs/heads/main' &&
             github.repository == 'LibreSplit/LibreSplit'
         steps:
@@ -154,7 +322,7 @@ jobs:
                       cp $dir/*.AppImage.zsync artifacts-master/
                     elif [[ $dir == *-standalone ]]; then
                       echo "Processing $dir (Standalone x86_64)"
-                      (cd $dir && zip -r ../artifacts-master/$dir.zip *)
+                      cp "$dir/$dir.zip" artifacts-master/
                     fi
                   done
                   echo "=== artifacts-master ==="
