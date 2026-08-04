@@ -186,6 +186,14 @@ jobs:
             SOURCE_SHA: ${{ inputs.source_sha }}
             VERSION: ${{ inputs.version }}
         steps:
+            - name: Install Fedora tooling
+              run: >-
+                  dnf install --assumeyes
+                  dnf5-plugins
+                  gh
+                  git-core
+                  rpm-build
+
             - name: Check out LibreSplit source
               uses: actions/checkout@v7
               with:
@@ -202,14 +210,6 @@ jobs:
                   persist-credentials: false
                   ref: ${{ inputs.packaging_sha }}
                   repository: LibreSplit/rpm.libresplit.org
-
-            - name: Install Fedora tooling
-              run: >-
-                  dnf install --assumeyes
-                  dnf5-plugins
-                  gh
-                  git-core
-                  rpm-build
 
             - name: Prepare RPM sources
               run: |
