@@ -137,10 +137,21 @@ jobs:
             - name: Download release artifacts
               uses: actions/download-artifact@v7
 
+            - name: Create release token
+              id: release-token
+              uses: actions/create-github-app-token@v3
+              with:
+                  client-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
+                  private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+                  owner: LibreSplit
+                  repositories: LibreSplit
+                  permission-contents: write
+                  permission-workflows: write
+
             - name: Upload release artifacts
               uses: softprops/action-gh-release@v3
               with:
-                  token: ${{ github.token }}
+                  token: ${{ steps.release-token.outputs.token }}
                   tag_name: v${{ needs.prepare.outputs.version }}
                   draft: true
                   fail_on_unmatched_files: true
@@ -174,6 +185,7 @@ jobs:
                       --method POST \
                       -H "X-GitHub-Api-Version: 2026-03-10" \
                       repos/LibreSplit/rpm.libresplit.org/actions/workflows/publish.yml/dispatches \
+                      -F return_run_details=true \
                       -f ref=main \
                       -f "inputs[release_id]=${RELEASE_ID}" \
                       -f "inputs[version]=${VERSION}" \
