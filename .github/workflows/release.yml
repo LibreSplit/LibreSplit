@@ -101,6 +101,26 @@ jobs:
                   permission-contents: write
                   permission-workflows: write
 
+            - name: Reject existing release
+              env:
+                  GH_TOKEN: ${{ steps.release-token.outputs.token }}
+                  TAG: v${{ steps.inputs.outputs.version }}
+              run: |
+                  set -euo pipefail
+
+                  existing_release_ids="$(
+                    gh api \
+                      --paginate \
+                      -H "X-GitHub-Api-Version: 2026-03-10" \
+                      "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
+                      --jq ".[] | select(.tag_name == \"${TAG}\") | .id"
+                  )"
+
+                  if [[ -n "${existing_release_ids}" ]]; then
+                    echo "${TAG} already exists." >&2
+                    exit 1
+                  fi
+
             - name: Create draft release
               id: draft
               uses: softprops/action-gh-release@v3
