@@ -14,9 +14,6 @@ on:
             source_sha:
                 required: true
                 type: string
-            packaging_sha:
-                required: true
-                type: string
 
 permissions: {}
 
@@ -181,7 +178,6 @@ jobs:
                     - architecture: aarch64
                       runner: ubuntu-24.04-arm
         env:
-            PACKAGING_SHA: ${{ inputs.packaging_sha }}
             RPM_RELEASE: ${{ inputs.rpm_release }}
             SOURCE_SHA: ${{ inputs.source_sha }}
             VERSION: ${{ inputs.version }}
@@ -194,22 +190,13 @@ jobs:
                   git-core
                   rpm-build
 
-            - name: Check out LibreSplit source
+            - name: Check out LibreSplit
               uses: actions/checkout@v7
               with:
-                  fetch-depth: 1
+                  fetch-depth: 0
                   path: source
                   persist-credentials: false
-                  ref: ${{ inputs.source_sha }}
-
-            - name: Check out RPM packaging
-              uses: actions/checkout@v7
-              with:
-                  fetch-depth: 1
-                  path: packaging-policy
-                  persist-credentials: false
-                  ref: ${{ inputs.packaging_sha }}
-                  repository: LibreSplit/rpm.libresplit.org
+                  ref: main
 
             - name: Prepare RPM sources
               run: |
@@ -230,11 +217,10 @@ jobs:
                     --output="${rpm_topdir}/SOURCES/libresplit-${VERSION}.tar.gz" \
                     "${SOURCE_SHA}"
 
-                  cp packaging-policy/packaging/libresplit.spec "${rpm_topdir}/SPECS/libresplit.spec"
+                  cp source/assets/rpm/libresplit.spec "${rpm_topdir}/SPECS/libresplit.spec"
                   cp \
-                    packaging-policy/packaging/libresplit.repo \
-                    packaging-policy/packaging/RPM-GPG-KEY-libresplit \
-                    packaging-policy/packaging/org.libresplit.LibreSplit.metainfo.xml \
+                    source/assets/rpm/libresplit.repo \
+                    source/assets/rpm/org.libresplit.LibreSplit.metainfo.xml \
                     "${rpm_topdir}/SOURCES/"
 
             - name: Install RPM build dependencies

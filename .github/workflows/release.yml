@@ -25,7 +25,6 @@ jobs:
         permissions:
             contents: read
         outputs:
-            packaging_sha: ${{ steps.inputs.outputs.packaging_sha }}
             release_id: ${{ steps.draft.outputs.id }}
             rpm_release: ${{ steps.inputs.outputs.rpm_release }}
             source_sha: ${{ steps.inputs.outputs.source_sha }}
@@ -78,14 +77,6 @@ jobs:
                     fi
                   fi
 
-                  packaging_sha="$(
-                    git ls-remote --exit-code \
-                      https://github.com/LibreSplit/rpm.libresplit.org.git \
-                      refs/heads/main |
-                      cut -f1
-                  )"
-
-                  echo "packaging_sha=${packaging_sha}" >> "${GITHUB_OUTPUT}"
                   echo "rpm_release=${RPM_RELEASE}" >> "${GITHUB_OUTPUT}"
                   echo "source_sha=${source_sha}" >> "${GITHUB_OUTPUT}"
                   echo "version=${version}" >> "${GITHUB_OUTPUT}"
@@ -140,7 +131,6 @@ jobs:
             contents: write
         uses: ./.github/workflows/build.yml
         with:
-            packaging_sha: ${{ needs.prepare.outputs.packaging_sha }}
             rpm_release: ${{ needs.prepare.outputs.rpm_release }}
             source_sha: ${{ needs.prepare.outputs.source_sha }}
             version: ${{ needs.prepare.outputs.version }}
@@ -194,7 +184,6 @@ jobs:
               env:
                   GH_TOKEN: ${{ steps.publication-token.outputs.token }}
                   ORIGIN_RUN_ID: ${{ github.run_id }}
-                  PACKAGING_SHA: ${{ needs.prepare.outputs.packaging_sha }}
                   RELEASE_ID: ${{ needs.prepare.outputs.release_id }}
                   RPM_RELEASE: ${{ needs.prepare.outputs.rpm_release }}
                   SOURCE_SHA: ${{ needs.prepare.outputs.source_sha }}
@@ -211,7 +200,6 @@ jobs:
                       -f "inputs[version]=${VERSION}" \
                       -f "inputs[rpm_release]=${RPM_RELEASE}" \
                       -f "inputs[source_sha]=${SOURCE_SHA}" \
-                      -f "inputs[packaging_sha]=${PACKAGING_SHA}" \
                       -f "inputs[origin_run_id]=${ORIGIN_RUN_ID}" \
                       --jq .workflow_run_id
                   )"

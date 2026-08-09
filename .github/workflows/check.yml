@@ -69,15 +69,6 @@ jobs:
                   fetch-depth: 1
                   persist-credentials: false
 
-            - name: Checkout RPM packaging
-              uses: actions/checkout@v7
-              with:
-                  fetch-depth: 1
-                  path: packaging-policy
-                  persist-credentials: false
-                  ref: main
-                  repository: LibreSplit/rpm.libresplit.org
-
             - name: Prepare RPM sources
               run: |
                   set -euo pipefail
@@ -99,11 +90,10 @@ jobs:
                     --output="${rpm_topdir}/SOURCES/libresplit-${VERSION}.tar.gz" \
                     HEAD
 
-                  cp packaging-policy/packaging/libresplit.spec "${rpm_topdir}/SPECS/libresplit.spec"
+                  cp assets/rpm/libresplit.spec "${rpm_topdir}/SPECS/libresplit.spec"
                   cp \
-                    packaging-policy/packaging/libresplit.repo \
-                    packaging-policy/packaging/RPM-GPG-KEY-libresplit \
-                    packaging-policy/packaging/org.libresplit.LibreSplit.metainfo.xml \
+                    assets/rpm/libresplit.repo \
+                    assets/rpm/org.libresplit.LibreSplit.metainfo.xml \
                     "${rpm_topdir}/SOURCES/"
 
             - name: Install RPM build dependencies
