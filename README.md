@@ -49,6 +49,19 @@ LibreSplit is a speedrun timer based on [urn](https://github.com/3snowp7im/urn) 
 
 ## Installation
 
+- Fedora/RHEL Based Systems
+
+    Download the RPM for your system and open it with your software manager:
+
+    - [x86_64](https://rpm.libresplit.org/libresplit.x86_64.rpm)
+    - [arm64](https://rpm.libresplit.org/libresplit.aarch64.rpm)
+
+    Or via command line:
+
+    ```sh
+    sudo dnf install "https://rpm.libresplit.org/libresplit.$(uname -m).rpm"
+    ```
+
 - Arch-based Distros
     - `yay libresplit-git`
     - `paru libresplit-git`
@@ -77,6 +90,18 @@ and also the following (optional) runtime dependencies:
 - `glib-networking` (for web split icons)
 
 Install the required dependencies:
+
+- Fedora/RHEL Based Systems
+
+    ```sh
+    sudo dnf install binutils gcc git gtk3-devel jansson-devel libX11-devel luajit-devel meson openssl-devel
+    ```
+
+    For optional dependencies:
+
+    ```sh
+    sudo dnf install glib-networking gvfs
+    ```
 
 - Debian-based systems
 
