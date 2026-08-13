@@ -736,15 +736,18 @@ int ls_run_save(ls_timer* timer, const char* reason)
         if (i < timer->curr_split) {
             // Check if time > 0, avoids saving time on skipped splits
             if (
-                timer->split_times[i].game_time > 0 && timer->split_times[i].real_time > 0 && timer->split_times[i].game_time < LLONG_MAX && timer->split_times[i].real_time < LLONG_MAX) {
+                timer->split_times[i].game_time > 0 && timer->split_times[i].real_time > 0
+                    && timer->split_times[i].game_time < LLONG_MAX && timer->split_times[i].real_time < LLONG_MAX) {
                 json_t* time = json_object();
                 json_time_set(time, &timer->split_times[i]);
                 json_object_set_new(split, "time", time);
                 // Check if segment time > 0, avoids saving segment time AFTER skipped split
                 if (
-                    timer->segment_times[i].game_time > 0 && timer->segment_times[i].real_time > 0 && timer->segment_times[i].game_time < LLONG_MAX && timer->segment_times[i].real_time < LLONG_MAX) {
-                    json_time_set(time, &timer->segment_times[i]);
-                    json_object_set_new(split, "segment", time);
+                    timer->segment_times[i].game_time > 0 && timer->segment_times[i].real_time > 0
+                        && timer->segment_times[i].game_time < LLONG_MAX && timer->segment_times[i].real_time < LLONG_MAX) {
+                    json_t* segment = json_object();
+                    json_time_set(segment, &timer->segment_times[i]);
+                    json_object_set_new(split, "segment", segment);
                 } else {
                     json_object_set_new(split, "segment", json_null());
                 }
