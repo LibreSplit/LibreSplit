@@ -1053,13 +1053,21 @@ int ls_timer_split(ls_timer* timer)
     if (!ls_time_get_by_method(timer->best_splits[timer->curr_split], timer->game->comparison_method)
         || ls_time_get_by_method(timer->split_times[timer->curr_split], timer->game->comparison_method)
             < ls_time_get_by_method(timer->best_splits[timer->curr_split], timer->game->comparison_method)) {
-        timer->best_splits[timer->curr_split].game_time = timer->split_times[timer->curr_split].game_time;
+        if (timer->game->comparison_method == LS_GAME_TIME) {
+            timer->best_splits[timer->curr_split].game_time = timer->split_times[timer->curr_split].game_time;
+        } else {
+            timer->best_splits[timer->curr_split].real_time = timer->split_times[timer->curr_split].real_time;
+        }
         timer->split_info[timer->curr_split] |= LS_INFO_BEST_SPLIT;
     }
     if (!ls_time_get_by_method(timer->best_segments[timer->curr_split], timer->game->comparison_method)
         || ls_time_get_by_method(timer->segment_times[timer->curr_split], timer->game->comparison_method)
             < ls_time_get_by_method(timer->best_segments[timer->curr_split], timer->game->comparison_method)) {
-        timer->best_segments[timer->curr_split].game_time = timer->segment_times[timer->curr_split].game_time;
+        if (timer->game->comparison_method == LS_GAME_TIME) {
+            timer->best_segments[timer->curr_split].game_time = timer->segment_times[timer->curr_split].game_time;
+        } else {
+            timer->best_splits[timer->curr_split].real_time = timer->split_times[timer->curr_split].real_time;
+        }
         timer->split_info[timer->curr_split] |= LS_INFO_BEST_SEGMENT;
     }
 
