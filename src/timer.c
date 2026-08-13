@@ -1242,7 +1242,7 @@ int ls_timer_reset(ls_timer* timer, ls_game* game)
     if (timer->running)
         return 0;
 
-    if (timer->started && ls_time_lte_zero(ls_timer_get_time(timer, true)) <= 0) {
+    if (timer->started && ls_time_lte_zero(ls_timer_get_time(timer, true))) {
         return ls_timer_cancel(timer);
     }
 
