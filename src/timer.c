@@ -1211,7 +1211,7 @@ void ls_timer_stop(ls_timer* timer)
  * @param timer The timer instance
  * @return Whether the reset was successful, will fail if the timer is currently running/reset cancelled
  */
-int ls_timer_reset(ls_timer* timer)
+int ls_timer_reset(ls_timer* timer, ls_game* game)
 {
     // Disallow resets while running
     if (timer->running)
@@ -1229,7 +1229,7 @@ int ls_timer_reset(ls_timer* timer)
 
     // Warn if the reset will lose a gold split, and allow the user to cancel the reset if they want to keep it
     if (ls_timer_has_gold_split(timer)) {
-        ls_game_update_splits(&timer->game, timer);
+        ls_game_update_splits(game, timer);
     }
 
     reset_timer(timer);

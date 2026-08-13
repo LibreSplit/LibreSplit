@@ -124,7 +124,7 @@ void ls_timer_unpause(ls_timer* timer);
 
 void ls_timer_stop(ls_timer* timer);
 
-int ls_timer_reset(ls_timer* timer);
+int ls_timer_reset(ls_timer* timer, ls_game* game);
 
 int ls_timer_cancel(ls_timer* timer);
 
