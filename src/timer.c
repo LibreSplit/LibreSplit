@@ -38,17 +38,12 @@ static long long ls_time_now(void)
  * @param load_removed Whether to subtract load_removed from RTA time
  * @return The current time
  */
-inline long long ls_timer_get_time(const ls_timer* timer, bool load_removed)
+inline ls_time ls_timer_get_time(const ls_timer* timer, bool load_removed)
 {
-    if (timer->game->comparison_method == LS_GAME_TIME) {
-        return timer->gameTime;
-    }
-
-    if (load_removed) {
-        return timer->realTime - timer->loadingTime;
-    }
-
-    return timer->realTime;
+    return (ls_time) {
+        .real_time = timer->realTime - (load_removed ? timer->loadingTime : 0),
+        .game_time = timer->gameTime
+    };
 }
 
 /**
@@ -710,12 +705,11 @@ int ls_game_save(const ls_game* game)
 
 int ls_run_save(ls_timer* timer, const char* reason)
 {
-    if (ls_timer_get_time(timer, true) == 0)
+    ls_time final_time = ls_timer_get_time(timer, true);
+    if (ls_time_get_by_method(final_time, timer->game->comparison_method) == 0)
         return 0;
 
     int error = 0;
-    char final_time_str[128];
-    ls_time_string_serialized(final_time_str, ls_timer_get_time(timer, true));
 
     // Root JSON Object
     json_t* json = json_object();
@@ -730,7 +724,9 @@ int ls_run_save(ls_timer* timer, const char* reason)
     if (timer->game->finished_count) {
         json_object_set_new(json, "finished_count", json_integer(timer->game->finished_count));
     }
-    json_object_set_new(json, "final_time", json_string(final_time_str));
+    json_t* final = json_object();
+    json_time_set(final, &final_time);
+    json_object_set_new(json, "final_time", final);
     json_object_set_new(json, "reason", json_string(reason));
 
     // Splits Array
@@ -1046,7 +1042,7 @@ int ls_timer_start(ls_timer* timer)
  */
 int ls_timer_split(ls_timer* timer)
 {
-    if (ls_timer_get_time(timer, true) <= 0) {
+    if (ls_time_get_by_method(ls_timer_get_time(timer, true), timer->game->comparison_method) <= 0) {
         return 0;
     }
 
@@ -1128,7 +1124,7 @@ int ls_timer_split(ls_timer* timer)
  */
 int ls_timer_skip(ls_timer* timer)
 {
-    if (ls_timer_get_time(timer, false) <= 0)
+    if (ls_time_get_by_method(ls_timer_get_time(timer, false), timer->game->comparison_method) <= 0)
         return 0;
 
     if (timer->curr_split + 1 == timer->game->split_count) {
@@ -1220,7 +1216,7 @@ int ls_timer_reset(ls_timer* timer)
     if (timer->running)
         return 0;
 
-    if (timer->started && ls_timer_get_time(timer, true) <= 0) {
+    if (timer->started && ls_time_get_by_method(ls_timer_get_time(timer, true), timer->game->comparison_method) <= 0) {
         return ls_timer_cancel(timer);
     }
 

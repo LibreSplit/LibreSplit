@@ -74,7 +74,7 @@ typedef struct ls_timer {
 
 extern atomic_bool run_started;
 
-long long ls_timer_get_time(const ls_timer* timer, bool load_removed);
+ls_time ls_timer_get_time(const ls_timer* timer, bool load_removed);
 
 long long ls_time_value(const char* string);
 
