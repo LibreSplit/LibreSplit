@@ -1,6 +1,6 @@
 #include "src/gui/actions.h"
-#include "src/gui/dialogs.h"
 #include "src/gui/app_window.h"
+#include "src/gui/dialogs.h"
 #include "src/gui/game.h"
 #include "src/gui/timer.h"
 #include "src/lasr/auto-splitter.h"
