@@ -1,6 +1,7 @@
 #pragma once
 
 #include "src/settings/definitions.h"
+#include <jansson.h>
 #include <stdatomic.h>
 #include <stdbool.h>
 
@@ -11,25 +12,36 @@
 
 extern AppConfig cfg;
 
+typedef struct ls_time {
+    long long real_time;
+    long long game_time;
+} ls_time;
+
+typedef enum ls_time_method {
+    LS_REAL_TIME,
+    LS_GAME_TIME
+} ls_time_method;
+
 typedef struct ls_game {
     char path[PATH_MAX];
     char* title;
     char* theme;
     char* theme_variant;
+    int comparison_method;
     int attempt_count;
     int finished_count;
     int width;
     int height;
-    long long world_record;
+    ls_time world_record;
     long long start_delay;
     char** split_titles;
     char** split_icon_paths; // null if no icons
     bool contains_icons;
     unsigned int split_count;
-    long long* split_times;
-    long long* segment_times;
-    long long* best_splits;
-    long long* best_segments;
+    ls_time* split_times;
+    ls_time* segment_times;
+    ls_time* best_splits;
+    ls_time* best_segments;
 } ls_game;
 
 /**
@@ -45,15 +57,15 @@ typedef struct ls_timer {
     int started; /*!< Wether the run has started, either by LASR or manually, keeps being set to true after run finished */
     bool running; /*!< Whether the runner is currently running. If this is false and started is true then the run finished. Mainly used to check if some actions are valid to perform (splits, pause, etc) */
     unsigned int curr_split; /*!< Index of the current split, 0 for first split */
-    long long sum_of_bests; /*!< Sum of best segments */
-    long long world_record; /*!< World record time */
-    long long* split_times;
-    long long* split_deltas;
-    long long* segment_times;
-    long long* segment_deltas;
+    ls_time sum_of_bests; /*!< Sum of best segments */
+    ls_time world_record; /*!< World record time */
+    ls_time* split_times;
+    ls_time* split_deltas;
+    ls_time* segment_times;
+    ls_time* segment_deltas;
     int* split_info;
-    long long* best_splits;
-    long long* best_segments;
+    ls_time* best_splits;
+    ls_time* best_segments;
     const ls_game* game;
     long long last_tick; // This NEEDS to be here for resetting
     int* attempt_count;
@@ -65,6 +77,12 @@ extern atomic_bool run_started;
 long long ls_timer_get_time(const ls_timer* timer, bool load_removed);
 
 long long ls_time_value(const char* string);
+
+ls_time ls_time_subtract(ls_time a, ls_time b);
+
+long long ls_time_get_by_method(ls_time time, ls_time_method method);
+
+void ls_time_clear(ls_time* time);
 
 void ls_time_string(char* string, long long time);
 
@@ -109,3 +127,7 @@ void ls_timer_stop(ls_timer* timer);
 int ls_timer_reset(ls_timer* timer);
 
 int ls_timer_cancel(ls_timer* timer);
+
+void json_time_get(const json_t* ref, ls_time* time);
+
+void json_time_set(json_t* ref, const ls_time* time);

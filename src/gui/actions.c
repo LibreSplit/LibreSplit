@@ -10,7 +10,7 @@
 
 /**
  * Compares the current timer and the saved one to see
- * if the current one is better
+ * if the current one is better for the game's comparison method.
  *
  * Ported from paoloose/urn @7456bfe
  *
@@ -24,20 +24,21 @@ bool ls_is_timer_better(ls_game* game, ls_timer* timer)
     int i;
     // Find the latest split with a time
     for (i = game->split_count - 1; i >= 0; i--) {
-        if (timer->split_times[i] != 0ll || game->split_times[i] != 0ll) {
+        if (ls_time_get_by_method(timer->split_times[i], game->comparison_method) != 0ll || ls_time_get_by_method(game->split_times[i], game->comparison_method) != 0ll) {
             break;
         }
     }
     if (i < 0) {
         return true;
     }
-    if (timer->split_times[i] == 0ll) {
+    if (ls_time_get_by_method(timer->split_times[i], game->comparison_method) == 0ll) {
         return false;
     }
-    if (game->split_times[i] == 0ll) {
+    if (ls_time_get_by_method(game->split_times[i], game->comparison_method) == 0ll) {
         return true;
     }
-    return timer->split_times[i] <= game->split_times[i];
+
+    return ls_time_get_by_method(timer->split_times[i], game->comparison_method) <= ls_time_get_by_method(game->split_times[i], game->comparison_method);
 }
 
 /**

@@ -9,7 +9,7 @@
 
 #include "lasr/auto-splitter.h"
 
-#include <jansson.h>
+#include <assert.h>
 #include <limits.h>
 #include <stdatomic.h>
 #include <stdbool.h>
@@ -110,6 +110,34 @@ long long ls_time_value(const char* string)
     }
 
     return sign * ((hours * 60 * 60 + minutes * 60 + seconds) * 1000000LL + (long long)(subseconds_part * 1000000.));
+}
+
+/**
+ * Subtracts time values of b from a, i.e. (a - b) for delta calculations.
+ * If a split has no prior time (i.e. a time of 0) then an empty delta is returned instead.
+ *
+ * @param a Time to subtract from
+ * @param b Time to subtract
+ * @return ls_time
+ */
+ls_time ls_time_subtract(ls_time a, ls_time b)
+{
+    return (ls_time) {
+        .real_time = a.real_time > 0 && b.real_time > 0 ? a.real_time - b.real_time : 0,
+        .game_time = a.game_time > 0 && b.game_time > 0 ? a.game_time - b.game_time : 0
+    };
+}
+
+long long ls_time_get_by_method(ls_time time, ls_time_method method)
+{
+    return method == LS_GAME_TIME ? time.game_time : time.real_time;
+}
+
+void ls_time_clear(ls_time* time)
+{
+    assert(time != NULL);
+    time->game_time = 0;
+    time->real_time = 0;
 }
 
 /**
@@ -323,6 +351,17 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
             goto game_create_error;
         }
     }
+    // get comparison method, default to real time
+    game->comparison_method = LS_REAL_TIME;
+    ref = json_object_get(json, "comparison_method");
+    if (ref) {
+        game->comparison_method = json_integer_value(ref);
+        if (game->comparison_method != LS_REAL_TIME || game->comparison_method != LS_GAME_TIME) {
+            error = 1;
+            LOG_ERRF("Invalid value for comparison_method: %i", game->comparison_method);
+            goto game_create_error;
+        }
+    }
     // get attempt count
     ref = json_object_get(json, "attempt_count");
     if (ref) {
@@ -352,8 +391,7 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
     // get wr
     ref = json_object_get(json, "world_record");
     if (ref) {
-        game->world_record = ls_time_value(
-            json_string_value(ref));
+        json_time_get(ref, &game->world_record);
     }
     // get splits
     ref = json_object_get(json, "splits");
@@ -381,7 +419,7 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
             goto game_create_error;
         }
         // allocate splits
-        game->split_times = calloc(split_count, sizeof(long long));
+        game->split_times = calloc(split_count, sizeof(ls_time));
         if (!game->split_times) {
             error = 1;
             goto game_create_error;
@@ -391,17 +429,17 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
             error = 1;
             goto game_create_error;
         }
-        game->segment_times = calloc(split_count, sizeof(long long));
+        game->segment_times = calloc(split_count, sizeof(ls_time));
         if (!game->segment_times) {
             error = 1;
             goto game_create_error;
         }
-        game->best_splits = calloc(split_count, sizeof(long long));
+        game->best_splits = calloc(split_count, sizeof(ls_time));
         if (!game->best_splits) {
             error = 1;
             goto game_create_error;
         }
-        game->best_segments = calloc(split_count, sizeof(long long));
+        game->best_segments = calloc(split_count, sizeof(ls_time));
         if (!game->best_segments) {
             error = 1;
             goto game_create_error;
@@ -434,39 +472,54 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
 
             split_ref = json_object_get(split, "time");
             if (split_ref) {
-                game->split_times[i] = ls_time_value(
-                    json_string_value(split_ref));
+                json_time_get(split_ref, &game->split_times[i]);
             }
 
             // Check whether the split time is 0, if it is set it to max value
-            if (game->split_times[i] == 0) {
-                game->split_times[i] = LLONG_MAX;
+            if (game->split_times[i].real_time == 0) {
+                game->split_times[i].real_time = LLONG_MAX;
             }
-            if (i && game->split_times[i] && game->split_times[i - 1]) {
-                game->segment_times[i] = game->split_times[i] - game->split_times[i - 1];
-            } else if (!i && game->split_times[0]) {
-                game->segment_times[0] = game->split_times[0];
+            if (game->split_times[i].game_time == 0) {
+                game->split_times[i].game_time = LLONG_MAX;
             }
 
-            if (game->best_splits[i] == 0) {
-                game->best_splits[i] = LLONG_MAX;
+            if (i && game->split_times[i].real_time && game->split_times[i - 1].real_time) {
+                game->segment_times[i].real_time = game->split_times[i].real_time - game->split_times[i - 1].real_time;
+            } else if (!i && game->split_times[0].real_time) {
+                game->segment_times[0].real_time = game->split_times[0].real_time;
             }
+
+            if (i && game->split_times[i].game_time && game->split_times[i - 1].game_time) {
+                game->segment_times[i].game_time = game->split_times[i].game_time - game->split_times[i - 1].game_time;
+            } else if (!i && game->split_times[0].game_time) {
+                game->segment_times[0].game_time = game->split_times[0].game_time;
+            }
+
+            if (game->best_splits[i].real_time == 0) {
+                game->best_splits[i].real_time = LLONG_MAX;
+            }
+            if (game->best_splits[i].game_time == 0) {
+                game->best_splits[i].game_time = LLONG_MAX;
+            }
+
             split_ref = json_object_get(split, "best_time");
             if (split_ref) {
-                game->best_splits[i] = ls_time_value(
-                    json_string_value(split_ref));
-            } else if (game->split_times[i]) {
+                json_time_get(split_ref, &game->best_splits[i]);
+            } else if (game->split_times[i].real_time || game->split_times[i].game_time) {
                 game->best_splits[i] = game->split_times[i];
             }
 
-            if (game->best_segments[i] == 0) {
-                game->best_segments[i] = LLONG_MAX;
+            if (game->best_segments[i].real_time == 0) {
+                game->best_segments[i].real_time = LLONG_MAX;
             }
+            if (game->best_segments[i].game_time == 0) {
+                game->best_segments[i].game_time = LLONG_MAX;
+            }
+
             split_ref = json_object_get(split, "best_segment");
             if (split_ref) {
-                game->best_segments[i] = ls_time_value(
-                    json_string_value(split_ref));
-            } else if (game->segment_times[i]) {
+                json_time_get(split_ref, &game->best_segments[i]);
+            } else if (game->segment_times[i].real_time || game->segment_times[i].game_time) {
                 game->best_segments[i] = game->segment_times[i];
             }
         }
@@ -504,34 +557,53 @@ void ls_game_update_splits(ls_game* game, const ls_timer* timer)
 {
     if (timer->curr_split) {
         int size;
-        if (timer->split_times[game->split_count - 1]
-            && timer->split_times[game->split_count - 1]
-                < game->world_record) {
-            game->world_record = timer->split_times[game->split_count - 1];
-        }
-        size = timer->curr_split * sizeof(long long);
-        if (timer->split_times[game->split_count - 1]
-            < game->split_times[game->split_count - 1]) {
-            memcpy(game->split_times, timer->split_times, size);
-        }
-        memcpy(game->segment_times, timer->segment_times, size);
-        for (unsigned int i = 0; i < game->split_count; ++i) {
-            if (timer->split_times[i] < game->best_splits[i]) {
-                game->best_splits[i] = timer->split_times[i];
+        long long split_time = ls_time_get_by_method(timer->split_times[game->split_count - 1], game->comparison_method);
+        long long world_record_time = ls_time_get_by_method(game->world_record, game->comparison_method);
+        if (timer->curr_split == game->split_count) {
+            if (split_time && split_time < world_record_time) {
+                game->world_record = timer->split_times[game->split_count - 1];
             }
-            if (timer->segment_times[i] < game->best_segments[i]) {
-                game->best_segments[i] = timer->segment_times[i];
+
+            // PB
+            size = timer->curr_split * sizeof(ls_time);
+            long long pb_time = ls_time_get_by_method(game->split_times[game->split_count - 1], game->comparison_method);
+            if (split_time && split_time < pb_time) {
+                memcpy(game->split_times, timer->split_times, size);
+                memcpy(game->segment_times, timer->segment_times, size);
+            }
+        }
+
+        for (unsigned int i = 0; i < timer->curr_split; ++i) {
+            ls_time* split_time = &timer->split_times[i];
+            ls_time* segment_time = &timer->segment_times[i];
+            ls_time* best_split_time = &game->best_splits[i];
+            ls_time* best_segment_time = &game->best_segments[i];
+
+            // update best game time splits
+            if (split_time->game_time && split_time->game_time < best_split_time->game_time) {
+                best_split_time->game_time = split_time->game_time;
+            }
+            // update best real time splits
+            if (split_time->real_time && split_time->real_time < best_split_time->real_time) {
+                best_split_time->real_time = split_time->real_time;
+            }
+            // update best game time segments
+            if (segment_time->game_time && segment_time->game_time < best_segment_time->game_time) {
+                best_segment_time->game_time = segment_time->game_time;
+            }
+            // update best real time segments
+            if (segment_time->real_time && segment_time->real_time < best_segment_time->real_time) {
+                best_segment_time->real_time = segment_time->real_time;
             }
         }
     }
 }
 
-void ls_game_update_bests(const ls_game* game,
-    const ls_timer* timer)
+void ls_game_update_bests(const ls_game* game, const ls_timer* timer)
 {
     if (timer->curr_split) {
         int size;
-        size = timer->curr_split * sizeof(long long);
+        size = timer->curr_split * sizeof(ls_time);
         memcpy(game->best_splits, timer->best_splits, size);
         memcpy(game->best_segments, timer->best_segments, size);
     }
@@ -569,9 +641,10 @@ int ls_game_save(const ls_game* game)
         json_object_set_new(json, "finished_count",
             json_integer(game->finished_count));
     }
-    if (game->world_record) {
-        ls_time_string_serialized(str, game->world_record);
-        json_object_set_new(json, "world_record", json_string(str));
+    if ((game->world_record.real_time && game->world_record.real_time < LLONG_MAX) || (game->world_record.game_time && game->world_record.game_time < LLONG_MAX)) {
+        json_t* world_record = json_object();
+        json_time_set(world_record, &game->world_record);
+        json_object_set_new(json, "world_record", world_record);
     }
     if (game->start_delay) {
         ls_time_string_serialized(str, game->start_delay);
@@ -583,17 +656,29 @@ int ls_game_save(const ls_game* game)
         json_object_set_new(split, "icon", json_string(game->split_icon_paths[i]));
 
         // Only save the split if it's above 0. Otherwise it's impossible to beat 0
-        if (game->split_times[i] > 0 && game->split_times[i] < LLONG_MAX) {
-            ls_time_string_serialized(str, game->split_times[i]);
-            json_object_set_new(split, "time", json_string(str));
+        if (
+            game->split_times[i].game_time > 0 && game->split_times[i].game_time < LLONG_MAX &&
+            game->split_times[i].real_time > 0 && game->split_times[i].real_time < LLONG_MAX
+        ) {
+            json_t* time = json_object();
+            json_time_set(time, &game->split_times[i]);
+            json_object_set_new(split, "time", time);
         }
-        if (game->best_splits[i] > 0 && game->best_splits[i] < LLONG_MAX) {
-            ls_time_string_serialized(str, game->best_splits[i]);
-            json_object_set_new(split, "best_time", json_string(str));
+        if (
+            game->best_splits[i].game_time > 0 && game->best_splits[i].game_time < LLONG_MAX &&
+            game->best_splits[i].real_time > 0 && game->best_splits[i].real_time < LLONG_MAX
+        ) {
+            json_t* time = json_object();
+            json_time_set(time, &game->best_splits[i]);
+            json_object_set_new(split, "best_time", time);
         }
-        if (game->best_segments[i] > 0 && game->best_segments[i] < LLONG_MAX) {
-            ls_time_string_serialized(str, game->best_segments[i]);
-            json_object_set_new(split, "best_segment", json_string(str));
+        if (
+            game->best_segments[i].game_time > 0 && game->best_segments[i].game_time < LLONG_MAX &&
+            game->best_segments[i].real_time > 0 && game->best_segments[i].real_time < LLONG_MAX
+        ) {
+            json_t* time = json_object();
+            json_time_set(time, &game->best_segments[i]);
+            json_object_set_new(split, "best_segment", time);
         }
         json_array_append_new(splits, split);
     }
@@ -605,6 +690,7 @@ int ls_game_save(const ls_game* game)
         json_object_set_new(json, "theme_variant",
             json_string(game->theme_variant));
     }
+    json_object_set_new(json, "comparison_method", json_integer(game->comparison_method));
     if (game->width) {
         json_object_set_new(json, "width", json_integer(game->width));
     }
@@ -659,15 +745,20 @@ int ls_run_save(ls_timer* timer, const char* reason)
         // Time
         if (i < timer->curr_split) {
             // Check if time > 0, avoids saving time on skipped splits
-            if (timer->split_times[i] > 0 && timer->split_times[i] < LLONG_MAX) {
-                char split_time_str[128];
-                ls_time_string_serialized(split_time_str, timer->split_times[i]);
-                json_object_set_new(split, "time", json_string(split_time_str));
+            if (
+                timer->split_times[i].game_time > 0 && timer->split_times[i].real_time > 0 &&
+                timer->split_times[i].game_time < LLONG_MAX && timer->split_times[i].real_time < LLONG_MAX
+            ) {
+                json_t* time = json_object();
+                json_time_set(time, &timer->split_times[i]);
+                json_object_set_new(split, "time", time);
                 // Check if segment time > 0, avoids saving segment time AFTER skipped split
-                if (timer->segment_times[i] > 0 && timer->segment_times[i] < LLONG_MAX) {
-                    char segment_time_str[128];
-                    ls_time_string_serialized(segment_time_str, timer->segment_times[i]);
-                    json_object_set_new(split, "segment", json_string(segment_time_str));
+                if (
+                    timer->segment_times[i].game_time > 0 && timer->segment_times[i].real_time > 0 &&
+                    timer->segment_times[i].game_time < LLONG_MAX && timer->segment_times[i].real_time < LLONG_MAX
+                ) {
+                    json_time_set(time, &timer->segment_times[i]);
+                    json_object_set_new(split, "segment", time);
                 } else {
                     json_object_set_new(split, "segment", json_null());
                 }
@@ -761,7 +852,7 @@ static void reset_timer(ls_timer* timer)
     timer->loading = false;
     timer->loadingTime = 0;
     timer->last_tick = 0;
-    int size = timer->game->split_count * sizeof(long long);
+    int size = timer->game->split_count * sizeof(ls_time);
     memcpy(timer->split_times, timer->game->split_times, size);
     memset(timer->split_deltas, 0, size);
     memcpy(timer->segment_times, timer->game->segment_times, size);
@@ -770,15 +861,26 @@ static void reset_timer(ls_timer* timer)
     memcpy(timer->best_segments, timer->game->best_segments, size);
     size = timer->game->split_count * sizeof(int);
     memset(timer->split_info, 0, size);
-    timer->sum_of_bests = 0;
+    timer->sum_of_bests.game_time = 0;
+    timer->sum_of_bests.real_time = 0;
     for (unsigned int i = 0; i < timer->game->split_count; ++i) {
-        // Check no segments are erroring with LLONG_MAX
-        if (timer->best_segments[i] && timer->best_segments[i] < LLONG_MAX) {
-            timer->sum_of_bests += timer->best_segments[i];
-        } else if (timer->game->best_segments[i] && timer->game->best_segments[i] < LLONG_MAX) {
-            timer->sum_of_bests += timer->game->best_segments[i];
+        // Check no segments are erroring with LLONG_MAX for game_time
+        if (timer->best_segments[i].game_time && timer->best_segments[i].game_time < LLONG_MAX) {
+            timer->sum_of_bests.game_time += timer->best_segments[i].game_time;
+        } else if (timer->game->best_segments[i].game_time && timer->game->best_segments[i].game_time < LLONG_MAX) {
+            timer->sum_of_bests.game_time += timer->game->best_segments[i].game_time;
         } else {
-            timer->sum_of_bests = 0;
+            timer->sum_of_bests.game_time = 0;
+            break;
+        }
+
+        // Check no segments are erroring with LLONG_MAX for real_time
+        if (timer->best_segments[i].real_time && timer->best_segments[i].real_time < LLONG_MAX) {
+            timer->sum_of_bests.real_time += timer->best_segments[i].real_time;
+        } else if (timer->game->best_segments[i].real_time && timer->game->best_segments[i].real_time < LLONG_MAX) {
+            timer->sum_of_bests.real_time += timer->game->best_segments[i].real_time;
+        } else {
+            timer->sum_of_bests.real_time = 0;
             break;
         }
     }
@@ -807,32 +909,32 @@ int ls_timer_create(ls_timer** timer_ptr, ls_game* game)
     // alloc splits
     int split_count = timer->game->split_count + 1; // +1 for the last invisible "split" that exists to signify no split
 
-    timer->split_times = calloc(split_count, sizeof(long long));
+    timer->split_times = calloc(split_count, sizeof(ls_time));
     if (!timer->split_times) {
         error = 1;
         goto timer_create_error;
     }
-    timer->split_deltas = calloc(split_count, sizeof(long long));
+    timer->split_deltas = calloc(split_count, sizeof(ls_time));
     if (!timer->split_deltas) {
         error = 1;
         goto timer_create_error;
     }
-    timer->segment_times = calloc(split_count, sizeof(long long));
+    timer->segment_times = calloc(split_count, sizeof(ls_time));
     if (!timer->segment_times) {
         error = 1;
         goto timer_create_error;
     }
-    timer->segment_deltas = calloc(split_count, sizeof(long long));
+    timer->segment_deltas = calloc(split_count, sizeof(ls_time));
     if (!timer->segment_deltas) {
         error = 1;
         goto timer_create_error;
     }
-    timer->best_splits = calloc(split_count, sizeof(long long));
+    timer->best_splits = calloc(split_count, sizeof(ls_time));
     if (!timer->best_splits) {
         error = 1;
         goto timer_create_error;
     }
-    timer->best_segments = calloc(split_count, sizeof(long long));
+    timer->best_segments = calloc(split_count, sizeof(ls_time));
     if (!timer->best_segments) {
         error = 1;
         goto timer_create_error;
@@ -876,46 +978,48 @@ void ls_timer_step(ls_timer* timer)
             timer->loadingTime += delta; // Accumulate loading time if currently loading
         }
         if (timer->curr_split < timer->game->split_count) {
-            timer->split_times[timer->curr_split] = timer->usingGameTime ? timer->gameTime : timer->realTime - timer->loadingTime;
+            timer->split_times[timer->curr_split].real_time = timer->realTime;
+            timer->split_times[timer->curr_split].game_time = timer->usingGameTime ? timer->gameTime : timer->realTime - timer->loadingTime;
             // calc delta and check it's not an error of LLONG_MAX
-            if (timer->game->split_times[timer->curr_split] && timer->game->split_times[timer->curr_split] < LLONG_MAX) {
-                timer->split_deltas[timer->curr_split] = timer->split_times[timer->curr_split]
-                    - timer->game->split_times[timer->curr_split];
+            if (
+                timer->game->split_times[timer->curr_split].game_time && timer->game->split_times[timer->curr_split].real_time &&
+                timer->game->split_times[timer->curr_split].game_time < LLONG_MAX && timer->game->split_times[timer->curr_split].real_time < LLONG_MAX
+            ) {
+                timer->split_deltas[timer->curr_split] = ls_time_subtract(timer->split_times[timer->curr_split], timer->game->split_times[timer->curr_split]);
             }
             // check for behind time
-            if (timer->split_deltas[timer->curr_split] > 0) {
+            long long split_delta = ls_time_get_by_method(timer->split_deltas[timer->curr_split], timer->game->comparison_method);
+            if (split_delta > 0) {
                 timer->split_info[timer->curr_split] |= LS_INFO_BEHIND_TIME;
             } else {
                 timer->split_info[timer->curr_split] &= ~LS_INFO_BEHIND_TIME;
             }
-            if (!timer->curr_split || timer->split_times[timer->curr_split - 1]) {
+            if (!timer->curr_split || timer->split_times[timer->curr_split - 1].real_time) {
                 // calc segment time and delta
                 timer->segment_times[timer->curr_split] = timer->split_times[timer->curr_split];
                 if (timer->curr_split) {
-                    timer->segment_times[timer->curr_split] -= timer->split_times[timer->curr_split - 1];
+                    timer->segment_times[timer->curr_split] = ls_time_subtract(timer->segment_times[timer->curr_split], timer->split_times[timer->curr_split - 1]);
                 }
                 // For previous segment in footer
-                if (timer->game->segment_times[timer->curr_split] && timer->game->segment_times[timer->curr_split] < LLONG_MAX) {
-                    timer->segment_deltas[timer->curr_split] = timer->segment_times[timer->curr_split]
-                        - timer->game->segment_times[timer->curr_split];
+                if (
+                    timer->game->segment_times[timer->curr_split].game_time && timer->game->segment_times[timer->curr_split].real_time &&
+                    timer->game->segment_times[timer->curr_split].game_time < LLONG_MAX && timer->game->segment_times[timer->curr_split].real_time < LLONG_MAX
+                ) {
+                    timer->segment_deltas[timer->curr_split] = ls_time_subtract(timer->segment_times[timer->curr_split], timer->game->segment_times[timer->curr_split]);
                 }
             }
             // check for losing time
             if (timer->curr_split) {
-                if (timer->split_deltas[timer->curr_split]
-                    > timer->split_deltas[timer->curr_split - 1]) {
-                    timer->split_info[timer->curr_split]
-                        |= LS_INFO_LOSING_TIME;
+                long long last_split_delta = ls_time_get_by_method(timer->split_deltas[timer->curr_split - 1], timer->game->comparison_method);
+                if (split_delta > last_split_delta) {
+                    timer->split_info[timer->curr_split] |= LS_INFO_LOSING_TIME;
                 } else {
-                    timer->split_info[timer->curr_split]
-                        &= ~LS_INFO_LOSING_TIME;
+                    timer->split_info[timer->curr_split] &= ~LS_INFO_LOSING_TIME;
                 }
-            } else if (timer->split_deltas[timer->curr_split] > 0) {
-                timer->split_info[timer->curr_split]
-                    |= LS_INFO_LOSING_TIME;
+            } else if (split_delta > 0) {
+                timer->split_info[timer->curr_split] |= LS_INFO_LOSING_TIME;
             } else {
-                timer->split_info[timer->curr_split]
-                    &= ~LS_INFO_LOSING_TIME;
+                timer->split_info[timer->curr_split] &= ~LS_INFO_LOSING_TIME;
             }
         }
     }
@@ -959,31 +1063,53 @@ int ls_timer_split(ls_timer* timer)
         return 0;
     }
 
-    // check for best split and segment
-    if (!timer->best_splits[timer->curr_split]
-        || timer->split_times[timer->curr_split]
-            < timer->best_splits[timer->curr_split]) {
-        timer->best_splits[timer->curr_split] = timer->split_times[timer->curr_split];
-        timer->split_info[timer->curr_split]
-            |= LS_INFO_BEST_SPLIT;
+    // check for best split and segment - game time
+    if (!ls_time_get_by_method(timer->best_splits[timer->curr_split], LS_GAME_TIME)
+        || ls_time_get_by_method(timer->split_times[timer->curr_split], LS_GAME_TIME)
+            < ls_time_get_by_method(timer->best_splits[timer->curr_split], LS_GAME_TIME)) {
+        timer->best_splits[timer->curr_split].game_time = timer->split_times[timer->curr_split].game_time;
+        timer->split_info[timer->curr_split] |= LS_INFO_BEST_SPLIT;
     }
-    if (!timer->best_segments[timer->curr_split]
-        || timer->segment_times[timer->curr_split]
-            < timer->best_segments[timer->curr_split]) {
-        timer->best_segments[timer->curr_split] = timer->segment_times[timer->curr_split];
-        timer->split_info[timer->curr_split]
-            |= LS_INFO_BEST_SEGMENT;
+    if (!ls_time_get_by_method(timer->best_segments[timer->curr_split], LS_GAME_TIME)
+        || ls_time_get_by_method(timer->segment_times[timer->curr_split], LS_GAME_TIME)
+            < ls_time_get_by_method(timer->best_segments[timer->curr_split], LS_GAME_TIME)) {
+        timer->best_segments[timer->curr_split].game_time = timer->segment_times[timer->curr_split].game_time;
+        timer->split_info[timer->curr_split] |= LS_INFO_BEST_SEGMENT;
     }
+
+    // check for best split and segment - real time
+    if (!ls_time_get_by_method(timer->best_splits[timer->curr_split], LS_REAL_TIME)
+        || ls_time_get_by_method(timer->split_times[timer->curr_split], LS_REAL_TIME)
+            < ls_time_get_by_method(timer->best_splits[timer->curr_split], LS_REAL_TIME)) {
+        timer->best_splits[timer->curr_split].real_time = timer->split_times[timer->curr_split].real_time;
+        timer->split_info[timer->curr_split] |= LS_INFO_BEST_SPLIT;
+    }
+    if (!ls_time_get_by_method(timer->best_segments[timer->curr_split], LS_REAL_TIME)
+        || ls_time_get_by_method(timer->segment_times[timer->curr_split], LS_REAL_TIME)
+            < ls_time_get_by_method(timer->best_segments[timer->curr_split], LS_REAL_TIME)) {
+        timer->best_segments[timer->curr_split].real_time = timer->segment_times[timer->curr_split].real_time;
+        timer->split_info[timer->curr_split] |= LS_INFO_BEST_SEGMENT;
+    }
+
     // update sum of bests
-    timer->sum_of_bests = 0;
+    ls_time_clear(&timer->sum_of_bests);
     for (unsigned int i = 0; i < timer->game->split_count; ++i) {
         // Check if any best segment is missing/LLONG_MAX
-        if (timer->best_segments[i] && timer->best_segments[i] < LLONG_MAX) {
-            timer->sum_of_bests += timer->best_segments[i];
-        } else if (timer->game->best_segments[i] && timer->game->best_segments[i] < LLONG_MAX) {
-            timer->sum_of_bests += timer->game->best_segments[i];
+        if (timer->best_segments[i].game_time && timer->best_segments[i].game_time < LLONG_MAX) {
+            timer->sum_of_bests.game_time += timer->best_segments[i].game_time;
+        } else if (timer->game->best_segments[i].game_time && timer->game->best_segments[i].game_time < LLONG_MAX) {
+            timer->sum_of_bests.game_time += timer->game->best_segments[i].game_time;
         } else {
-            timer->sum_of_bests = 0;
+            timer->sum_of_bests.game_time = 0;
+            break;
+        }
+
+        if (timer->best_segments[i].real_time && timer->best_segments[i].real_time < LLONG_MAX) {
+            timer->sum_of_bests.real_time += timer->best_segments[i].real_time;
+        } else if (timer->game->best_segments[i].real_time && timer->game->best_segments[i].real_time < LLONG_MAX) {
+            timer->sum_of_bests.real_time += timer->game->best_segments[i].real_time;
+        } else {
+            timer->sum_of_bests.real_time = 0;
             break;
         }
     }
@@ -999,6 +1125,7 @@ int ls_timer_split(ls_timer* timer)
             ls_run_save(timer, "FINISHED");
         }
     }
+
     return timer->curr_split;
 }
 
@@ -1022,11 +1149,11 @@ int ls_timer_skip(ls_timer* timer)
         return 0;
     }
 
-    timer->split_times[timer->curr_split] = 0;
-    timer->split_deltas[timer->curr_split] = 0;
+    ls_time_clear(&timer->split_times[timer->curr_split]);
+    ls_time_clear(&timer->split_deltas[timer->curr_split]);
     timer->split_info[timer->curr_split] = 0;
-    timer->segment_times[timer->curr_split] = 0;
-    timer->segment_deltas[timer->curr_split] = 0;
+    ls_time_clear(&timer->segment_times[timer->curr_split]);
+    ls_time_clear(&timer->segment_deltas[timer->curr_split]);
     return ++timer->curr_split;
 }
 
@@ -1045,10 +1172,10 @@ int ls_timer_unsplit(ls_timer* timer)
     unsigned int curr = --timer->curr_split;
     for (unsigned int i = curr; i < timer->game->split_count; ++i) {
         timer->split_times[i] = timer->game->split_times[i];
-        timer->split_deltas[i] = 0;
+        ls_time_clear(&timer->split_deltas[i]);
         timer->split_info[i] = 0;
         timer->segment_times[i] = timer->game->segment_times[i];
-        timer->segment_deltas[i] = 0;
+        ls_time_clear(&timer->segment_deltas[i]);
     }
     if (timer->curr_split + 1 == timer->game->split_count) {
         timer->running = true;
@@ -1146,4 +1273,41 @@ int ls_timer_cancel(ls_timer* timer)
     }
     reset_timer(timer);
     return 1;
+}
+
+/**
+ * Parses json to fetch a time value from ref, where ref could be
+ * a sole string timestamp, or an object that contains either
+ * real_time and/or game_time.
+ *
+ * @param ref The json time representation field
+ * @param time The time object to store the json value(s) to
+ */
+void json_time_get(const json_t* ref, ls_time* time) {
+    assert(time && ref);
+    time->game_time = 0;
+    time->real_time = 0;
+    if (!json_is_object(ref)) {
+        time->real_time = ls_time_value(json_string_value(ref));
+        return;
+    }
+
+    json_t* time_val = json_object_get(ref, "game_time");
+    if (time_val) {
+        time->game_time = ls_time_value(
+            json_string_value(time_val));
+    }
+
+    time_val = json_object_get(ref, "real_time");
+    if (time_val) {
+        time->real_time = ls_time_value(json_string_value(time_val));
+    }
+}
+
+void json_time_set(json_t* ref, const ls_time* time) {
+    char str[256];
+    ls_time_string_serialized(str, time->real_time);
+    json_object_set_new(ref, "real_time", json_string(str));
+    ls_time_string_serialized(str, time->game_time);
+    json_object_set_new(ref, "game_time", json_string(str));
 }
