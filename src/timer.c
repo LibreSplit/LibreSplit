@@ -684,22 +684,6 @@ void ls_game_update_splits(ls_game* game, const ls_timer* timer)
 }
 
 /**
- * Copy the current timer's best splits into the game object for saving to the splits file
- *
- * @param game
- * @param timer
- */
-void ls_game_update_bests(const ls_game* game, const ls_timer* timer)
-{
-    if (timer->curr_split) {
-        int size;
-        size = timer->curr_split * sizeof(ls_time);
-        memcpy(game->best_splits, timer->best_splits, size);
-        memcpy(game->best_segments, timer->best_segments, size);
-    }
-}
-
-/**
  * Returns whether or not the current timer has at least one unsaved gold split (best_segment)
  *
  * @param timer The current timer

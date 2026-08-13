@@ -102,8 +102,6 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg);
 
 void ls_game_update_splits(ls_game* game, const ls_timer* timer);
 
-void ls_game_update_bests(const ls_game* game, const ls_timer* timer);
-
 bool ls_timer_has_gold_split(const ls_timer* timer);
 
 bool ls_timer_has_rainbow_split(const ls_timer* timer);
