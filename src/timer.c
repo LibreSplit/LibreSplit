@@ -1069,7 +1069,7 @@ int ls_timer_split(ls_timer* timer)
         if (timer->game->comparison_method == LS_GAME_TIME) {
             timer->best_segments[timer->curr_split].game_time = timer->segment_times[timer->curr_split].game_time;
         } else {
-            timer->best_splits[timer->curr_split].real_time = timer->split_times[timer->curr_split].real_time;
+            timer->best_segments[timer->curr_split].real_time = timer->segment_times[timer->curr_split].real_time;
         }
         timer->split_info[timer->curr_split] |= LS_INFO_BEST_SEGMENT;
     }
