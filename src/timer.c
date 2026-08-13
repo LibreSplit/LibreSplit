@@ -1085,6 +1085,7 @@ int ls_timer_split(ls_timer* timer)
 
     // update sum of bests
     ls_time_clear(&timer->sum_of_bests);
+    bool quitLoop = false;
     for (unsigned int i = 0; i < timer->game->split_count; ++i) {
         // Check if any best segment is missing/LLONG_MAX
         if (timer->best_segments[i].game_time && timer->best_segments[i].game_time < LLONG_MAX) {
@@ -1093,7 +1094,7 @@ int ls_timer_split(ls_timer* timer)
             timer->sum_of_bests.game_time += timer->game->best_segments[i].game_time;
         } else {
             timer->sum_of_bests.game_time = 0;
-            break;
+            quitLoop = true;
         }
 
         if (timer->best_segments[i].real_time && timer->best_segments[i].real_time < LLONG_MAX) {
@@ -1102,6 +1103,10 @@ int ls_timer_split(ls_timer* timer)
             timer->sum_of_bests.real_time += timer->game->best_segments[i].real_time;
         } else {
             timer->sum_of_bests.real_time = 0;
+            quitLoop = true;
+        }
+
+        if (quitLoop) {
             break;
         }
     }
