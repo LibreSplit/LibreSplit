@@ -128,6 +128,16 @@ long long ls_time_get_by_method(ls_time time, ls_time_method method)
     return method == LS_GAME_TIME ? time.game_time : time.real_time;
 }
 
+/**
+ * Returns true if and only if BOTH real time AND game time values are lte 0.
+ *
+ * @param time
+ * @return bool
+ */
+bool ls_time_lte_zero(ls_time time) {
+    return time.game_time <= 0 && time.real_time <= 0;
+}
+
 void ls_time_clear(ls_time* time)
 {
     assert(time != NULL);
@@ -700,7 +710,7 @@ int ls_game_save(const ls_game* game)
 int ls_run_save(ls_timer* timer, const char* reason)
 {
     ls_time final_time = ls_timer_get_time(timer, true);
-    if (ls_time_get_by_method(final_time, timer->game->comparison_method) == 0)
+    if (ls_time_lte_zero(final_time) == 0)
         return 0;
 
     int error = 0;
@@ -1044,7 +1054,7 @@ int ls_timer_start(ls_timer* timer)
  */
 int ls_timer_split(ls_timer* timer)
 {
-    if (ls_time_get_by_method(ls_timer_get_time(timer, true), timer->game->comparison_method) <= 0) {
+    if (ls_time_lte_zero(ls_timer_get_time(timer, true))) {
         return 0;
     }
 
@@ -1139,7 +1149,7 @@ int ls_timer_split(ls_timer* timer)
  */
 int ls_timer_skip(ls_timer* timer)
 {
-    if (ls_time_get_by_method(ls_timer_get_time(timer, false), timer->game->comparison_method) <= 0)
+    if (ls_time_lte_zero(ls_timer_get_time(timer, false)))
         return 0;
 
     if (timer->curr_split + 1 == timer->game->split_count) {
@@ -1231,7 +1241,7 @@ int ls_timer_reset(ls_timer* timer, ls_game* game)
     if (timer->running)
         return 0;
 
-    if (timer->started && ls_time_get_by_method(ls_timer_get_time(timer, true), timer->game->comparison_method) <= 0) {
+    if (timer->started && ls_time_lte_zero(ls_timer_get_time(timer, true)) <= 0) {
         return ls_timer_cancel(timer);
     }
 

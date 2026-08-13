@@ -82,6 +82,8 @@ ls_time ls_time_subtract(ls_time a, ls_time b);
 
 long long ls_time_get_by_method(ls_time time, ls_time_method method);
 
+bool ls_time_lte_zero(ls_time time);
+
 void ls_time_clear(ls_time* time);
 
 void ls_time_string(char* string, long long time);
