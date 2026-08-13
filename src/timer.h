@@ -18,8 +18,8 @@ typedef struct ls_time {
 } ls_time;
 
 typedef enum ls_time_method {
-    LS_REAL_TIME,
-    LS_GAME_TIME
+    LS_REAL_TIME = 0,
+    LS_GAME_TIME = 1
 } ls_time_method;
 
 typedef struct ls_game {
@@ -27,7 +27,7 @@ typedef struct ls_game {
     char* title;
     char* theme;
     char* theme_variant;
-    int comparison_method;
+    ls_time_method comparison_method;
     int attempt_count;
     int finished_count;
     int width;
