@@ -46,16 +46,19 @@ inline ls_time ls_timer_get_time(const ls_timer* timer, bool load_removed)
     };
 }
 
-/**
- * Converts a time string into milliseconds
- *
- * Takes a HH:MM:SS.mmmmmm formatted time string and converts it into
- * milliseconds.
- *
- * @param string The time string to convert, in HH:MM:SS.mmmmmm format
- * @return The time string converted to milliseconds
- */
-long long ls_time_value(const char* string)
+inline
+
+    /**
+     * Converts a time string into milliseconds
+     *
+     * Takes a HH:MM:SS.mmmmmm formatted time string and converts it into
+     * milliseconds.
+     *
+     * @param string The time string to convert, in HH:MM:SS.mmmmmm format
+     * @return The time string converted to milliseconds
+     */
+    long long
+    ls_time_value(const char* string)
 {
     char seconds_part[256];
     double subseconds_part = 0.;
@@ -122,11 +125,21 @@ long long ls_time_value(const char* string)
 ls_time ls_time_subtract(ls_time a, ls_time b)
 {
     return (ls_time) {
-        .real_time = a.real_time > 0 && b.real_time > 0 && a.real_time < LLONG_MAX && b.real_time < LLONG_MAX ? a.real_time - b.real_time : 0,
-        .game_time = a.game_time > 0 && b.game_time > 0 && a.game_time < LLONG_MAX && b.game_time < LLONG_MAX ? a.game_time - b.game_time : 0
+        .real_time = is_time_valid(a.real_time) && is_time_valid(b.real_time) ? a.real_time - b.real_time : 0,
+        .game_time = is_time_valid(a.game_time) && is_time_valid(b.game_time) ? a.game_time - b.game_time : 0
     };
 }
 
+/**
+ * Returns the time for the current segment by calculating it from the current and prior splits.
+ * This function also handles converting 0 times to LLONG_MAX and prevents splits that still contain LLONG_MAX
+ * from having arithmetic unnecessarily performed on them.
+ *
+ * @param current The current split time
+ * @param previous The previous split time
+ * @param is_first_split Whether or not the current time is the first split of the run
+ * @return long long The current segment time
+ */
 long long ls_segment_value(long long current, long long previous, bool is_first_split)
 {
     if (current <= 0 || current == LLONG_MAX) {
@@ -140,11 +153,42 @@ long long ls_segment_value(long long current, long long previous, bool is_first_
     return is_first_split ? current : current - previous;
 }
 
-long long ls_time_get_by_method(ls_time time, ls_time_method method)
+/**
+ * Get the current time value from the specified ls_time by the specified comparison method.
+ *
+ * @param time The time object containing all comparison method times
+ * @param method The comparison method to pull the time for
+ * @return long long The requested time value
+ */
+inline long long ls_time_get_by_method(ls_time time, ls_time_method method)
 {
     return method == LS_GAME_TIME ? time.game_time : time.real_time;
 }
 
+/**
+ * Whether or not the time is valid. A valid time is one greater than zero and less than LLONG_MAX.
+ * A zero time is impossible and should usually mean the timer is just initializing.
+ *
+ * LLONG_MAX is used to represent a new split or something along those lines and is just the default time
+ * that can be easily beat with any run.
+ *
+ * Values in-between these 2 should therefore be valid.
+ *
+ * @param time
+ * @return bool
+ */
+inline bool is_time_valid(long long time)
+{
+    return time > 0 && time < LLONG_MAX;
+}
+
+/**
+ * Calculates the sum of best time for the specified timer, using the comparison method specified.
+ *
+ * @param timer The current timer object
+ * @param method The comparison method to pull the time for
+ * @return long long
+ */
 long long ls_sum_of_bests(const ls_timer* timer, ls_time_method method)
 {
     long long sum = 0;
@@ -154,6 +198,7 @@ long long ls_sum_of_bests(const ls_timer* timer, ls_time_method method)
             segment = ls_time_get_by_method(timer->game->best_segments[i], method);
         }
 
+        // TODO: We can be smarter about how we handle missing segments so that SOB can still be calculated if the run was actually completed
         if (segment <= 0 || segment == LLONG_MAX || segment > LLONG_MAX - sum) {
             return 0;
         }
@@ -175,6 +220,11 @@ bool ls_time_lte_zero(ls_time time)
     return time.game_time <= 0 && time.real_time <= 0;
 }
 
+/**
+ * Sets the provided time object to zero time for all comparison methods.
+ *
+ * @param time Pointer to the time object to clear
+ */
 void ls_time_clear(ls_time* time)
 {
     assert(time != NULL);
@@ -525,6 +575,7 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
                 game->split_times[i].game_time = LLONG_MAX;
             }
 
+            // Only send previous time when i > 0
             game->segment_times[i].real_time = ls_segment_value(game->split_times[i].real_time, i ? game->split_times[i - 1].real_time : 0, i == 0);
             game->segment_times[i].game_time = ls_segment_value(game->split_times[i].game_time, i ? game->split_times[i - 1].game_time : 0, i == 0);
 
@@ -545,9 +596,7 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
             split_ref = json_object_get(split, "best_segment");
             if (split_ref) {
                 json_time_get(split_ref, &game->best_segments[i]);
-            } else if (
-                (game->segment_times[i].real_time > 0 && game->segment_times[i].real_time < LLONG_MAX)
-                || (game->segment_times[i].game_time > 0 && game->segment_times[i].game_time < LLONG_MAX)) {
+            } else if (is_time_valid(game->segment_times[i].real_time) || is_time_valid(game->segment_times[i].game_time)) {
                 game->best_segments[i] = game->segment_times[i];
             }
 
@@ -634,6 +683,12 @@ void ls_game_update_splits(ls_game* game, const ls_timer* timer)
     }
 }
 
+/**
+ * Copy the current timer's best splits into the game object for saving to the splits file
+ *
+ * @param game
+ * @param timer
+ */
 void ls_game_update_bests(const ls_game* game, const ls_timer* timer)
 {
     if (timer->curr_split) {
@@ -644,6 +699,12 @@ void ls_game_update_bests(const ls_game* game, const ls_timer* timer)
     }
 }
 
+/**
+ * Returns whether or not the current timer has at least one unsaved gold split (best_segment)
+ *
+ * @param timer The current timer
+ * @return bool
+ */
 bool ls_timer_has_gold_split(const ls_timer* timer)
 {
     if (!timer || !timer->split_info)
@@ -659,6 +720,12 @@ bool ls_timer_has_gold_split(const ls_timer* timer)
     return false;
 }
 
+/**
+ * Returns whether or not the current timer has at least one unsaved rainbow split (best_split)
+ *
+ * @param timer The current timer
+ * @return bool
+ */
 bool ls_timer_has_rainbow_split(const ls_timer* timer)
 {
     if (!timer || !timer->split_info)
@@ -674,6 +741,12 @@ bool ls_timer_has_rainbow_split(const ls_timer* timer)
     return false;
 }
 
+/**
+ * Save the current game state to the splits file.
+ *
+ * @param game The ls_game object
+ * @return int Any error code while saving
+ */
 int ls_game_save(const ls_game* game)
 {
     int error = 0;
@@ -691,7 +764,7 @@ int ls_game_save(const ls_game* game)
         json_object_set_new(json, "finished_count",
             json_integer(game->finished_count));
     }
-    if ((game->world_record.real_time && game->world_record.real_time < LLONG_MAX) || (game->world_record.game_time && game->world_record.game_time < LLONG_MAX)) {
+    if (is_time_valid(game->world_record.real_time) || is_time_valid(game->world_record.game_time)) {
         json_t* world_record = json_object();
         json_time_set(world_record, &game->world_record);
         json_object_set_new(json, "world_record", world_record);
@@ -749,6 +822,13 @@ int ls_game_save(const ls_game* game)
     return error;
 }
 
+/**
+ * Saves the current timer to a run history file.
+ *
+ * @param timer The current run's timer
+ * @param reason Why the run ended
+ * @return int Any error code while saving
+ */
 int ls_run_save(ls_timer* timer, const char* reason)
 {
     ls_time final_time = ls_timer_get_time(timer, true);
@@ -786,17 +866,13 @@ int ls_run_save(ls_timer* timer, const char* reason)
 
         // Time
         if (i < timer->curr_split) {
-            // Check if time > 0, avoids saving time on skipped splits
-            if (
-                timer->split_times[i].game_time > 0 && timer->split_times[i].real_time > 0
-                && timer->split_times[i].game_time < LLONG_MAX && timer->split_times[i].real_time < LLONG_MAX) {
+            // Check if time is valid, avoids saving time on skipped splits
+            if (is_time_valid(timer->split_times[i].game_time) && is_time_valid(timer->split_times[i].real_time)) {
                 json_t* time = json_object();
                 json_time_set(time, &timer->split_times[i]);
                 json_object_set_new(split, "time", time);
-                // Check if segment time > 0, avoids saving segment time AFTER skipped split
-                if (
-                    timer->segment_times[i].game_time > 0 && timer->segment_times[i].real_time > 0
-                    && timer->segment_times[i].game_time < LLONG_MAX && timer->segment_times[i].real_time < LLONG_MAX) {
+                // Check if segment time is valid, avoids saving segment time AFTER skipped split
+                if (is_time_valid(timer->segment_times[i].game_time) && is_time_valid(timer->segment_times[i].real_time)) {
                     json_t* segment = json_object();
                     json_time_set(segment, &timer->segment_times[i]);
                     json_object_set_new(split, "segment", segment);
@@ -1291,7 +1367,7 @@ int ls_timer_cancel(ls_timer* timer)
  * a sole string timestamp, or an object that contains either
  * real_time and/or game_time.
  *
- * @param ref The json time representation field
+ * @param ref The json time representation field to read from
  * @param time The time object to store the json value(s) to
  */
 void json_time_get(const json_t* ref, ls_time* time)
@@ -1316,6 +1392,13 @@ void json_time_get(const json_t* ref, ls_time* time)
     }
 }
 
+/**
+ * Converts ls_time to string representations of that time
+ * and stores them in the referenced json object
+ *
+ * @param ref The json time representation field to save to
+ * @param time The time object to read the time value(s) from
+ */
 void json_time_set(json_t* ref, const ls_time* time)
 {
     assert(time && ref);

@@ -23,23 +23,29 @@
 bool ls_is_timer_better(ls_game* game, ls_timer* timer)
 {
     int i;
+    long long timer_split_time = LLONG_MAX;
+    long long game_split_time = LLONG_MAX;
+
     // Find the latest split with a time
     for (i = game->split_count - 1; i >= 0; i--) {
-        if (ls_time_get_by_method(timer->split_times[i], game->comparison_method) != 0ll || ls_time_get_by_method(game->split_times[i], game->comparison_method) != 0ll) {
+        timer_split_time = ls_time_get_by_method(timer->split_times[i], game->comparison_method);
+        game_split_time = ls_time_get_by_method(game->split_times[i], game->comparison_method);
+        if (timer_split_time != 0ll || game_split_time != 0ll) {
             break;
         }
     }
+
     if (i < 0) {
         return true;
     }
-    if (ls_time_get_by_method(timer->split_times[i], game->comparison_method) == 0ll) {
+    if (timer_split_time == 0ll) {
         return false;
     }
-    if (ls_time_get_by_method(game->split_times[i], game->comparison_method) == 0ll) {
+    if (game_split_time == 0ll) {
         return true;
     }
 
-    return ls_time_get_by_method(timer->split_times[i], game->comparison_method) <= ls_time_get_by_method(game->split_times[i], game->comparison_method);
+    return timer_split_time <= game_split_time;
 }
 
 /**
