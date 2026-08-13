@@ -859,6 +859,7 @@ static void reset_timer(ls_timer* timer)
     memset(timer->split_info, 0, size);
     timer->sum_of_bests.game_time = 0;
     timer->sum_of_bests.real_time = 0;
+    bool quitLoop = false;
     for (unsigned int i = 0; i < timer->game->split_count; ++i) {
         // Check no segments are erroring with LLONG_MAX for game_time
         if (timer->best_segments[i].game_time && timer->best_segments[i].game_time < LLONG_MAX) {
@@ -867,7 +868,7 @@ static void reset_timer(ls_timer* timer)
             timer->sum_of_bests.game_time += timer->game->best_segments[i].game_time;
         } else {
             timer->sum_of_bests.game_time = 0;
-            break;
+            quitLoop = true;
         }
 
         // Check no segments are erroring with LLONG_MAX for real_time
@@ -877,6 +878,10 @@ static void reset_timer(ls_timer* timer)
             timer->sum_of_bests.real_time += timer->game->best_segments[i].real_time;
         } else {
             timer->sum_of_bests.real_time = 0;
+            quitLoop = true;
+        }
+
+        if (quitLoop) {
             break;
         }
     }
