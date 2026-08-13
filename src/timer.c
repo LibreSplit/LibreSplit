@@ -968,6 +968,10 @@ void ls_timer_step(ls_timer* timer)
         if (timer->loading) {
             timer->loadingTime += delta; // Accumulate loading time if currently loading
         }
+        // if there's no gameTime then gameTime should mirror LRT
+        if (!timer->usingGameTime) {
+            timer->gameTime = timer->realTime - timer->loadingTime;
+        }
         if (timer->curr_split < timer->game->split_count) {
             timer->split_times[timer->curr_split].real_time = timer->realTime;
             timer->split_times[timer->curr_split].game_time = timer->usingGameTime ? timer->gameTime : timer->realTime - timer->loadingTime;
