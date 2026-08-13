@@ -652,25 +652,19 @@ int ls_game_save(const ls_game* game)
 
         // Only save the split if it's above 0. Otherwise it's impossible to beat 0
         if (
-            game->split_times[i].game_time > 0 && game->split_times[i].game_time < LLONG_MAX &&
-            game->split_times[i].real_time > 0 && game->split_times[i].real_time < LLONG_MAX
-        ) {
+            game->split_times[i].game_time > 0 && game->split_times[i].game_time < LLONG_MAX && game->split_times[i].real_time > 0 && game->split_times[i].real_time < LLONG_MAX) {
             json_t* time = json_object();
             json_time_set(time, &game->split_times[i]);
             json_object_set_new(split, "time", time);
         }
         if (
-            game->best_splits[i].game_time > 0 && game->best_splits[i].game_time < LLONG_MAX &&
-            game->best_splits[i].real_time > 0 && game->best_splits[i].real_time < LLONG_MAX
-        ) {
+            game->best_splits[i].game_time > 0 && game->best_splits[i].game_time < LLONG_MAX && game->best_splits[i].real_time > 0 && game->best_splits[i].real_time < LLONG_MAX) {
             json_t* time = json_object();
             json_time_set(time, &game->best_splits[i]);
             json_object_set_new(split, "best_time", time);
         }
         if (
-            game->best_segments[i].game_time > 0 && game->best_segments[i].game_time < LLONG_MAX &&
-            game->best_segments[i].real_time > 0 && game->best_segments[i].real_time < LLONG_MAX
-        ) {
+            game->best_segments[i].game_time > 0 && game->best_segments[i].game_time < LLONG_MAX && game->best_segments[i].real_time > 0 && game->best_segments[i].real_time < LLONG_MAX) {
             json_t* time = json_object();
             json_time_set(time, &game->best_segments[i]);
             json_object_set_new(split, "best_segment", time);
@@ -742,17 +736,13 @@ int ls_run_save(ls_timer* timer, const char* reason)
         if (i < timer->curr_split) {
             // Check if time > 0, avoids saving time on skipped splits
             if (
-                timer->split_times[i].game_time > 0 && timer->split_times[i].real_time > 0 &&
-                timer->split_times[i].game_time < LLONG_MAX && timer->split_times[i].real_time < LLONG_MAX
-            ) {
+                timer->split_times[i].game_time > 0 && timer->split_times[i].real_time > 0 && timer->split_times[i].game_time < LLONG_MAX && timer->split_times[i].real_time < LLONG_MAX) {
                 json_t* time = json_object();
                 json_time_set(time, &timer->split_times[i]);
                 json_object_set_new(split, "time", time);
                 // Check if segment time > 0, avoids saving segment time AFTER skipped split
                 if (
-                    timer->segment_times[i].game_time > 0 && timer->segment_times[i].real_time > 0 &&
-                    timer->segment_times[i].game_time < LLONG_MAX && timer->segment_times[i].real_time < LLONG_MAX
-                ) {
+                    timer->segment_times[i].game_time > 0 && timer->segment_times[i].real_time > 0 && timer->segment_times[i].game_time < LLONG_MAX && timer->segment_times[i].real_time < LLONG_MAX) {
                     json_time_set(time, &timer->segment_times[i]);
                     json_object_set_new(split, "segment", time);
                 } else {
@@ -1266,7 +1256,8 @@ int ls_timer_cancel(ls_timer* timer)
  * @param ref The json time representation field
  * @param time The time object to store the json value(s) to
  */
-void json_time_get(const json_t* ref, ls_time* time) {
+void json_time_get(const json_t* ref, ls_time* time)
+{
     assert(time && ref);
     time->game_time = 0;
     time->real_time = 0;
@@ -1287,7 +1278,8 @@ void json_time_get(const json_t* ref, ls_time* time) {
     }
 }
 
-void json_time_set(json_t* ref, const ls_time* time) {
+void json_time_set(json_t* ref, const ls_time* time)
+{
     assert(time && ref);
     char str[256];
     ls_time_string_serialized(str, time->real_time);
