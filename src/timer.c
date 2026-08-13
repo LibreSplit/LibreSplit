@@ -134,7 +134,8 @@ long long ls_time_get_by_method(ls_time time, ls_time_method method)
  * @param time
  * @return bool
  */
-bool ls_time_lte_zero(ls_time time) {
+bool ls_time_lte_zero(ls_time time)
+{
     return time.game_time <= 0 && time.real_time <= 0;
 }
 
