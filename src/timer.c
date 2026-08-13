@@ -1229,7 +1229,7 @@ int ls_timer_reset(ls_timer* timer)
 
     // Warn if the reset will lose a gold split, and allow the user to cancel the reset if they want to keep it
     if (ls_timer_has_gold_split(timer)) {
-        ls_game_update_splits(timer->game, timer);
+        ls_game_update_splits(&timer->game, timer);
     }
 
     reset_timer(timer);
