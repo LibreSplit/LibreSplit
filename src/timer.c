@@ -351,7 +351,7 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
     ref = json_object_get(json, "comparison_method");
     if (ref) {
         game->comparison_method = json_integer_value(ref);
-        if (game->comparison_method != LS_REAL_TIME || game->comparison_method != LS_GAME_TIME) {
+        if (game->comparison_method != LS_REAL_TIME && game->comparison_method != LS_GAME_TIME) {
             error = 1;
             LOG_ERRF("Invalid value for comparison_method: %i", game->comparison_method);
             goto game_create_error;
