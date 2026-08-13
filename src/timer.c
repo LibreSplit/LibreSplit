@@ -659,6 +659,21 @@ bool ls_timer_has_gold_split(const ls_timer* timer)
     return false;
 }
 
+bool ls_timer_has_rainbow_split(const ls_timer* timer)
+{
+    if (!timer || !timer->split_info)
+        return false;
+
+    // Only consider splits that happened this run
+    const int committed = timer->curr_split;
+    for (int i = 0; i < committed; i++) {
+        if (timer->split_info[i] & LS_INFO_BEST_SPLIT) {
+            return true;
+        }
+    }
+    return false;
+}
+
 int ls_game_save(const ls_game* game)
 {
     int error = 0;
@@ -1245,6 +1260,18 @@ int ls_timer_cancel(ls_timer* timer)
     // Disallow resets while running
     if (timer->running)
         return 0;
+
+    // Warn if the reset will lose a gold split, and allow the user to cancel the reset if they want to keep it
+    if (ls_timer_has_gold_split(timer) || ls_timer_has_rainbow_split(timer)) {
+        bool user_reset = true;
+        if (cfg.libresplit.ask_on_gold.value.b) {
+            user_reset = display_confirm_reset_dialog();
+        }
+
+        if (!user_reset) {
+            return 0;
+        }
+    }
 
     if (timer->started) {
         if (*timer->attempt_count > 0) {

@@ -1,4 +1,5 @@
 #include "src/gui/actions.h"
+#include "src/gui/dialogs.h"
 #include "src/gui/app_window.h"
 #include "src/gui/game.h"
 #include "src/gui/timer.h"
@@ -282,6 +283,19 @@ void quit_activated(GSimpleAction* action,
     } else {
         win = ls_app_window_new(LS_APP(app));
     }
+
+    // Warn if the reset will lose a gold split, and allow the user to cancel the reset if they want to keep it
+    if (win->timer && win->timer->running && (ls_timer_has_gold_split(win->timer) || ls_timer_has_rainbow_split(win->timer))) {
+        bool user_reset = true;
+        if (cfg.libresplit.ask_on_gold.value.b) {
+            user_reset = display_confirm_reset_dialog();
+        }
+
+        if (!user_reset) {
+            return;
+        }
+    }
+
     if (win->welcome_box) {
         welcome_box_destroy(win->welcome_box);
     }

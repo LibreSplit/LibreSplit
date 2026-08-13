@@ -106,6 +106,8 @@ void ls_game_update_bests(const ls_game* game, const ls_timer* timer);
 
 bool ls_timer_has_gold_split(const ls_timer* timer);
 
+bool ls_timer_has_rainbow_split(const ls_timer* timer);
+
 int ls_game_save(const ls_game* game);
 
 void ls_game_release(ls_game* game);

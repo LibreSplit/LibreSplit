@@ -110,8 +110,8 @@ bool display_confirm_reset_dialog(void)
         GTK_DIALOG_MODAL,
         GTK_MESSAGE_WARNING,
         GTK_BUTTONS_YES_NO,
-        "This run contains a gold split.\n\n"
-        "Are you sure you want to reset?");
+        "This run contains a gold and/or rainbow split.\n\n"
+        "Are you sure you want to proceed?");
     gtk_window_set_title(GTK_WINDOW(dialog), "Confirm Reset?");
 
     gint response = gtk_dialog_run(GTK_DIALOG(dialog));
