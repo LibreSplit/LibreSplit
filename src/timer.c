@@ -67,6 +67,10 @@ long long ls_time_value(const char* string)
         return 0;
     }
 
+    if (strncmp(string, "-", strnlen(string, 20)) == 0) {
+        return LLONG_MAX;
+    }
+
     // Split at the decimal point manually
     const char* dot_pos = strchr(string, '.');
     if (dot_pos) {
@@ -524,13 +528,6 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
             game->segment_times[i].real_time = ls_segment_value(game->split_times[i].real_time, i ? game->split_times[i - 1].real_time : 0, i == 0);
             game->segment_times[i].game_time = ls_segment_value(game->split_times[i].game_time, i ? game->split_times[i - 1].game_time : 0, i == 0);
 
-            if (game->best_splits[i].real_time == 0) {
-                game->best_splits[i].real_time = LLONG_MAX;
-            }
-            if (game->best_splits[i].game_time == 0) {
-                game->best_splits[i].game_time = LLONG_MAX;
-            }
-
             split_ref = json_object_get(split, "best_time");
             if (split_ref) {
                 json_time_get(split_ref, &game->best_splits[i]);
@@ -538,11 +535,11 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
                 game->best_splits[i] = game->split_times[i];
             }
 
-            if (game->best_segments[i].real_time == 0) {
-                game->best_segments[i].real_time = LLONG_MAX;
+            if (game->best_splits[i].real_time == 0) {
+                game->best_splits[i].real_time = LLONG_MAX;
             }
-            if (game->best_segments[i].game_time == 0) {
-                game->best_segments[i].game_time = LLONG_MAX;
+            if (game->best_splits[i].game_time == 0) {
+                game->best_splits[i].game_time = LLONG_MAX;
             }
 
             split_ref = json_object_get(split, "best_segment");
@@ -552,6 +549,13 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
                 (game->segment_times[i].real_time > 0 && game->segment_times[i].real_time < LLONG_MAX)
                 || (game->segment_times[i].game_time > 0 && game->segment_times[i].game_time < LLONG_MAX)) {
                 game->best_segments[i] = game->segment_times[i];
+            }
+
+            if (game->best_segments[i].real_time == 0) {
+                game->best_segments[i].real_time = LLONG_MAX;
+            }
+            if (game->best_segments[i].game_time == 0) {
+                game->best_segments[i].game_time = LLONG_MAX;
             }
         }
     }
@@ -687,20 +691,17 @@ int ls_game_save(const ls_game* game)
         json_object_set_new(split, "icon", json_string(game->split_icon_paths[i]));
 
         // Only save the split if it's above 0. Otherwise it's impossible to beat 0
-        if (
-            game->split_times[i].game_time > 0 && game->split_times[i].game_time < LLONG_MAX && game->split_times[i].real_time > 0 && game->split_times[i].real_time < LLONG_MAX) {
+        if (game->split_times[i].game_time > 0 && game->split_times[i].real_time > 0) {
             json_t* time = json_object();
             json_time_set(time, &game->split_times[i]);
             json_object_set_new(split, "time", time);
         }
-        if (
-            game->best_splits[i].game_time > 0 && game->best_splits[i].game_time < LLONG_MAX && game->best_splits[i].real_time > 0 && game->best_splits[i].real_time < LLONG_MAX) {
+        if (game->best_splits[i].game_time > 0 && game->best_splits[i].real_time > 0) {
             json_t* time = json_object();
             json_time_set(time, &game->best_splits[i]);
             json_object_set_new(split, "best_time", time);
         }
-        if (
-            game->best_segments[i].game_time > 0 && game->best_segments[i].game_time < LLONG_MAX && game->best_segments[i].real_time > 0 && game->best_segments[i].real_time < LLONG_MAX) {
+        if (game->best_segments[i].game_time > 0 && game->best_segments[i].real_time > 0) {
             json_t* time = json_object();
             json_time_set(time, &game->best_segments[i]);
             json_object_set_new(split, "best_segment", time);
