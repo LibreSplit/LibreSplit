@@ -40,7 +40,7 @@ static long long ls_time_now(void)
  */
 inline long long ls_timer_get_time(const ls_timer* timer, bool load_removed)
 {
-    if (timer->usingGameTime) {
+    if (timer->game->comparison_method == LS_GAME_TIME) {
         return timer->gameTime;
     }
 
@@ -123,8 +123,8 @@ long long ls_time_value(const char* string)
 ls_time ls_time_subtract(ls_time a, ls_time b)
 {
     return (ls_time) {
-        .real_time = a.real_time > 0 && b.real_time > 0 ? a.real_time - b.real_time : 0,
-        .game_time = a.game_time > 0 && b.game_time > 0 ? a.game_time - b.game_time : 0
+        .real_time = a.real_time > 0 && b.real_time > 0 && a.real_time < LLONG_MAX && b.real_time < LLONG_MAX ? a.real_time - b.real_time : 0,
+        .game_time = a.game_time > 0 && b.game_time > 0 && a.game_time < LLONG_MAX && b.game_time < LLONG_MAX ? a.game_time - b.game_time : 0
     };
 }
 
@@ -981,12 +981,8 @@ void ls_timer_step(ls_timer* timer)
             timer->split_times[timer->curr_split].real_time = timer->realTime;
             timer->split_times[timer->curr_split].game_time = timer->usingGameTime ? timer->gameTime : timer->realTime - timer->loadingTime;
             // calc delta and check it's not an error of LLONG_MAX
-            if (
-                timer->game->split_times[timer->curr_split].game_time && timer->game->split_times[timer->curr_split].real_time &&
-                timer->game->split_times[timer->curr_split].game_time < LLONG_MAX && timer->game->split_times[timer->curr_split].real_time < LLONG_MAX
-            ) {
-                timer->split_deltas[timer->curr_split] = ls_time_subtract(timer->split_times[timer->curr_split], timer->game->split_times[timer->curr_split]);
-            }
+            timer->split_deltas[timer->curr_split] = ls_time_subtract(timer->split_times[timer->curr_split], timer->game->split_times[timer->curr_split]);
+
             // check for behind time
             long long split_delta = ls_time_get_by_method(timer->split_deltas[timer->curr_split], timer->game->comparison_method);
             if (split_delta > 0) {
@@ -1001,12 +997,7 @@ void ls_timer_step(ls_timer* timer)
                     timer->segment_times[timer->curr_split] = ls_time_subtract(timer->segment_times[timer->curr_split], timer->split_times[timer->curr_split - 1]);
                 }
                 // For previous segment in footer
-                if (
-                    timer->game->segment_times[timer->curr_split].game_time && timer->game->segment_times[timer->curr_split].real_time &&
-                    timer->game->segment_times[timer->curr_split].game_time < LLONG_MAX && timer->game->segment_times[timer->curr_split].real_time < LLONG_MAX
-                ) {
-                    timer->segment_deltas[timer->curr_split] = ls_time_subtract(timer->segment_times[timer->curr_split], timer->game->segment_times[timer->curr_split]);
-                }
+                timer->segment_deltas[timer->curr_split] = ls_time_subtract(timer->segment_times[timer->curr_split], timer->game->segment_times[timer->curr_split]);
             }
             // check for losing time
             if (timer->curr_split) {
