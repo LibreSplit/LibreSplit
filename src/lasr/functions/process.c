@@ -77,12 +77,11 @@ int find_process_id(lua_State* L)
 
     process.name = lua_tostring(L, 1);
 
-    const char* cmdLineFlag = NULL;
+    int useCmdLine = 0;
 
-    if (lua_isstring(L, 2)) {
-        cmdLineFlag = lua_tostring(L, 2);
+    if (lua_isboolean(L, 2)) {
+        useCmdLine = lua_toboolean(L, 2);
     }
-    int useCmdLine = cmdLineFlag && strcmp(cmdLineFlag, "cmdline") == 0;
 
     const char* sort = lua_tostring(L, 3);
     char sortCmd[16] = "";
@@ -130,12 +129,11 @@ int check_process_id(lua_State* L)
                                 //
     const char* name = lua_tostring(L, 1);
 
-    const char* cmdLineFlag = NULL;
+    int useCmdLine = 0;
 
-    if (lua_isstring(L, 2)) {
-        cmdLineFlag = lua_tostring(L, 2);
+    if (lua_isboolean(L, 2)) {
+        useCmdLine = lua_toboolean(L, 2);
     }
-    int useCmdLine = cmdLineFlag && strcmp(cmdLineFlag, "cmdline") == 0;
 
     const char* sort = lua_tostring(L, 3);
     char sortCmd[16] = "";
