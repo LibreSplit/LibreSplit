@@ -1288,6 +1288,7 @@ void json_time_get(const json_t* ref, ls_time* time) {
 }
 
 void json_time_set(json_t* ref, const ls_time* time) {
+    assert(time && ref);
     char str[256];
     ls_time_string_serialized(str, time->real_time);
     json_object_set_new(ref, "real_time", json_string(str));
