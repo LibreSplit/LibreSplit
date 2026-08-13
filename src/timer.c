@@ -1078,6 +1078,10 @@ int ls_timer_split(ls_timer* timer)
         return 0;
     }
 
+    if (!timer->running) {
+        return 0;
+    }
+
     // check for best split and segment - game time
     if (!ls_time_get_by_method(timer->best_splits[timer->curr_split], LS_GAME_TIME)
         || ls_time_get_by_method(timer->split_times[timer->curr_split], LS_GAME_TIME)
