@@ -80,7 +80,11 @@ long long ls_time_value(const char* string);
 
 ls_time ls_time_subtract(ls_time a, ls_time b);
 
+long long ls_segment_value(long long current, long long previous, bool is_first_split);
+
 long long ls_time_get_by_method(ls_time time, ls_time_method method);
+
+long long ls_sum_of_bests(const ls_timer* timer, ls_time_method method);
 
 bool ls_time_lte_zero(ls_time time);
 

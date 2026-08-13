@@ -123,9 +123,41 @@ ls_time ls_time_subtract(ls_time a, ls_time b)
     };
 }
 
+long long ls_segment_value(long long current, long long previous, bool is_first_split)
+{
+    if (current <= 0 || current == LLONG_MAX) {
+        return LLONG_MAX;
+    }
+
+    if (!is_first_split && (previous <= 0 || previous == LLONG_MAX)) {
+        return LLONG_MAX;
+    }
+
+    return is_first_split ? current : current - previous;
+}
+
 long long ls_time_get_by_method(ls_time time, ls_time_method method)
 {
     return method == LS_GAME_TIME ? time.game_time : time.real_time;
+}
+
+long long ls_sum_of_bests(const ls_timer* timer, ls_time_method method)
+{
+    long long sum = 0;
+    for (unsigned int i = 0; i < timer->game->split_count; i++) {
+        long long segment = ls_time_get_by_method(timer->best_segments[i], method);
+        if (segment <= 0 || segment == LLONG_MAX) {
+            segment = ls_time_get_by_method(timer->game->best_segments[i], method);
+        }
+
+        if (segment <= 0 || segment == LLONG_MAX || segment > LLONG_MAX - sum) {
+            return 0;
+        }
+
+        sum += segment;
+    }
+
+    return sum;
 }
 
 /**
@@ -489,17 +521,8 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
                 game->split_times[i].game_time = LLONG_MAX;
             }
 
-            if (i && game->split_times[i].real_time && game->split_times[i - 1].real_time) {
-                game->segment_times[i].real_time = game->split_times[i].real_time - game->split_times[i - 1].real_time;
-            } else if (!i && game->split_times[0].real_time) {
-                game->segment_times[0].real_time = game->split_times[0].real_time;
-            }
-
-            if (i && game->split_times[i].game_time && game->split_times[i - 1].game_time) {
-                game->segment_times[i].game_time = game->split_times[i].game_time - game->split_times[i - 1].game_time;
-            } else if (!i && game->split_times[0].game_time) {
-                game->segment_times[0].game_time = game->split_times[0].game_time;
-            }
+            game->segment_times[i].real_time = ls_segment_value(game->split_times[i].real_time, i ? game->split_times[i - 1].real_time : 0, i == 0);
+            game->segment_times[i].game_time = ls_segment_value(game->split_times[i].game_time, i ? game->split_times[i - 1].game_time : 0, i == 0);
 
             if (game->best_splits[i].real_time == 0) {
                 game->best_splits[i].real_time = LLONG_MAX;
@@ -525,7 +548,9 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
             split_ref = json_object_get(split, "best_segment");
             if (split_ref) {
                 json_time_get(split_ref, &game->best_segments[i]);
-            } else if (game->segment_times[i].real_time || game->segment_times[i].game_time) {
+            } else if (
+                (game->segment_times[i].real_time > 0 && game->segment_times[i].real_time < LLONG_MAX)
+                || (game->segment_times[i].game_time > 0 && game->segment_times[i].game_time < LLONG_MAX)) {
                 game->best_segments[i] = game->segment_times[i];
             }
         }
@@ -861,34 +886,8 @@ static void reset_timer(ls_timer* timer)
     memcpy(timer->best_segments, timer->game->best_segments, size);
     size = timer->game->split_count * sizeof(int);
     memset(timer->split_info, 0, size);
-    timer->sum_of_bests.game_time = 0;
-    timer->sum_of_bests.real_time = 0;
-    bool quitLoop = false;
-    for (unsigned int i = 0; i < timer->game->split_count; ++i) {
-        // Check no segments are erroring with LLONG_MAX for game_time
-        if (timer->best_segments[i].game_time && timer->best_segments[i].game_time < LLONG_MAX) {
-            timer->sum_of_bests.game_time += timer->best_segments[i].game_time;
-        } else if (timer->game->best_segments[i].game_time && timer->game->best_segments[i].game_time < LLONG_MAX) {
-            timer->sum_of_bests.game_time += timer->game->best_segments[i].game_time;
-        } else {
-            timer->sum_of_bests.game_time = 0;
-            quitLoop = true;
-        }
-
-        // Check no segments are erroring with LLONG_MAX for real_time
-        if (timer->best_segments[i].real_time && timer->best_segments[i].real_time < LLONG_MAX) {
-            timer->sum_of_bests.real_time += timer->best_segments[i].real_time;
-        } else if (timer->game->best_segments[i].real_time && timer->game->best_segments[i].real_time < LLONG_MAX) {
-            timer->sum_of_bests.real_time += timer->game->best_segments[i].real_time;
-        } else {
-            timer->sum_of_bests.real_time = 0;
-            quitLoop = true;
-        }
-
-        if (quitLoop) {
-            break;
-        }
-    }
+    timer->sum_of_bests.game_time = ls_sum_of_bests(timer, LS_GAME_TIME);
+    timer->sum_of_bests.real_time = ls_sum_of_bests(timer, LS_REAL_TIME);
 }
 
 /**
@@ -1100,32 +1099,8 @@ int ls_timer_split(ls_timer* timer)
     }
 
     // update sum of bests
-    ls_time_clear(&timer->sum_of_bests);
-    bool quitLoop = false;
-    for (unsigned int i = 0; i < timer->game->split_count; ++i) {
-        // Check if any best segment is missing/LLONG_MAX
-        if (timer->best_segments[i].game_time && timer->best_segments[i].game_time < LLONG_MAX) {
-            timer->sum_of_bests.game_time += timer->best_segments[i].game_time;
-        } else if (timer->game->best_segments[i].game_time && timer->game->best_segments[i].game_time < LLONG_MAX) {
-            timer->sum_of_bests.game_time += timer->game->best_segments[i].game_time;
-        } else {
-            timer->sum_of_bests.game_time = 0;
-            quitLoop = true;
-        }
-
-        if (timer->best_segments[i].real_time && timer->best_segments[i].real_time < LLONG_MAX) {
-            timer->sum_of_bests.real_time += timer->best_segments[i].real_time;
-        } else if (timer->game->best_segments[i].real_time && timer->game->best_segments[i].real_time < LLONG_MAX) {
-            timer->sum_of_bests.real_time += timer->game->best_segments[i].real_time;
-        } else {
-            timer->sum_of_bests.real_time = 0;
-            quitLoop = true;
-        }
-
-        if (quitLoop) {
-            break;
-        }
-    }
+    timer->sum_of_bests.game_time = ls_sum_of_bests(timer, LS_GAME_TIME);
+    timer->sum_of_bests.real_time = ls_sum_of_bests(timer, LS_REAL_TIME);
 
     ++timer->curr_split;
     // stop timer if last split
