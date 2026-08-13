@@ -26,11 +26,18 @@ Most of the above keys are optional.
 | -------------- | ------ | --------------------------------------------------------- |
 | `title`        | string | Split title                                               |
 | `icon`         | string | Icon file path or url                                     |
-| `time`         | string | Split time - the total time up to this segment in your PB |
-| `best_time`    | string | Your best split time                                      |
-| `best_segment` | string | Your best segment time (split gold)                       |
+| `time`         | time   | Split time - the total time up to this segment in your PB |
+| `best_time`    | time   | Your best split time                                      |
+| `best_segment` | time   | Your best segment time (split gold)                       |
 
-Times are strings in `HH:MM:SS.mmmmmm` format.
+## Time Object
+
+| Key            | Type   | Value                                                             |
+| -------------- | ------ | ----------------------------------------------------------------- |
+| `real_time`    | string | Real time elapsed for your run                                    |
+| `game_time`    | string | Game time elapsed for your run as controlled by your autosplitter |
+
+A time object is an object containing times for real time and game time. Times in a time object are strings in `HH:MM:SS.mmmmmm` format.
 
 Icons can be either a local file path (preferably absolute) or a URL. Note that only GTK-supported image formats will work. For example, `.svg` and `.webp` won't.
 
@@ -45,15 +52,33 @@ Here is a quick example of how a simple split file would look:
     "splits": [
         {
             "title": "Maths",
-            "time": "05:12:55.000000",
-            "best_time": "04:10:50.000000",
-            "best_segment": "04:10:50.000000",
+            "time": {
+                "real_time": "05:12:55.000000",
+                "game_time": "05:12:55.000000",
+            },
+            "best_time": {
+                "real_time": "04:10:50.000000",
+                "game_time": "04:10:50.000000",
+            },
+            "best_segment": {
+                "real_time": "04:10:50.000000",
+                "game_time": "04:10:50.000000",
+            }
         },
         {
             "title": "Science",
-            "time": "07:36:30.000000",
-            "best_time": "05:26:25.000000",
-            "best_segment": "01:15:35.000000",
+            "time": {
+                "real_time": "07:36:30.000000",
+                "game_time": "07:36:30.000000",
+            },
+            "best_time": {
+                "real_time": "05:26:25.000000",
+                "game_time": "05:26:25.000000",
+            },
+            "best_segment": {
+                "real_time": "01:15:35.000000",
+                "game_time": "01:15:35.000000",
+            }
         }
     ],
     "width": 250,
