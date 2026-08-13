@@ -157,7 +157,7 @@ static void ls_time_string_format(char* string,
     int compact)
 {
     int hours, minutes, seconds;
-    char dot_subsecs[256];
+    char dot_subsecs[8];
     const char* sign = "";
 
     // Check time is not 0 or maxed out, otherwise -
