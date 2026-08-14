@@ -46,19 +46,16 @@ inline ls_time ls_timer_get_time(const ls_timer* timer, bool load_removed)
     };
 }
 
-inline
-
-    /**
-     * Converts a time string into milliseconds
-     *
-     * Takes a HH:MM:SS.mmmmmm formatted time string and converts it into
-     * milliseconds.
-     *
-     * @param string The time string to convert, in HH:MM:SS.mmmmmm format
-     * @return The time string converted to milliseconds
-     */
-    long long
-    ls_time_value(const char* string)
+/**
+ * Converts a time string into milliseconds
+ *
+ * Takes a HH:MM:SS.mmmmmm formatted time string and converts it into
+ * milliseconds.
+ *
+ * @param string The time string to convert, in HH:MM:SS.mmmmmm format
+ * @return The time string converted to milliseconds
+ */
+long long ls_time_value(const char* string)
 {
     char seconds_part[256];
     double subseconds_part = 0.;
@@ -70,6 +67,7 @@ inline
         return 0;
     }
 
+    // An empty time is represented as LLONG_MAX
     if (strncmp(string, "-", strnlen(string, 20)) == 0) {
         return LLONG_MAX;
     }
