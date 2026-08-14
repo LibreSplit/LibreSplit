@@ -1,5 +1,5 @@
-#include "app_window.h"
 #include "settings_dialog.h"
+#include "app_window.h"
 #include "src/logging.h"
 #include "src/settings/definitions.h"
 #include "src/settings/settings.h"
