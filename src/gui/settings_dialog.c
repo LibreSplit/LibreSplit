@@ -1,4 +1,5 @@
 #include "settings_dialog.h"
+#include "src/logging.h"
 #include "src/settings/definitions.h"
 #include "src/settings/settings.h"
 
@@ -24,6 +25,7 @@ static GtkWidget* settings_window_singleton = NULL;
  */
 static size_t enumerate_settings(AppConfig cfg)
 {
+    LOG_DEBUG("Enumerating settings to add to the GUI...");
     int settings_number = 0;
     for (size_t s = 0; s < sections_count; ++s) {
         SectionInfo section_info = sections[s];
@@ -46,6 +48,7 @@ static size_t enumerate_settings(AppConfig cfg)
  */
 static gboolean on_help_window_delete(GtkWidget* widget, GdkEvent* event, gpointer user_data)
 {
+    LOG_DEBUG("Destroying the settings window...");
     settings_window_singleton = NULL;
     gtk_widget_destroy(widget);
     free(gui_settings);
@@ -122,6 +125,7 @@ bool on_entry_clear_press(GtkEntry* widget, GtkEntryIconPosition icon_pos, GdkEv
 
 static void save_gui_settings(GSimpleAction* action, GVariant* parameter, gpointer app)
 {
+    LOG_INFO("Saving settings from the GUI...");
     size_t settings_number = enumerate_settings(cfg);
     // Parse all values in gui_settings, assign them to the respective cfg settings
     for (size_t i = 0; i < settings_number; i++) {
@@ -165,6 +169,7 @@ static void set_widget_defaults(GtkWidget* obj)
 
 static void build_settings_dialog(GtkApplication* app, gpointer data)
 {
+    LOG_INFO("Creating the settings dialog...");
     // Show already open window if another one is called.
     if (settings_window_singleton) {
         gtk_window_present(GTK_WINDOW(settings_window_singleton));
@@ -174,7 +179,7 @@ static void build_settings_dialog(GtkApplication* app, gpointer data)
     int settings_number = enumerate_settings(cfg);
     gui_settings = malloc(settings_number * sizeof(LSGuiSetting));
     if (gui_settings == NULL) {
-        printf("Cannot allocate memory for the settings GUI.");
+        LOG_WARN("Cannot allocate memory for the settings GUI.");
         return;
     }
 
