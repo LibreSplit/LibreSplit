@@ -17,7 +17,7 @@ void keybind_stop_reset(const char* str, LSAppWindow* win)
 
 void keybind_cancel(const char* str, LSAppWindow* win)
 {
-    timer_cancel_run(win);
+    win->delayed_handlers.cancel = true;
 }
 
 void keybind_skip(const char* str, LSAppWindow* win)

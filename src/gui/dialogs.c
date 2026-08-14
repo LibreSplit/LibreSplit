@@ -1,4 +1,5 @@
 #include "src/lasr/auto-splitter.h"
+#include "src/logging.h"
 #include <gio/gio.h>
 #include <glib.h>
 #include <gtk/gtk.h>
@@ -100,6 +101,7 @@ bool display_root_warning_dialog(void)
 
 bool display_confirm_reset_dialog(void)
 {
+    LOG_DEBUG("Detected gold/rainbow split, asking user for confirmation");
     GtkApplication* app = GTK_APPLICATION(g_application_get_default());
     GtkWindow* win = NULL;
     if (app != NULL) {

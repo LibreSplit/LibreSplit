@@ -7,4 +7,5 @@
  */
 typedef struct DelayedHandlers {
     bool stop_reset;
+    bool cancel;
 } DelayedHandlers;

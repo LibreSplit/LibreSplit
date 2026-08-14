@@ -1347,7 +1347,6 @@ int ls_timer_cancel(ls_timer* timer)
     if (ls_timer_has_gold_split(timer) || ls_timer_has_rainbow_split(timer)) {
         bool user_reset = true;
         if (cfg.libresplit.ask_on_gold.value.b) {
-            LOG_DEBUG("Detected gold split, asking user for confirmation");
             user_reset = display_confirm_reset_dialog();
         }
 
