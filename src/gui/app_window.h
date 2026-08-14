@@ -47,6 +47,8 @@ typedef struct _LSAppWindow {
     LSWelcomeBox* welcome_box;
     GtkWidget* box;
     GtkWidget* context_menu; /*!< The context menu */
+    bool resize_cursor_hover; /*!< True when the user is mousing over the resize edge of an undecorated window */
+    GdkWindowEdge resize_cursor_edge; /*!< The edge the user is mousing over */
     GList* components;
     GtkWidget* footer;
     GtkCssProvider* reset_style; /*!< The "reset rules" provider, will remove desktop theme rules */

@@ -189,7 +189,7 @@ void ls_app_activate(GApplication* app)
         }
     }
     atomic_store(&auto_splitter_enabled, cfg.libresplit.auto_splitter_enabled.value.b);
-    g_signal_connect(win, "button_press_event", G_CALLBACK(handle_button_pressed), app);
+    g_signal_connect(win, "button-press-event", G_CALLBACK(handle_button_pressed), app);
 }
 
 void ls_app_open(GApplication* app,
@@ -370,6 +370,7 @@ static void ls_app_window_init(LSAppWindow* win)
     win->display = gdk_display_get_default();
     win->style = NULL;
     win->context_menu = NULL;
+    win->resize_cursor_hover = false;
 
     // make data path
     win->data_path[0] = '\0';
@@ -403,11 +404,14 @@ static void ls_app_window_init(LSAppWindow* win)
     win->game = 0;
     win->timer = 0;
 
+    gtk_widget_add_events(GTK_WIDGET(win), GDK_POINTER_MOTION_MASK);
     LOG_DEBUG("Connecting window signals...")
     g_signal_connect(win, "destroy",
         G_CALLBACK(ls_app_window_destroy), NULL);
     g_signal_connect(win, "configure-event",
         G_CALLBACK(ls_app_window_resize), win);
+    g_signal_connect(win, "motion-notify-event",
+        G_CALLBACK(handle_pointer_motion), NULL);
     g_signal_connect(win, "realize",
         G_CALLBACK(ls_app_window_realize), win);
 
