@@ -12,6 +12,11 @@
 #include "src/settings/settings.h"
 #include "src/settings/utils.h"
 #include "src/timer.h"
+
+#ifdef GDK_WINDOWING_WAYLAND
+#include <gdk/gdkwayland.h>
+#endif
+
 #include <glib-object.h>
 #include <stdatomic.h>
 #include <stdio.h>
@@ -27,11 +32,32 @@ G_DEFINE_TYPE(LSApp, ls_app, GTK_TYPE_APPLICATION)
 
 G_DEFINE_TYPE(LSAppWindow, ls_app_window, GTK_TYPE_APPLICATION_WINDOW)
 
+static void set_window_decorations(LSAppWindow* win)
+{
+    gtk_window_set_decorated(GTK_WINDOW(win), win->opts.decorated);
+
+#ifdef GDK_WINDOWING_WAYLAND
+    GdkWindow* window = gtk_widget_get_window(GTK_WIDGET(win));
+    if (window && GDK_IS_WAYLAND_WINDOW(window)) {
+        if (win->opts.decorated) {
+            gdk_wayland_window_announce_ssd(window);
+        } else {
+            gdk_wayland_window_announce_csd(window);
+        }
+    }
+#endif
+}
+
+static void ls_app_window_realize(GtkWidget* widget, gpointer data)
+{
+    set_window_decorations(LS_APP_WINDOW(widget));
+}
+
 void toggle_decorations(LSAppWindow* win)
 {
     LOG_DEBUG("Toggling window decorations");
-    gtk_window_set_decorated(GTK_WINDOW(win), !win->opts.decorated);
     win->opts.decorated = !win->opts.decorated;
+    set_window_decorations(win);
     cfg.libresplit.start_decorated.value.b = win->opts.decorated;
     config_save();
 }
@@ -163,7 +189,7 @@ void ls_app_activate(GApplication* app)
         }
     }
     atomic_store(&auto_splitter_enabled, cfg.libresplit.auto_splitter_enabled.value.b);
-    g_signal_connect(win, "button_press_event", G_CALLBACK(button_right_click), app);
+    g_signal_connect(win, "button_press_event", G_CALLBACK(handle_button_pressed), app);
 }
 
 void ls_app_open(GApplication* app,
@@ -362,8 +388,8 @@ static void ls_app_window_init(LSAppWindow* win)
     win->keybinds.skip_split = parse_keybind(cfg.keybinds.skip_split.value.s);
     win->keybinds.toggle_decorations = parse_keybind(cfg.keybinds.toggle_decorations.value.s);
     win->keybinds.toggle_win_on_top = parse_keybind(cfg.keybinds.toggle_win_on_top.value.s);
-    gtk_window_set_decorated(GTK_WINDOW(win), win->opts.decorated);
     gtk_window_set_keep_above(GTK_WINDOW(win), win->opts.win_on_top);
+    set_window_decorations(win);
 
     // Load theme
     LOG_DEBUG("Loading Theme...");
@@ -382,6 +408,8 @@ static void ls_app_window_init(LSAppWindow* win)
         G_CALLBACK(ls_app_window_destroy), NULL);
     g_signal_connect(win, "configure-event",
         G_CALLBACK(ls_app_window_resize), win);
+    g_signal_connect(win, "realize",
+        G_CALLBACK(ls_app_window_realize), win);
 
     // As a crash workaround, only enable global hotkeys if not on Wayland
     const bool is_wayland = getenv("WAYLAND_DISPLAY");

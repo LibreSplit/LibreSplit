@@ -2,4 +2,5 @@
 
 #include <gtk/gtk.h>
 
-gboolean button_right_click(GtkWidget* widget, GdkEventButton* event, gpointer app);
+void button_right_click(GdkEventButton* event, gpointer app);
+gboolean handle_button_pressed(GtkWidget* widget, GdkEventButton* event, gpointer app);
