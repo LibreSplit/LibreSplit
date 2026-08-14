@@ -222,6 +222,7 @@ void ls_delta_string(char* string, long long time)
  */
 void ls_game_release(ls_game* game)
 {
+    LOG_DEBUG("Releasing game...");
     if (game->title) {
         free(game->title);
         game->title = 0;
@@ -269,6 +270,7 @@ void ls_game_release(ls_game* game)
 
 int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
 {
+    LOG_DEBUG("Creating game...");
     int error = 0;
     json_t* json = 0;
     json_t* ref;
@@ -554,6 +556,7 @@ bool ls_timer_has_gold_split(const ls_timer* timer)
 
 int ls_game_save(const ls_game* game)
 {
+    LOG_DEBUG("Saving game...");
     int error = 0;
     char str[256];
     json_t* json = json_object();
@@ -613,9 +616,9 @@ int ls_game_save(const ls_game* game)
     }
     const int json_dump_result = json_dump_file(json, game->path, JSON_PRESERVE_ORDER | JSON_INDENT(2));
     if (json_dump_result) {
-        printf("Error dumping JSON:\n%s\n", json_dumps(json, JSON_PRESERVE_ORDER | JSON_INDENT(2)));
-        printf("Error: '%d'\n", json_dump_result);
-        printf("Path: %s\n", game->path);
+        LOG_WARNF("Error dumping JSON:\n%s", json_dumps(json, JSON_PRESERVE_ORDER | JSON_INDENT(2)));
+        LOG_WARNF("Error: '%d'", json_dump_result);
+        LOG_WARNF("Path: %s", game->path);
         error = 1;
     }
     json_decref(json);
@@ -624,6 +627,7 @@ int ls_game_save(const ls_game* game)
 
 int ls_run_save(ls_timer* timer, const char* reason)
 {
+    LOG_DEBUG("Saving historical run file...");
     if (ls_timer_get_time(timer, true) == 0)
         return 0;
 
@@ -695,15 +699,15 @@ int ls_run_save(ls_timer* timer, const char* reason)
     char filename[PATH_MAX];
     int ret = snprintf(filename, sizeof(filename), "%s/run_%s.json", path, time_buf);
     if (ret < 0 || (size_t)ret >= sizeof(filename)) {
-        printf("Error creating run filename. The path may be too long, aborting save.\n");
+        LOG_WARN("Error creating run filename. The path may be too long, aborting save.");
         return 1;
     }
 
     const int json_dump_result = json_dump_file(json, filename, JSON_PRESERVE_ORDER | JSON_INDENT(2));
     if (json_dump_result) {
-        printf("Error dumping JSON:\n%s\n", json_dumps(json, JSON_PRESERVE_ORDER | JSON_INDENT(2)));
-        printf("Error: '%d'\n", json_dump_result);
-        printf("Path: %s\n", filename);
+        LOG_WARNF("Error dumping JSON:\n%s", json_dumps(json, JSON_PRESERVE_ORDER | JSON_INDENT(2)));
+        LOG_WARNF("Error: '%d'", json_dump_result);
+        LOG_WARNF("Path: %s", filename);
         error = 1;
     }
 
@@ -718,6 +722,7 @@ int ls_run_save(ls_timer* timer, const char* reason)
  */
 void ls_timer_release(ls_timer* timer)
 {
+    LOG_DEBUG("Releasing timer...");
     if (timer->split_times) {
         free(timer->split_times);
     }
@@ -750,6 +755,7 @@ void ls_timer_release(ls_timer* timer)
  */
 static void reset_timer(ls_timer* timer)
 {
+    LOG_DEBUG("Resetting timer...");
     timer->started = 0;
     atomic_store(&run_started, false);
     timer->running = 0;
@@ -793,6 +799,7 @@ static void reset_timer(ls_timer* timer)
  */
 int ls_timer_create(ls_timer** timer_ptr, ls_game* game)
 {
+    LOG_DEBUG("Creating timer...");
     int error = 0;
     ls_timer* timer;
     // allocate timer
@@ -930,6 +937,7 @@ void ls_timer_step(ls_timer* timer)
  */
 int ls_timer_start(ls_timer* timer)
 {
+    LOG_DEBUG("Starting timer...");
     // TODO: Allow starting when split_count is 0 for splitless runs, other stuff has to change for this to work (components, timer logic, etc)
     if (timer->curr_split < timer->game->split_count) {
         if (!timer->started) {
@@ -951,6 +959,7 @@ int ls_timer_start(ls_timer* timer)
  */
 int ls_timer_split(ls_timer* timer)
 {
+    LOG_DEBUG("Splitting...");
     if (ls_timer_get_time(timer, true) <= 0) {
         return 0;
     }
@@ -1010,6 +1019,7 @@ int ls_timer_split(ls_timer* timer)
  */
 int ls_timer_skip(ls_timer* timer)
 {
+    LOG_DEBUG("Skipping split...");
     if (ls_timer_get_time(timer, false) <= 0)
         return 0;
 
@@ -1038,6 +1048,7 @@ int ls_timer_skip(ls_timer* timer)
  */
 int ls_timer_unsplit(ls_timer* timer)
 {
+    LOG_DEBUG("Undoing a split...");
     if (timer->curr_split == 0) {
         return 0;
     }
@@ -1064,6 +1075,7 @@ int ls_timer_unsplit(ls_timer* timer)
  */
 void ls_timer_pause(ls_timer* timer)
 {
+    LOG_DEBUG("Pausing timer...");
     timer->loading = 1;
 }
 
@@ -1074,6 +1086,7 @@ void ls_timer_pause(ls_timer* timer)
  */
 void ls_timer_unpause(ls_timer* timer)
 {
+    LOG_DEBUG("Unpausing timer...");
     timer->loading = 0;
 }
 
@@ -1084,6 +1097,7 @@ void ls_timer_unpause(ls_timer* timer)
  */
 void ls_timer_stop(ls_timer* timer)
 {
+    LOG_DEBUG("Stopping timer...");
     timer->running = false;
     atomic_store(&run_running, false);
 }
@@ -1098,9 +1112,12 @@ void ls_timer_stop(ls_timer* timer)
  */
 int ls_timer_reset(ls_timer* timer)
 {
+    LOG_DEBUG("Resetting timer...");
     // Disallow resets while running
-    if (timer->running)
+    if (timer->running) {
+        LOG_DEBUG("Timer is running. Cannot reset.");
         return 0;
+    }
 
     if (timer->started && ls_timer_get_time(timer, true) <= 0) {
         return ls_timer_cancel(timer);
@@ -1114,6 +1131,7 @@ int ls_timer_reset(ls_timer* timer)
 
     // Warn if the reset will lose a gold split, and allow the user to cancel the reset if they want to keep it
     if (ls_timer_has_gold_split(timer)) {
+        LOG_DEBUG("Detected gold split, asking user for confirmation");
         bool user_reset = true;
         if (cfg.libresplit.ask_on_gold.value.b) {
             user_reset = display_confirm_reset_dialog();
@@ -1135,9 +1153,12 @@ int ls_timer_reset(ls_timer* timer)
  */
 int ls_timer_cancel(ls_timer* timer)
 {
+    LOG_DEBUG("Cancelling run...");
     // Disallow resets while running
-    if (timer->running)
+    if (timer->running) {
+        LOG_DEBUG("Timer is running, cannot cancel run.")
         return 0;
+    }
 
     if (timer->started) {
         if (*timer->attempt_count > 0) {
