@@ -32,7 +32,7 @@ G_DEFINE_TYPE(LSApp, ls_app, GTK_TYPE_APPLICATION)
 
 G_DEFINE_TYPE(LSAppWindow, ls_app_window, GTK_TYPE_APPLICATION_WINDOW)
 
-static void set_window_decorations(LSAppWindow* win)
+void set_window_decorations(LSAppWindow* win)
 {
     gtk_window_set_decorated(GTK_WINDOW(win), win->opts.decorated);
 

@@ -58,6 +58,7 @@ typedef struct _LSAppWindow {
     LSOpts opts; /*!< The window options */
 } LSAppWindow;
 
+void set_window_decorations(LSAppWindow* win);
 void toggle_decorations(LSAppWindow* win);
 void toggle_win_on_top(LSAppWindow* win);
 

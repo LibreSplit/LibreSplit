@@ -1,3 +1,4 @@
+#include "app_window.h"
 #include "settings_dialog.h"
 #include "src/logging.h"
 #include "src/settings/definitions.h"
@@ -123,7 +124,7 @@ bool on_entry_clear_press(GtkEntry* widget, GtkEntryIconPosition icon_pos, GdkEv
     return TRUE;
 }
 
-static void save_gui_settings(GSimpleAction* action, GVariant* parameter, gpointer app)
+static void save_gui_settings(GtkButton* button, gpointer app)
 {
     LOG_INFO("Saving settings from the GUI...");
     size_t settings_number = enumerate_settings(cfg);
@@ -154,7 +155,12 @@ static void save_gui_settings(GSimpleAction* action, GVariant* parameter, gpoint
         }
     }
     // Call the normal save_settings thing
-    config_save();
+    if (config_save()) {
+        // on success, set decorations in case the setting changed.
+        LSAppWindow* win = LS_APP_WINDOW(app);
+        win->opts.decorated = cfg.libresplit.start_decorated.value.b;
+        set_window_decorations(win);
+    }
 }
 
 static void set_widget_defaults(GtkWidget* obj)
@@ -258,7 +264,7 @@ static void build_settings_dialog(GtkApplication* app, gpointer data)
     }
     gtk_container_add(GTK_CONTAINER(main_box), tabs);
     GtkWidget* save_btn = gtk_button_new_with_label("Save");
-    g_signal_connect(save_btn, "clicked", G_CALLBACK(save_gui_settings), NULL);
+    g_signal_connect(save_btn, "clicked", G_CALLBACK(save_gui_settings), parent);
     gtk_container_add(GTK_CONTAINER(main_box), save_btn);
     gtk_container_add(GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(window))), main_box);
     gtk_widget_show_all(window);
