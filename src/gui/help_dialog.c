@@ -20,9 +20,10 @@ static void build_help_dialog(GtkApplication* app, gpointer data)
         return;
     }
 
-    GtkWidget* window = gtk_application_window_new(app);
+    GtkWindow* parent = gtk_application_get_active_window(app);
+    GtkWidget* window = gtk_dialog_new_with_buttons("About LibreSplit", parent, GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT, NULL, NULL);
+    gtk_window_set_application(GTK_WINDOW(window), app);
     help_window_singleton = window;
-    gtk_window_set_title(GTK_WINDOW(window), "About LibreSplit");
     gtk_window_set_default_size(GTK_WINDOW(window), 200, 320);
     gtk_window_set_resizable(GTK_WINDOW(window), FALSE);
 
@@ -64,7 +65,7 @@ static void build_help_dialog(GtkApplication* app, gpointer data)
     gtk_widget_set_halign(version_label, GTK_ALIGN_CENTER);
     gtk_container_add(GTK_CONTAINER(box), version_label);
 
-    gtk_container_add(GTK_CONTAINER(window), box);
+    gtk_container_add(GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(window))), box);
 
     GtkWidget* website_lnk = gtk_link_button_new_with_label("https://libresplit.org/", "Check out our website!");
     gtk_container_add(GTK_CONTAINER(box), website_lnk);

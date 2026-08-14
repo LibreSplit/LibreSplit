@@ -1,19 +1,18 @@
 #include "getModuleSize.h"
 
+#include "../maps/maps.h"
 #include "../utils.h"
-#include "src/lasr/maps/maps.h"
 
-#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
 /**
- * The lua getModuleSize() function.
+ * The Lua getModuleSize() function.
  *
  * FIXME: Size is taken as an unsigned long, which may
  *    ^   exceed the size of lua_Integer
  *
- * @param L The lua state
+ * @param L The Lua state
  */
 int getModuleSize(lua_State* L)
 {
@@ -32,12 +31,11 @@ int getModuleSize(lua_State* L)
     }
 
     ProcessMap map;
-    const bool found = maps_findMapByName(module_name, &map);
-    if (found) {
+    if (maps_findMapByName(module_name, &map)) {
         lua_pushinteger(L, (lua_Integer)map.size);
         return 1;
     }
     lua_pushnil(L);
-    printf("[getModuleSize] Cannot find module with name \"%s\"", module_name);
+    printf("[getModuleSize] Cannot find module with name \"%s\"\n", module_name);
     return 1;
 }

@@ -22,13 +22,13 @@ Most of the above keys are optional.
 
 ## Split Object
 
-| Key            | Type   | Value                  |
-| -------------- | ------ | ---------------------- |
-| `title`        | string | Split title            |
-| `icon`         | string | Icon file path or url  |
-| `time`         | string | Split time             |
-| `best_time`    | string | Your best split time   |
-| `best_segment` | string | Your best segment time |
+| Key            | Type   | Value                                                     |
+| -------------- | ------ | --------------------------------------------------------- |
+| `title`        | string | Split title                                               |
+| `icon`         | string | Icon file path or url                                     |
+| `time`         | string | Split time - the total time up to this segment in your PB |
+| `best_time`    | string | Your best split time                                      |
+| `best_segment` | string | Your best segment time (split gold)                       |
 
 Times are strings in `HH:MM:SS.mmmmmm` format.
 
@@ -45,18 +45,20 @@ Here is a quick example of how a simple split file would look:
     "splits": [
         {
             "title": "Maths",
-            "time": "05:12:55.123456",
-            "best_time": "05:12:55.123456",
-            "best_segment": "05:12:55.123456",
+            "time": "05:12:55.000000",
+            "best_time": "04:10:50.000000",
+            "best_segment": "04:10:50.000000",
         },
         {
             "title": "Science",
-            "time": "02:23:35.123456",
-            "best_time": "01:15:35.789520",
-            "best_segment": "01:15:35.789520",
+            "time": "07:36:30.000000",
+            "best_time": "05:26:25.000000",
+            "best_segment": "01:15:35.000000",
         }
     ],
     "width": 250,
     "height": 500
 }
 ```
+
+In the example above, the individual segment time for the "Maths" split would be `05:12:55.000000` and the individual segment time for the "Science" split would be `02:23:35.000000`

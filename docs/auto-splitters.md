@@ -23,10 +23,10 @@ process('GameBlaBlaBla.exe')
 
 - With this line, LibreSplit will repeatedly attempt to find this process and will not continue script execution until it is found. This is limited to 15 characters in length (the ones present in `/proc/<pid>/stat`).
 
-If you want to use longer names or check the entire command line add `cmdline` on second parameter:
+If you want to use longer names or check the entire command line add `true` on second parameter:
 
 ```lua
-process('MyGameHasAVeryLongName.exe', 'cmdline')
+process('MyGameHasAVeryLongName.exe', true)
 ```
 
 - Next we have to define the basic functions. Not all are required and the ones that are required may change depending on the game or end goal, like if loading screens are included or not.
@@ -555,6 +555,16 @@ Usage:
 local maps = getMaps()
 ```
 
+## md5sum
+
+Returns a hex-digest of the file pointed by the path passed as argument, as a string. Mostly used for detecting different game versions.
+
+Usage:
+
+```lua
+local md5_to_compare = md5sum("path/to/my/awesome/game")
+```
+
 ## `processExists`
 
 Check if a process is running without attaching to it.
@@ -578,4 +588,4 @@ end
 
 `processExists()` will return `true` or `false`.
 
-_Note: If you want to use longer names, add `cmdline` on second parameter like in `process()` function._
+_Note: If you want to use longer names, add `true` on second parameter e.g. `process("game.exe", true)`._

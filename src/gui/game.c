@@ -2,6 +2,7 @@
 #include "src/gui/component/components.h"
 #include "src/gui/theming.h"
 #include "src/settings/definitions.h"
+#include <gtk/gtk.h>
 
 extern AppConfig cfg;
 
@@ -39,9 +40,15 @@ void ls_app_window_show_game(LSAppWindow* win)
 
     // set dimensions
     if (win->game->width > 0 && win->game->height > 0) {
+        // First set the "minimum size" allowed
         gtk_widget_set_size_request(GTK_WIDGET(win),
             win->game->width,
             win->game->height);
+        // Then automatically resize the window to the preferences
+        gtk_window_resize(GTK_WINDOW(win),
+            win->game->width,
+            win->game->height);
+        // User will still be able to resize the window up, but not down
     }
 
     // set game theme (if it is set)

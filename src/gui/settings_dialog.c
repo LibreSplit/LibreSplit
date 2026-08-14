@@ -178,9 +178,10 @@ static void build_settings_dialog(GtkApplication* app, gpointer data)
         return;
     }
 
-    GtkWidget* window = gtk_application_window_new(app);
+    GtkWindow* parent = gtk_application_get_active_window(app);
+    GtkWidget* window = gtk_dialog_new_with_buttons("LibreSplit Settings", parent, GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT, NULL, NULL);
+    gtk_window_set_application(GTK_WINDOW(window), app);
     settings_window_singleton = window;
-    gtk_window_set_title(GTK_WINDOW(window), "LibreSplit Settings");
     gtk_window_set_default_size(GTK_WINDOW(window), 500, 500);
     gtk_window_set_resizable(GTK_WINDOW(window), FALSE);
     g_signal_connect(window, "delete-event", G_CALLBACK(on_help_window_delete), NULL);
@@ -254,8 +255,8 @@ static void build_settings_dialog(GtkApplication* app, gpointer data)
     GtkWidget* save_btn = gtk_button_new_with_label("Save");
     g_signal_connect(save_btn, "clicked", G_CALLBACK(save_gui_settings), NULL);
     gtk_container_add(GTK_CONTAINER(main_box), save_btn);
-    gtk_container_add(GTK_CONTAINER(window), main_box);
-    gtk_widget_show_all(main_box);
+    gtk_container_add(GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(window))), main_box);
+    gtk_widget_show_all(window);
     gtk_window_present(GTK_WINDOW(window));
 }
 

@@ -7,6 +7,7 @@ project(
 )
 
 add_project_arguments('-DAPP_VERSION="@0@"'.format(meson.project_version()), language: 'c')
+add_project_arguments('-D_GNU_SOURCE=1 ', language: 'c')
 
 if get_option('buildtype') == 'debug'
     add_project_arguments('-DDEBUG', language: 'c')
@@ -27,6 +28,7 @@ gtk = dependency('gtk+-3.0')
 luajit = dependency('luajit')
 x11 = dependency('x11')
 jansson = dependency('jansson')
+openssl = dependency('openssl')
 
 libresplit_sources = files(
     'src/main.c',
@@ -57,6 +59,7 @@ libresplit_sources = files(
     'src/lasr/functions/shallow_copy_tbl.c',
     'src/lasr/functions/signature.c',
     'src/lasr/functions/sizeOf.c',
+    'src/lasr/functions/md5.c',
 
     # Keybinds
     'src/keybinds/keybinds.c',
@@ -116,7 +119,7 @@ executable(
     'libresplit',
     libresplit_sources,
     objects: [css_o],
-    dependencies: [threads, gtk, luajit, x11, jansson],
+    dependencies: [threads, gtk, luajit, x11, jansson, openssl],
     c_args: shared_c_flags,
     install: true,
 )

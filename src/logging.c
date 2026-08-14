@@ -8,7 +8,6 @@
 #include "settings/utils.h"
 
 #include <linux/limits.h>
-#include <linux/prctl.h>
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdatomic.h>

@@ -1,10 +1,3 @@
-/**
- * Shows a message dialog in case of a memory read error.
- *
- * @param data Unused.
- *
- * @return False, to remove the function from the queue.
- */
 #include "src/lasr/auto-splitter.h"
 #include <gio/gio.h>
 #include <glib.h>
@@ -27,6 +20,13 @@ static void dialog_response_cb(GtkWidget* dialog, gint response_id, gpointer use
     gtk_widget_destroy(dialog);
 }
 
+/**
+ * Shows a message dialog in case of a memory read error.
+ *
+ * @param data Unused.
+ *
+ * @return False, to remove the function from the queue.
+ */
 gboolean display_non_capable_mem_read_dialog(gpointer data)
 {
     atomic_store(&auto_splitter_enabled, 0);
@@ -61,6 +61,41 @@ gboolean display_non_capable_mem_read_dialog(gpointer data)
 
     // Connect the response signal to the callback function
     return FALSE; // False removes this function from the queue
+}
+
+/**
+ * Displays a modal warning dialog explaining that LibreSplit should not be
+ * run as the root user due to potential security and file permission issues.
+ * The dialog is parented to the active application window when one exists.
+ *
+ * @return `true` to indicate that root execution was detected and the warning
+ *         dialog was shown.
+ */
+bool display_root_warning_dialog(void)
+{
+    GtkApplication* app = GTK_APPLICATION(g_application_get_default());
+    GtkWindow* win = NULL;
+
+    if (app != NULL) {
+        win = gtk_application_get_active_window(app);
+    }
+
+    GtkWidget* dialog = gtk_message_dialog_new(
+        GTK_WINDOW(win),
+        GTK_DIALOG_MODAL,
+        GTK_MESSAGE_WARNING,
+        GTK_BUTTONS_OK,
+        "Running LibreSplit as root is unsafe.\n\n"
+        "Running applications as root can lead to security issues "
+        "and may cause unintended file ownership problems.\n\n"
+        "Please run LibreSplit as a normal user.");
+
+    gtk_window_set_title(GTK_WINDOW(dialog), "Unsafe Configuration");
+
+    gtk_dialog_run(GTK_DIALOG(dialog));
+    gtk_widget_destroy(dialog);
+
+    return true;
 }
 
 bool display_confirm_reset_dialog(void)

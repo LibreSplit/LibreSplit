@@ -5,6 +5,7 @@
 #include "functions/getMaps.h"
 #include "functions/getModuleSize.h"
 #include "functions/getPID.h"
+#include "functions/md5.h"
 #include "functions/print_tbl.h"
 #include "functions/process.h"
 #include "functions/readAddress.h"

@@ -357,6 +357,18 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
     }
     // get splits
     ref = json_object_get(json, "splits");
+    if (!json_is_array(ref) || json_array_size(ref) == 0) {
+        error = 1;
+        size_t msg_len = snprintf(NULL, 0, "Split file must contain a non-empty splits array");
+        *error_msg = calloc(msg_len + 1, sizeof(char));
+        if (*error_msg == NULL) {
+            LOG_ERR("Cannot allocate memory for error message");
+            error = 1;
+            goto game_create_error;
+        }
+        sprintf(*error_msg, "Split file must contain a non-empty splits array");
+        goto game_create_error;
+    }
     if (ref) {
         game->split_count = json_array_size(ref);
 
