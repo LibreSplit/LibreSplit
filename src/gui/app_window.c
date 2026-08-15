@@ -32,6 +32,12 @@ G_DEFINE_TYPE(LSApp, ls_app, GTK_TYPE_APPLICATION)
 
 G_DEFINE_TYPE(LSAppWindow, ls_app_window, GTK_TYPE_APPLICATION_WINDOW)
 
+/**
+ * Sets whether or not the window should be decorated
+ * based on the user's preferences.
+ *
+ * @param win The current main app window
+ */
 void set_window_decorations(LSAppWindow* win)
 {
     gtk_window_set_decorated(GTK_WINDOW(win), win->opts.decorated);
@@ -48,6 +54,15 @@ void set_window_decorations(LSAppWindow* win)
 #endif
 }
 
+/**
+ * Called when the main application window is about to be drawn.
+ * Useful on Wayland where decoration calls require the GdkWindow
+ * to actually exist, meaning our earlier call on application start
+ * to set the initial user's decoration settings might not work.
+ *
+ * @param widget The application's main widget
+ * @param data unused
+ */
 static void ls_app_window_realize(GtkWidget* widget, gpointer data)
 {
     set_window_decorations(LS_APP_WINDOW(widget));
@@ -413,7 +428,7 @@ static void ls_app_window_init(LSAppWindow* win)
     g_signal_connect(win, "motion-notify-event",
         G_CALLBACK(handle_pointer_motion), NULL);
     g_signal_connect(win, "realize",
-        G_CALLBACK(ls_app_window_realize), win);
+        G_CALLBACK(ls_app_window_realize), NULL);
 
     // As a crash workaround, only enable global hotkeys if not on Wayland
     const bool is_wayland = getenv("WAYLAND_DISPLAY");
