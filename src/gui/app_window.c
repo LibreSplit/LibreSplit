@@ -13,6 +13,7 @@
 #include "settings/settings.h"
 #include "settings/utils.h"
 #include "timer.h"
+#include <glib-object.h>
 #include <stdatomic.h>
 #include <stdio.h>
 #include <sys/stat.h>
@@ -29,6 +30,7 @@ G_DEFINE_TYPE(LSAppWindow, ls_app_window, GTK_TYPE_APPLICATION_WINDOW)
 
 void toggle_decorations(LSAppWindow* win)
 {
+    LOG_DEBUG("Toggling window decorations");
     gtk_window_set_decorated(GTK_WINDOW(win), !win->opts.decorated);
     win->opts.decorated = !win->opts.decorated;
     cfg.libresplit.start_decorated.value.b = win->opts.decorated;
@@ -37,6 +39,7 @@ void toggle_decorations(LSAppWindow* win)
 
 void toggle_win_on_top(LSAppWindow* win)
 {
+    LOG_DEBUG("Toggling 'Always on Top' window flag");
     gtk_window_set_keep_above(GTK_WINDOW(win), !win->opts.win_on_top);
     win->opts.win_on_top = !win->opts.win_on_top;
     cfg.libresplit.start_on_top.value.b = win->opts.win_on_top;
@@ -47,6 +50,7 @@ static void resize_window(LSAppWindow* win,
     int window_width,
     int window_height)
 {
+    LOG_DEBUG("Resizing window");
     GList* l;
     for (l = win->components; l != NULL; l = l->next) {
         LSComponent* component = l->data;
@@ -62,6 +66,7 @@ gboolean ls_app_window_resize(GtkWidget* widget,
     GdkEvent* event,
     gpointer data)
 {
+    LOG_DEBUG("Configure signal received: size, position of stacking of the window changed...");
     LSAppWindow* win = (LSAppWindow*)widget;
     resize_window(win, event->configure.width, event->configure.height);
     return FALSE;
@@ -69,6 +74,7 @@ gboolean ls_app_window_resize(GtkWidget* widget,
 
 LSAppWindow* ls_app_window_new(LSApp* app)
 {
+    LOG_DEBUG("Creating a new LibreSplit window");
     LSAppWindow* win;
     win = g_object_new(LS_APP_WINDOW_TYPE, "application", app, NULL);
     gtk_window_set_type_hint(GTK_WINDOW(win), GDK_WINDOW_TYPE_HINT_DIALOG);
@@ -77,6 +83,7 @@ LSAppWindow* ls_app_window_new(LSApp* app)
 
 void ls_app_window_open(LSAppWindow* win, const char* file)
 {
+    LOG_DEBUG("Opening LibreSplit window");
     char* error_msg = NULL;
     GtkWidget* error_popup;
 
@@ -120,8 +127,9 @@ void ls_app_window_open(LSAppWindow* win, const char* file)
  */
 void ls_app_activate(GApplication* app)
 {
+    LOG_DEBUG("Initializing configuration");
     if (!config_init()) {
-        printf("Configuration failed to load, will use defaults\n");
+        LOG_WARN("Configuration failed to load, will use defaults");
     }
 
     LSAppWindow* win;
@@ -129,25 +137,28 @@ void ls_app_activate(GApplication* app)
     gtk_window_present(GTK_WINDOW(win));
 
     if (cfg.history.split_file.value.s[0] != '\0') {
+        LOG_DEBUG("Loading last used split file from history");
         // Check if split file exists
         struct stat st = { 0 };
         char splits_path[PATH_MAX];
         strcpy(splits_path, cfg.history.split_file.value.s);
         if (stat(splits_path, &st) == -1) {
-            printf("Split JSON %s does not exist\n", splits_path);
+            LOG_INFOF("Split JSON %s does not exist", splits_path);
             open_activated(NULL, NULL, app);
         } else {
             ls_app_window_open(win, splits_path);
         }
     } else {
+        LOG_DEBUG("Opening split file selection dialog");
         open_activated(NULL, NULL, app);
     }
     if (cfg.history.auto_splitter_file.value.s[0] != '\0') {
+        LOG_DEBUG("Opening last used auto splitter from history");
         struct stat st = { 0 };
         char auto_splitters_path[PATH_MAX];
         strcpy(auto_splitters_path, cfg.history.auto_splitter_file.value.s);
         if (stat(auto_splitters_path, &st) == -1) {
-            printf("Auto Splitter %s does not exist\n", auto_splitters_path);
+            LOG_INFOF("Auto Splitter %s does not exist", auto_splitters_path);
         } else {
             strcpy(auto_splitter_file, auto_splitters_path);
         }
@@ -161,6 +172,7 @@ void ls_app_open(GApplication* app,
     gint n_files,
     const gchar* hint)
 {
+    LOG_DEBUG("Starting LibreSplit App");
     GList* windows;
     LSAppWindow* win;
     int i;
@@ -203,6 +215,7 @@ static void ls_app_window_class_init(LSAppWindowClass* class)
  */
 void ls_app_window_destroy(GtkWidget* widget, gpointer data)
 {
+    LOG_INFO("Exiting LibreSplit. GG!");
     LSAppWindow* win = (LSAppWindow*)widget;
     if (win->timer) {
         ls_timer_release(win->timer);
@@ -217,6 +230,7 @@ void ls_app_window_destroy(GtkWidget* widget, gpointer data)
     free_timer_registries();
     unload_plugins();
     close_logger();
+    LOG_DEBUG("Exit request sent to threads");
     // Close any other open application windows (settings, dialogs, etc.)
     GApplication* app = g_application_get_default();
     if (app) {
@@ -230,6 +244,8 @@ void ls_app_window_destroy(GtkWidget* widget, gpointer data)
         }
         g_list_free(snapshot);
     }
+    close_logger();
+    g_application_quit(G_APPLICATION(app));
 }
 
 /**
@@ -324,6 +340,7 @@ gboolean ls_app_window_draw(gpointer data)
 
 static void ls_app_window_init(LSAppWindow* win)
 {
+    LOG_DEBUG("Initializing LibreSplit Window");
     const char* theme;
     const char* theme_variant;
     int i;
@@ -337,6 +354,7 @@ static void ls_app_window_init(LSAppWindow* win)
     get_libresplit_folder_path(win->data_path);
 
     // load settings
+    LOG_DEBUG("Loading Settings...");
     win->opts.hide_cursor = cfg.libresplit.hide_cursor.value.b;
     win->opts.global_hotkeys = cfg.libresplit.global_hotkeys.value.b;
     win->opts.decorated = cfg.libresplit.start_decorated.value.b;
@@ -352,6 +370,7 @@ static void ls_app_window_init(LSAppWindow* win)
     gtk_window_set_keep_above(GTK_WINDOW(win), win->opts.win_on_top);
 
     // Load theme
+    LOG_DEBUG("Loading Theme...");
     theme = cfg.libresplit.theme.value.s;
     theme_variant = cfg.libresplit.theme_variant.value.s;
     ls_app_load_theme_with_fallback(win, theme, theme_variant);
@@ -362,6 +381,7 @@ static void ls_app_window_init(LSAppWindow* win)
     win->game = 0;
     win->timer = 0;
 
+    LOG_DEBUG("Connecting window signals...")
     g_signal_connect(win, "destroy",
         G_CALLBACK(ls_app_window_destroy), NULL);
     g_signal_connect(win, "configure-event",
@@ -374,12 +394,15 @@ static void ls_app_window_init(LSAppWindow* win)
     const bool enable_global_hotkeys = win->opts.global_hotkeys && (force_global_hotkeys || !is_wayland);
 
     if (enable_global_hotkeys) {
+        LOG_DEBUG("Global Hotkeys Enabled, binding hotkeys globally...");
         bind_global_hotkeys(cfg, win);
     } else {
+        LOG_DEBUG("Global Hotkeys Disabled, binding hotkeys only to the main window...");
         g_signal_connect(win, "key_press_event",
             G_CALLBACK(ls_app_window_keypress), win);
     }
 
+    LOG_DEBUG("Creating the main window...");
     win->container = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     gtk_widget_set_margin_top(win->container, WINDOW_PAD);
     gtk_widget_set_margin_bottom(win->container, WINDOW_PAD);
@@ -387,6 +410,7 @@ static void ls_app_window_init(LSAppWindow* win)
     gtk_container_add(GTK_CONTAINER(win), win->container);
     gtk_widget_show(win->container);
 
+    LOG_DEBUG("Creating the welcome box...");
     win->welcome_box = welcome_box_new(win->container);
 
     win->box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
@@ -397,6 +421,7 @@ static void ls_app_window_init(LSAppWindow* win)
     gtk_container_add(GTK_CONTAINER(win->container), win->box);
 
     // Create all available components (TODO: change this in the future)
+    LOG_DEBUG("Creating components...");
     win->components = NULL;
     for (i = 0; ls_components[i].name != NULL; i++) {
         LSComponent* component = ls_components[i].new();
@@ -414,6 +439,7 @@ static void ls_app_window_init(LSAppWindow* win)
 
     // NOTE: This always creates an empty footer, no matter how many
     //  ^ "footers" are available, which may give issues with theming
+    LOG_DEBUG("Creating window footer...");
     win->footer = gtk_grid_new();
     add_class(win->footer, "footer");
     gtk_widget_set_margin_start(win->footer, WINDOW_PAD);
@@ -421,6 +447,7 @@ static void ls_app_window_init(LSAppWindow* win)
     gtk_container_add(GTK_CONTAINER(win->box), win->footer);
     gtk_widget_show(win->footer);
 
+    LOG_DEBUG("Setting up timers for updating and drawing the window...");
     // Update the internal state every millisecond
     g_timeout_add(1, ls_app_window_step, win);
     // Draw the window at 30 FPS

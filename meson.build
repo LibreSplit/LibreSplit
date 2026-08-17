@@ -13,7 +13,7 @@ if get_option('buildtype') == 'debug'
     add_project_arguments('-DDEBUG', language: 'c')
     add_project_arguments('-DLOG_LEVEL=0', language: 'c')
 else
-    add_project_arguments('-DLOG_LEVEL=2', language: 'c')
+    add_project_arguments('-DLOG_LEVEL=1', language: 'c')
 endif
 
 cc = meson.get_compiler('c')
