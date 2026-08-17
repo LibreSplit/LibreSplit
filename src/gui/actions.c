@@ -1,11 +1,14 @@
 #include "src/gui/actions.h"
+#include "gio/gio.h"
 #include "src/gui/app_window.h"
 #include "src/gui/game.h"
 #include "src/gui/timer.h"
 #include "src/lasr/auto-splitter.h"
 #include "src/lasr/utils.h"
+#include "src/logging.h"
 #include "src/settings/settings.h"
 #include <gtk/gtk.h>
+#include <stdatomic.h>
 #include <sys/stat.h>
 
 /**
@@ -269,12 +272,15 @@ void quit_activated(GSimpleAction* action,
     GVariant* parameter,
     gpointer app)
 {
+    LOG_INFO("Exiting LibreSplit. GG!");
     GList* windows;
     LSAppWindow* win;
     if (parameter != NULL) {
         app = parameter;
     }
 
+    atomic_store(&exit_requested, 1);
+    LOG_DEBUG("Exit request sent to threads");
     windows = gtk_application_get_windows(GTK_APPLICATION(app));
     if (windows) {
         win = LS_APP_WINDOW(windows->data);
@@ -284,7 +290,8 @@ void quit_activated(GSimpleAction* action,
     if (win->welcome_box) {
         welcome_box_destroy(win->welcome_box);
     }
-    exit(0);
+    gtk_widget_destroy(GTK_WIDGET(win));
+    g_application_quit(G_APPLICATION(app));
 }
 
 /**

@@ -1,3 +1,4 @@
+#include "logging.h"
 #include "shared.h"
 
 #include <arpa/inet.h>
@@ -147,6 +148,7 @@ void* ls_ctl_server(void* arg)
 
         if (ret == 0) { // Timeout
             if (atomic_load(&exit_requested)) {
+                LOG_DEBUG("Exit requested, shutting down Server Thread");
                 break;
             }
         }
