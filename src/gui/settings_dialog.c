@@ -1,4 +1,5 @@
 #include "settings_dialog.h"
+#include "src/logging.h"
 #include "src/settings/definitions.h"
 #include "src/settings/settings.h"
 
@@ -24,6 +25,7 @@ static GtkWidget* settings_window_singleton = NULL;
  */
 static size_t enumerate_settings(AppConfig cfg)
 {
+    LOG_DEBUG("Enumerating settings to add to the GUI...");
     int settings_number = 0;
     for (size_t s = 0; s < sections_count; ++s) {
         SectionInfo section_info = sections[s];
@@ -46,6 +48,7 @@ static size_t enumerate_settings(AppConfig cfg)
  */
 static gboolean on_help_window_delete(GtkWidget* widget, GdkEvent* event, gpointer user_data)
 {
+    LOG_DEBUG("Destroying the settings window...");
     settings_window_singleton = NULL;
     gtk_widget_destroy(widget);
     free(gui_settings);
@@ -122,6 +125,7 @@ bool on_entry_clear_press(GtkEntry* widget, GtkEntryIconPosition icon_pos, GdkEv
 
 static void save_gui_settings(GSimpleAction* action, GVariant* parameter, gpointer app)
 {
+    LOG_INFO("Saving settings from the GUI...");
     size_t settings_number = enumerate_settings(cfg);
     // Parse all values in gui_settings, assign them to the respective cfg settings
     for (size_t i = 0; i < settings_number; i++) {
@@ -165,6 +169,7 @@ static void set_widget_defaults(GtkWidget* obj)
 
 static void build_settings_dialog(GtkApplication* app, gpointer data)
 {
+    LOG_INFO("Creating the settings dialog...");
     // Show already open window if another one is called.
     if (settings_window_singleton) {
         gtk_window_present(GTK_WINDOW(settings_window_singleton));
@@ -174,13 +179,14 @@ static void build_settings_dialog(GtkApplication* app, gpointer data)
     int settings_number = enumerate_settings(cfg);
     gui_settings = malloc(settings_number * sizeof(LSGuiSetting));
     if (gui_settings == NULL) {
-        printf("Cannot allocate memory for the settings GUI.");
+        LOG_WARN("Cannot allocate memory for the settings GUI.");
         return;
     }
 
-    GtkWidget* window = gtk_application_window_new(app);
+    GtkWindow* parent = gtk_application_get_active_window(app);
+    GtkWidget* window = gtk_dialog_new_with_buttons("LibreSplit Settings", parent, GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT, NULL, NULL);
+    gtk_window_set_application(GTK_WINDOW(window), app);
     settings_window_singleton = window;
-    gtk_window_set_title(GTK_WINDOW(window), "LibreSplit Settings");
     gtk_window_set_default_size(GTK_WINDOW(window), 500, 500);
     gtk_window_set_resizable(GTK_WINDOW(window), FALSE);
     g_signal_connect(window, "delete-event", G_CALLBACK(on_help_window_delete), NULL);
@@ -254,8 +260,8 @@ static void build_settings_dialog(GtkApplication* app, gpointer data)
     GtkWidget* save_btn = gtk_button_new_with_label("Save");
     g_signal_connect(save_btn, "clicked", G_CALLBACK(save_gui_settings), NULL);
     gtk_container_add(GTK_CONTAINER(main_box), save_btn);
-    gtk_container_add(GTK_CONTAINER(window), main_box);
-    gtk_widget_show_all(main_box);
+    gtk_container_add(GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(window))), main_box);
+    gtk_widget_show_all(window);
     gtk_window_present(GTK_WINDOW(window));
 }
 

@@ -30,13 +30,12 @@ int getBaseAddress(lua_State* L)
         return 1;
     }
 
-    // Module name passed, search for its base address
     ProcessMap map;
-    bool found = maps_findMapByName(module_name, &map);
-    if (found) {
-        lua_pushnumber(L, map.start);
+    if (maps_findMapByName(module_name, &map)) {
+        lua_pushinteger(L, (lua_Integer)map.start);
         return 1;
     }
-    printf("[getBaseAddress] Cannot search for base address: module name must be a string or nil (for main module)");
-    return 0;
+    lua_pushnil(L);
+    printf("[getBaseAddress] Cannot find module with name \"%s\"\n", module_name);
+    return 1;
 }
