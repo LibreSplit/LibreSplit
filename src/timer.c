@@ -68,7 +68,7 @@ long long ls_time_value(const char* string)
     }
 
     // An empty time is represented as LLONG_MAX
-    if (strncmp(string, "-", strnlen(string, 20)) == 0) {
+    if (strcmp(string, "-") == 0) {
         return LLONG_MAX;
     }
 
