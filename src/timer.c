@@ -764,17 +764,17 @@ int ls_game_save(const ls_game* game)
         json_object_set_new(split, "icon", json_string(game->split_icon_paths[i]));
 
         // Only save the split if it's above 0. Otherwise it's impossible to beat 0
-        if (game->split_times[i].game_time > 0 && game->split_times[i].real_time > 0) {
+        if (!ls_time_lte_zero(game->split_times[i])) {
             json_t* time = json_object();
             json_time_set(time, &game->split_times[i]);
             json_object_set_new(split, "time", time);
         }
-        if (game->best_splits[i].game_time > 0 && game->best_splits[i].real_time > 0) {
+        if (!ls_time_lte_zero(game->best_splits[i])) {
             json_t* time = json_object();
             json_time_set(time, &game->best_splits[i]);
             json_object_set_new(split, "best_time", time);
         }
-        if (game->best_segments[i].game_time > 0 && game->best_segments[i].real_time > 0) {
+        if (!ls_time_lte_zero(game->best_segments[i])) {
             json_t* time = json_object();
             json_time_set(time, &game->best_segments[i]);
             json_object_set_new(split, "best_segment", time);
