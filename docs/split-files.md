@@ -52,7 +52,7 @@ Here is a quick example of how a simple split file would look:
 {
   "title": "School - Homework%",
   "attempt_count": 55,
-  "comparison_method": 1, // GAME TIME
+  "comparison_method": 1,
   "splits": [
     {
       "title": "Maths",
