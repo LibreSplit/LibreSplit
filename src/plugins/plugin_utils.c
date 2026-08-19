@@ -118,6 +118,9 @@ int register_event_hook(HookableEvent event, timer_hook_func fn)
     return 0;
 }
 
+/**
+ * Initializes the external LASR functions array of pointers
+ */
 void init_external_lasr_functions(void)
 {
     LOG_DEBUG("Initializing external LuaC functions array");
