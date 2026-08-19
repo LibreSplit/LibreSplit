@@ -2,6 +2,7 @@
 #include "gui/actions.h"
 #include "gui/component/components.h"
 #include "gui/context_menu.h"
+#include "gui/dialogs.h"
 #include "gui/game.h"
 #include "gui/theming.h"
 #include "gui/timer.h"
@@ -15,7 +16,6 @@
 #include "timer.h"
 #include <glib-object.h>
 #include <stdatomic.h>
-#include <stdio.h>
 #include <sys/stat.h>
 
 extern atomic_bool exit_requested; /*!< Set to 1 when LibreSplit is exiting */
@@ -208,6 +208,31 @@ static void ls_app_window_class_init(LSAppWindowClass* class)
 }
 
 /**
+ * Triggered when LibreSplit receives a notification to close.
+ *
+ * @param widget The pointer to the LibreSplit window, as a widget.
+ * @param data Usually NULL.
+ */
+gboolean ls_app_window_delete(GtkWidget* widget, GdkEvent* event, gpointer data)
+{
+    LSAppWindow* win = (LSAppWindow*)widget;
+
+    // Warn if the reset will lose a gold split, and allow the user to cancel the reset if they want to keep it
+    if (win->timer && win->timer->running && (ls_timer_has_gold_split(win->timer) || ls_timer_has_rainbow_split(win->timer))) {
+        bool user_reset = true;
+        if (cfg.libresplit.ask_on_gold.value.b) {
+            user_reset = display_confirm_reset_dialog();
+        }
+
+        if (!user_reset) {
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
+/**
  * Closes LibreSplit.
  *
  * @param widget The pointer to the LibreSplit window, as a widget.
@@ -382,6 +407,8 @@ static void ls_app_window_init(LSAppWindow* win)
     win->timer = 0;
 
     LOG_DEBUG("Connecting window signals...")
+    g_signal_connect(win, "delete-event",
+        G_CALLBACK(ls_app_window_delete), NULL);
     g_signal_connect(win, "destroy",
         G_CALLBACK(ls_app_window_destroy), NULL);
     g_signal_connect(win, "configure-event",

@@ -184,7 +184,7 @@ static void detailed_timer_draw(LSComponent* self_, const ls_game* game, const l
     if (curr == game->split_count) {
         curr = game->split_count - 1;
     }
-    if (ls_timer_get_time(timer, true) <= 0) {
+    if (ls_time_get_by_method(ls_timer_get_time(timer, true), game->comparison_method) <= 0) {
         add_class(self->time, "delay");
     } else {
         if (timer->curr_split == game->split_count
@@ -202,7 +202,7 @@ static void detailed_timer_draw(LSComponent* self_, const ls_game* game, const l
             }
         }
     }
-    ls_time_millis_string(str, &millis[1], ls_timer_get_time(timer, true));
+    ls_time_millis_string(str, &millis[1], ls_time_get_by_method(ls_timer_get_time(timer, true), game->comparison_method));
     if (millis[1] != '\0')
         millis[0] = '.';
     gtk_label_set_text(GTK_LABEL(self->time_seconds), str);
@@ -212,17 +212,17 @@ static void detailed_timer_draw(LSComponent* self_, const ls_game* game, const l
         gtk_label_set_text(GTK_LABEL(self->segment_seconds), str);
         gtk_label_set_text(GTK_LABEL(self->segment_millis), millis);
     } else {
-        ls_time_millis_string(seg, &seg_millis[1], timer->segment_times[timer->curr_split]);
+        ls_time_millis_string(seg, &seg_millis[1], ls_time_get_by_method(timer->segment_times[timer->curr_split], game->comparison_method));
         if (seg_millis[1] != '\0')
             seg_millis[0] = '.';
         gtk_label_set_text(GTK_LABEL(self->segment_seconds), seg);
         gtk_label_set_text(GTK_LABEL(self->segment_millis), seg_millis);
     }
 
-    ls_time_string(&pb[6], game->segment_times[timer->curr_split]);
+    ls_time_string(&pb[6], ls_time_get_by_method(game->segment_times[timer->curr_split], game->comparison_method));
     gtk_label_set_text(GTK_LABEL(self->segment_pb), pb);
 
-    ls_time_string(&best[6], game->best_segments[timer->curr_split]);
+    ls_time_string(&best[6], ls_time_get_by_method(game->best_segments[timer->curr_split], game->comparison_method));
     gtk_label_set_text(GTK_LABEL(self->segment_best), best);
 }
 

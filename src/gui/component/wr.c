@@ -82,9 +82,9 @@ static void wr_show_game(LSComponent* self_,
     LSWr* self = (LSWr*)self_;
     gtk_widget_set_halign(self->world_record_label, GTK_ALIGN_START);
     gtk_widget_set_hexpand(self->world_record_label, TRUE);
-    if (game->world_record) {
+    if (ls_time_get_by_method(game->world_record, game->comparison_method)) {
         char str[256];
-        ls_time_string(str, game->world_record);
+        ls_time_string(str, ls_time_get_by_method(game->world_record, game->comparison_method));
         gtk_label_set_text(GTK_LABEL(self->world_record), str);
         gtk_widget_show(self->world_record);
         gtk_widget_show(self->world_record_label);
@@ -115,15 +115,15 @@ static void wr_draw(LSComponent* self_, const ls_game* game,
 {
     LSWr* self = (LSWr*)self_;
     char str[256];
-    if (timer->curr_split == game->split_count
-        && game->world_record) {
-        if (timer->split_times[game->split_count - 1]
-            && timer->split_times[game->split_count - 1]
-                < game->world_record) {
-            ls_time_string(str, timer->split_times[game->split_count - 1]);
+    long long wr_time = ls_time_get_by_method(game->world_record, game->comparison_method);
+    long long current_time = ls_time_get_by_method(timer->split_times[game->split_count - 1], game->comparison_method);
+    if (timer->curr_split == game->split_count && wr_time) {
+        if (current_time && current_time < wr_time) {
+            ls_time_string(str, current_time);
         } else {
-            ls_time_string(str, game->world_record);
+            ls_time_string(str, wr_time);
         }
+
         gtk_label_set_text(GTK_LABEL(self->world_record), str);
     }
 }

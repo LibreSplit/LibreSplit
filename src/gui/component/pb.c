@@ -84,9 +84,9 @@ static void pb_show_game(LSComponent* self_,
 {
     LSPb* self = (LSPb*)self_;
     char str[256];
-    if (game->split_count && game->split_times[game->split_count - 1]) {
+    if (game->split_count && ls_time_get_by_method(game->split_times[game->split_count - 1], game->comparison_method)) {
         ls_time_string(
-            str, game->split_times[game->split_count - 1]);
+            str, ls_time_get_by_method(game->split_times[game->split_count - 1], game->comparison_method));
         gtk_label_set_text(GTK_LABEL(self->personal_best), str);
     }
 }
@@ -118,18 +118,18 @@ static void pb_draw(LSComponent* self_, const ls_game* game,
     gtk_label_set_text(GTK_LABEL(self->personal_best), "-");
     if (game->split_count
         && timer->curr_split == game->split_count
-        && timer->split_times[game->split_count - 1]
-        && (!game->split_times[game->split_count - 1]
-            || (timer->split_times[game->split_count - 1]
-                < game->split_times[game->split_count - 1]))) {
+        && ls_time_get_by_method(timer->split_times[game->split_count - 1], game->comparison_method)
+        && (!ls_time_get_by_method(game->split_times[game->split_count - 1], game->comparison_method)
+            || (ls_time_get_by_method(timer->split_times[game->split_count - 1], game->comparison_method)
+                < ls_time_get_by_method(game->split_times[game->split_count - 1], game->comparison_method)))) {
         add_class(self->personal_best, "time");
         ls_time_string(
-            str, timer->split_times[game->split_count - 1]);
+            str, ls_time_get_by_method(timer->split_times[game->split_count - 1], game->comparison_method));
         gtk_label_set_text(GTK_LABEL(self->personal_best), str);
-    } else if (game->split_count && game->split_times[game->split_count - 1]) {
+    } else if (game->split_count && ls_time_get_by_method(game->split_times[game->split_count - 1], game->comparison_method)) {
         add_class(self->personal_best, "time");
         ls_time_string(
-            str, game->split_times[game->split_count - 1]);
+            str, ls_time_get_by_method(game->split_times[game->split_count - 1], game->comparison_method));
         gtk_label_set_text(GTK_LABEL(self->personal_best), str);
     }
 }

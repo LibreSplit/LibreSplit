@@ -84,8 +84,8 @@ static void best_sum_show_game(LSComponent* self_,
 {
     LSBestSum* self = (LSBestSum*)self_;
     char str[256];
-    if (game->split_count && timer->sum_of_bests) {
-        ls_time_string(str, timer->sum_of_bests);
+    if (game->split_count && ls_time_get_by_method(timer->sum_of_bests, game->comparison_method)) {
+        ls_time_string(str, ls_time_get_by_method(timer->sum_of_bests, game->comparison_method));
         gtk_label_set_text(GTK_LABEL(self->sum_of_bests), str);
     }
 }
@@ -115,9 +115,9 @@ static void best_sum_draw(LSComponent* self_, const ls_game* game,
     char str[256];
     remove_class(self->sum_of_bests, "time");
     gtk_label_set_text(GTK_LABEL(self->sum_of_bests), "-");
-    if (timer->sum_of_bests) {
+    if (ls_time_get_by_method(timer->sum_of_bests, game->comparison_method)) {
         add_class(self->sum_of_bests, "time");
-        ls_time_string(str, timer->sum_of_bests);
+        ls_time_string(str, ls_time_get_by_method(timer->sum_of_bests, game->comparison_method));
         gtk_label_set_text(GTK_LABEL(self->sum_of_bests), str);
     }
 }

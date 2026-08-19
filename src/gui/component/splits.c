@@ -254,8 +254,8 @@ static void splits_show_game(LSComponent* self_, const ls_game* game,
         gtk_container_add(GTK_CONTAINER(self->split_rows[i]),
             self->split_times[i]);
 
-        if (game->split_times[i]) {
-            ls_split_string(str, game->split_times[i], 0);
+        if (ls_time_get_by_method(game->split_times[i], game->comparison_method)) {
+            ls_split_string(str, ls_time_get_by_method(game->split_times[i], game->comparison_method), 0);
             gtk_label_set_text(GTK_LABEL(self->split_times[i]), str);
         }
 
@@ -340,14 +340,14 @@ static void splits_draw(LSComponent* self_, const ls_game* game, const ls_timer*
 
         if (i < timer->curr_split) {
             add_class(self->split_times[i], "done");
-            if (timer->split_times[i]) {
+            if (ls_time_get_by_method(timer->split_times[i], game->comparison_method)) {
                 add_class(self->split_times[i], "time");
-                ls_split_string(str, timer->split_times[i], 0);
+                ls_split_string(str, ls_time_get_by_method(timer->split_times[i], game->comparison_method), 0);
                 gtk_label_set_text(GTK_LABEL(self->split_times[i]), str);
             }
-        } else if (game->split_times[i]) {
+        } else if (ls_time_get_by_method(game->split_times[i], game->comparison_method)) {
             add_class(self->split_times[i], "time");
-            ls_split_string(str, game->split_times[i], 0);
+            ls_split_string(str, ls_time_get_by_method(game->split_times[i], game->comparison_method), 0);
             gtk_label_set_text(GTK_LABEL(self->split_times[i]), str);
         }
 
@@ -358,7 +358,7 @@ static void splits_draw(LSComponent* self_, const ls_game* game, const ls_timer*
         remove_class(self->split_deltas[i], "delta");
         gtk_label_set_text(GTK_LABEL(self->split_deltas[i]), "");
         if (i < timer->curr_split
-            || timer->split_deltas[i] >= SHOW_DELTA_THRESHOLD) {
+            || ls_time_get_by_method(timer->split_deltas[i], game->comparison_method) >= SHOW_DELTA_THRESHOLD) {
             if (timer->split_info[i] & LS_INFO_BEST_SPLIT) {
                 add_class(self->split_deltas[i], "best-split");
             }
@@ -378,9 +378,9 @@ static void splits_draw(LSComponent* self_, const ls_game* game, const ls_timer*
                     add_class(self->split_deltas[i], "losing");
                 }
             }
-            if (timer->split_deltas[i]) {
+            if (ls_time_get_by_method(timer->split_deltas[i], game->comparison_method)) {
                 add_class(self->split_deltas[i], "delta");
-                ls_delta_string(str, timer->split_deltas[i]);
+                ls_delta_string(str, ls_time_get_by_method(timer->split_deltas[i], game->comparison_method));
                 gtk_label_set_text(GTK_LABEL(self->split_deltas[i]), str);
             }
         }
