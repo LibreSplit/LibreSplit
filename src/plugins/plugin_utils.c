@@ -20,17 +20,22 @@ int register_lua_function(const char* name, lua_CFunction fn)
         LOG_DEBUG("Reallocating array for size");
         // Resize array if too small
         external_lasr_functions.size *= 2;
+        // FIXME: [Penaz] [2026-08-20] Might lose the original reference if allocation fails
         external_lasr_functions.functions = realloc(external_lasr_functions.functions, external_lasr_functions.size * sizeof(struct lasr_function));
         if (!external_lasr_functions.functions) {
             LOG_ERR("Cannot reallocate external Lua C function array");
             free(external_lasr_functions.functions);
+            // XXX: [Penaz] [2026-08-20] Maybe abort is a bit too much?
             abort();
         }
     }
     // Add the new function to the array
+    //  FIXME: [Penaz] [2026-08-20] Check for NULL and empty function names, eventually for
+    // ^ overwrites also
     external_lasr_functions.functions[external_lasr_functions.count].function_name = strdup(name);
     if (!external_lasr_functions.functions[external_lasr_functions.count].function_name) {
         LOG_ERRF("Cannot allocate memory for the function named %s", name);
+        // XXX: [Penaz] [2026-08-20] Maybe abort is a bit too much?
         abort();
     }
     external_lasr_functions.functions[external_lasr_functions.count].function_ptr = fn;
@@ -53,9 +58,11 @@ static int push_function(TimerHookRegistry* registry, timer_hook_func fn)
         LOG_DEBUG("Reallocating array for size");
         // Resize array
         registry->size *= 2;
+        // FIXME: [Penaz] [2026-08-20] Might lose the original reference in case of failed allocation
         registry->functions = realloc(registry->functions, registry->size * sizeof(timer_hook_func));
         if (!registry->functions) {
             LOG_ERR("Cannot reallocate memory for timer hook.");
+            // XXX: [Penaz] [2026-08-20] Maybe abort is a bit too much?
             abort();
         }
     }
@@ -109,7 +116,7 @@ int register_event_hook(HookableEvent event, timer_hook_func fn)
             break;
         case UNPAUSE:
             LOG_DEBUG("Hooking new function into unpause event");
-            push_function(&start_hooks, fn);
+            push_function(&unpause_hooks, fn);
             break;
         default:
             LOG_WARN("Tried to hook to nonexisting event, ignored.");
@@ -128,6 +135,7 @@ void init_external_lasr_functions(void)
     external_lasr_functions.functions = malloc(external_lasr_functions.size * sizeof(struct lasr_function));
     if (external_lasr_functions.functions == NULL) {
         LOG_ERR("Cannot allocate memory for external LASR function pointers");
+        // XXX: [Penaz] [2026-08-20] Maybe abort is a bit too much?
         abort();
     }
     external_lasr_functions.functions[0].function_name = NULL;
