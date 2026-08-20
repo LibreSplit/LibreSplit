@@ -1447,6 +1447,10 @@ int ls_timer_cancel(ls_timer* timer)
     return 1;
 }
 
+/**
+ * Initializes the timer hook registries, allocating the memory
+ * for their usage.
+ */
 void init_timer_registries(void)
 {
     LOG_DEBUG("Initializing timer hook registries");
@@ -1506,6 +1510,9 @@ void init_timer_registries(void)
     unpause_hooks.functions[0] = NULL;
 }
 
+/**
+ * Frees the memory for all the timer hooks.
+ */
 void free_timer_registries(void)
 {
     LOG_DEBUG("Freeing timer hook registries");
