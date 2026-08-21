@@ -47,4 +47,4 @@ int register_lua_function(const char* name, lua_CFunction);
 
 int register_event_hook(HookableEvent event, timer_hook_func fn);
 
-void init_external_lasr_functions(void);
+int init_external_lasr_functions(void);

@@ -84,7 +84,11 @@ void handle_ctl_command(CTLCommand command)
 static void* ls_auto_splitter(void* arg)
 {
     prctl(PR_SET_NAME, "LS LASR", 0, 0, 0);
-    init_lasr_functions();
+    int lasr_init_status = init_lasr_functions();
+    if (lasr_init_status != 0) {
+        LOG_ERR("Cannot initialize the LASR C functions. Closing the LASR thread");
+        return NULL;
+    }
     while (1) {
         if (atomic_load(&auto_splitter_enabled) && auto_splitter_file[0] != '\0') {
             atomic_store(&auto_splitter_running, true);

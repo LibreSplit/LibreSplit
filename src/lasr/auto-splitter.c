@@ -125,61 +125,61 @@ static const lasr_function default_luac_functions[] = {
     { NULL, NULL }
 };
 
-lasr_function* luac_functions = NULL;
+const lasr_function* luac_functions = NULL;
+lasr_function* owned_luac_functions = NULL;
 ExternalLASRFunctionRegistry external_lasr_functions = {
     .size = 2,
     .count = 0,
-    .functions = NULL
+    .functions = NULL,
+    .enabled = false,
 };
 
-void init_lasr_functions(void)
+/**
+ * Utility function to get the size of the default LASR function
+ * array, minus the NULL-guard.
+ *
+ * @returns The size of the default LASR function array, minus 1
+ */
+static inline unsigned int default_luac_functions_length(void)
+{
+    return sizeof(default_luac_functions) / sizeof(default_luac_functions[0]) - 1;
+}
+
+/**
+ * Initializes the lua_functions array.
+ *
+ * @returns 0 if everything went well, an error code otherwise
+ */
+int init_lasr_functions(void)
 {
     LOG_DEBUG("Malloc-ing lua_functions");
-    int to_allocate_cnt = external_lasr_functions.count + (sizeof(default_luac_functions) / sizeof(default_luac_functions[0]));
-    luac_functions = malloc(to_allocate_cnt * sizeof(lasr_function));
-    if (!luac_functions) {
-        LOG_ERR("Unable to allocate memory for Lua C functions");
-        abort();
+    const unsigned int default_count = default_luac_functions_length();
+    const unsigned int external_count = external_lasr_functions.count;
+    const unsigned int total_count = default_count + external_count;
+    if (!external_lasr_functions.enabled || external_count == 0) {
+        LOG_DEBUG("No external lua functions to register, falling back to defaults.");
+        luac_functions = default_luac_functions;
+        return 0;
     }
-    // Copy default functions
-    int i = 0;
-    for (i = 0; default_luac_functions[i].function_name != NULL; i++) {
-        LOG_DEBUGF("Copying over %s", default_luac_functions[i].function_name);
-        char* fname = strdup(default_luac_functions[i].function_name);
-        if (!fname) {
-            LOG_ERRF("Cannot allocate default function name: %s", default_luac_functions[i].function_name);
-            abort();
-        }
-        luac_functions[i].function_name = fname;
-        if (!luac_functions[i].function_name) {
-            LOG_ERRF("Unable to allocate memory for Lua C function name: %s", default_luac_functions[i].function_name);
-            abort();
-        }
-        luac_functions[i].function_ptr = default_luac_functions[i].function_ptr;
-        LOG_DEBUGF("Copied over %s", luac_functions[i].function_name);
+    lasr_function* combined = calloc(total_count + 1, sizeof(*combined));
+    if (!combined) {
+        LOG_ERR("Unable to allocate memory for Lua C functions, falling back to defaults");
+        luac_functions = default_luac_functions;
+        return 0;
     }
-    for (int j = 0; j < external_lasr_functions.count; j++, i++) {
-        LOG_DEBUGF("Copying over %s", external_lasr_functions.functions[j].function_name);
-        char* fname = strdup(external_lasr_functions.functions[j].function_name);
-        if (!fname) {
-            LOG_ERRF("Cannot allocate external function name: %s", default_luac_functions[i].function_name);
-            abort();
-        }
-        luac_functions[i].function_name = fname;
-        if (!luac_functions[i].function_name) {
-            LOG_ERRF("Unable to allocate memory for Lua C function name: %s", external_lasr_functions.functions[j].function_name);
-            abort();
-        }
-        luac_functions[i].function_ptr = external_lasr_functions.functions[j].function_ptr;
-        // We don't need the external_lasr_functions.functions array anymore after initialization
-        free(external_lasr_functions.functions[j].function_name);
-        external_lasr_functions.functions[j].function_ptr = NULL;
-        LOG_DEBUGF("Copied over %s", luac_functions[i].function_name);
+    // Copy defaults
+    for (unsigned int i = 0; default_luac_functions[i].function_name != NULL; i++) {
+        combined[i] = default_luac_functions[i];
     }
-    luac_functions[i].function_name = NULL;
-    luac_functions[i].function_ptr = NULL;
-    // We're done with the external functions
+    // Copy plugin entries
+    for (unsigned int j = 0; j < external_count; j++) {
+        combined[default_count + j] = external_lasr_functions.functions[j];
+    }
+    // At this point, calloc should have already created the final {NULL, NULL} entry
+    luac_functions = combined;
+    owned_luac_functions = combined;
     free(external_lasr_functions.functions);
+    return 0;
 }
 
 /**
@@ -187,13 +187,17 @@ void init_lasr_functions(void)
  */
 void unregister_luac_functions(void)
 {
+    if (owned_luac_functions == NULL) {
+        // We're in fallback mode, can't free()
+        luac_functions = NULL;
+        return;
+    }
     for (int i = 0; luac_functions[i].function_name != NULL; i++) {
-        LOG_DEBUGF("Unregistering Lua C function %s", luac_functions[i].function_name);
-        free(luac_functions[i].function_name);
-        luac_functions[i].function_ptr = NULL;
+        LOG_DEBUGF("Unregistering Lua C function %s", owned_luac_functions[i].function_name);
+        free(owned_luac_functions[i].function_name);
     }
     // After freeing memory, we free the array itself.
-    free(luac_functions);
+    free(owned_luac_functions);
 }
 
 /**

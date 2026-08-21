@@ -20,6 +20,7 @@ static PluginRegistry plugin_registry = {
     .count = 0,
     .size = 2,
     .plugins = NULL,
+    .enabled = false,
 };
 
 const static size_t PLUGIN_VERSION_LENGTH = 21; /*!< 10 char for major, 10 for minor + 1 for dot */
@@ -292,7 +293,11 @@ fail:
  */
 void load_plugins(void)
 {
-    initialize_plugin_registry();
+    int initialized = initialize_plugin_registry();
+    if (initialized != 0) {
+        LOG_ERR("There has been an error initializing the plugin system. The plugin system will be disabled.")
+        return;
+    }
     char plugdir[PATH_MAX];
     get_libresplit_data_folder_path(plugdir);
     strlcat(plugdir, "/plugins/", sizeof(plugdir));
@@ -348,22 +353,21 @@ void load_plugins(void)
 int initialize_plugin_registry(void)
 {
     LOG_INFO("Initializing plugin registry");
-    if (plugin_registry.plugins) {
+    if (plugin_registry.enabled) {
         LOG_INFO("Plugin registry already initialized");
         return 0;
     }
     plugin_registry.plugins = malloc(plugin_registry.size * sizeof(Plugin));
     if (!plugin_registry.plugins) {
-        LOG_WARN("Plugin registry initialization failed.");
-        abort();
+        LOG_WARN("Plugin registry initialization failed (malloc failed).");
+        return -1;
     }
+    plugin_registry.enabled = true;
     return 0;
 }
 
 /**
  * Closes the handlers for all plugins and frees memory-
- *
- * NOTE: Currently unused.
  *
  * @returns Zero if everything went well, an error code otherwise
  */
@@ -417,5 +421,6 @@ int unload_plugins(void)
     plugin_registry.size = 2;
     plugin_registry.count = 0;
     plugin_registry.plugins = NULL;
+    plugin_registry.enabled = false;
     return 0;
 }

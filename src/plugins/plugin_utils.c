@@ -44,8 +44,9 @@ int register_lua_function(const char* name, lua_CFunction fn)
     external_lasr_functions.functions[external_lasr_functions.count].function_name = strdup(name);
     if (!external_lasr_functions.functions[external_lasr_functions.count].function_name) {
         LOG_ERRF("Cannot allocate memory for the function named %s", name);
-        // XXX: [Penaz] [2026-08-20] Maybe abort is a bit too much?
-        abort();
+        // If the strdup fails it returns NULL, so we just don't move the registry counter
+        // and fall back
+        return -1;
     }
     external_lasr_functions.functions[external_lasr_functions.count].function_ptr = fn;
     external_lasr_functions.count++;
@@ -137,16 +138,17 @@ int register_event_hook(HookableEvent event, timer_hook_func fn)
 /**
  * Initializes the external LASR functions array of pointers
  */
-void init_external_lasr_functions(void)
+int init_external_lasr_functions(void)
 {
     LOG_DEBUG("Initializing external LuaC functions array");
     // First array allocation
     external_lasr_functions.functions = malloc(external_lasr_functions.size * sizeof(struct lasr_function));
     if (external_lasr_functions.functions == NULL) {
         LOG_ERR("Cannot allocate memory for external LASR function pointers");
-        // XXX: [Penaz] [2026-08-20] Maybe abort is a bit too much?
-        abort();
+        return -1;
     }
     external_lasr_functions.functions[0].function_name = NULL;
     external_lasr_functions.functions[0].function_ptr = NULL;
+    external_lasr_functions.enabled = true;
+    return 0;
 }

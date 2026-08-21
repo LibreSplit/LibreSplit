@@ -18,6 +18,7 @@ typedef struct _PluginRegistry {
     int count; /*!< Number of loaded and active plugins */
     int size; /*!< Size of the plugin registry */
     Plugin* plugins; /*!< Array of Plugin structs with all their handles. */
+    bool enabled; /*!< Defines if the plugin system is fully enabled. */
 } PluginRegistry;
 
 /**
