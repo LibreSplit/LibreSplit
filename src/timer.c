@@ -1453,6 +1453,8 @@ int ls_timer_cancel(ls_timer* timer)
  */
 void init_timer_registries(void)
 {
+    // TODO: [Penaz] [2026-08-21] Find a more graceful way of handling failure
+    // ^ instead of aborting on hooks
     LOG_DEBUG("Initializing timer hook registries");
     start_hooks.functions = malloc(start_hooks.size * sizeof(timer_hook_func));
     if (!start_hooks.functions) {
