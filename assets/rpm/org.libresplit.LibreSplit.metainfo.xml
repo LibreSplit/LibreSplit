@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.libresplit.LibreSplit</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+  <name>LibreSplit</name>
+  <summary>Free speedrun timer with auto splitting and load removal for Linux.</summary>
+  <developer id="org.libresplit">
+    <name>LibreSplit</name>
+  </developer>
+  <description>
+    <p>
+      LibreSplit is a speedrun timer based on urn that adds support for
+      Lua-based auto splitters that are easy to port from ASL.
+    </p>
+  </description>
+  <launchable type="desktop-id">libresplit.desktop</launchable>
+  <provides>
+    <binary>libresplit</binary>
+  </provides>
+  <url type="homepage">https://libresplit.org/</url>
+  <url type="bugtracker">https://github.com/LibreSplit/LibreSplit/issues</url>
+  <content_rating type="oars-1.1"/>
+</component>

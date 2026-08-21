@@ -96,6 +96,18 @@ and also the following (optional) runtime dependencies:
 
 Install the required dependencies:
 
+- Fedora/RHEL Based Systems
+
+    ```sh
+    sudo dnf install binutils gcc git gtk3-devel jansson-devel libX11-devel luajit-devel meson openssl-devel
+    ```
+
+    For optional dependencies:
+
+    ```sh
+    sudo dnf install glib-networking gvfs
+    ```
+
 - Debian-based systems
 
   ```sh
