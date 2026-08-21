@@ -15,6 +15,17 @@
  */
 int register_lua_function(const char* name, lua_CFunction fn)
 {
+    LOG_DEBUGF("Checking name validity of Lua function %s", name);
+    // Check for null or empty function names
+    if (name == NULL || strcmp(name, "") == 0) {
+        LOG_ERR("Cannot register a Lua function with empty of NULL name");
+        return -1;
+    }
+    LOG_DEBUGF("Checking pointer validity of Lua function %s", name);
+    if (fn == NULL) {
+        LOG_ERR("Cannot register a Lua function with NULL function pointer");
+        return -1;
+    }
     LOG_DEBUGF("Pushing %s to the external Lua Function array", name);
     if (external_lasr_functions.count == external_lasr_functions.size) {
         LOG_DEBUG("Reallocating array for size");
@@ -30,8 +41,6 @@ int register_lua_function(const char* name, lua_CFunction fn)
         external_lasr_functions.functions = new_lasr_func_arr;
     }
     // Add the new function to the array
-    //  FIXME: [Penaz] [2026-08-20] Check for NULL and empty function names, eventually for
-    // ^ overwrites also
     external_lasr_functions.functions[external_lasr_functions.count].function_name = strdup(name);
     if (!external_lasr_functions.functions[external_lasr_functions.count].function_name) {
         LOG_ERRF("Cannot allocate memory for the function named %s", name);
