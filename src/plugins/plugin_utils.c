@@ -19,15 +19,15 @@ int register_lua_function(const char* name, lua_CFunction fn)
     if (external_lasr_functions.count == external_lasr_functions.size) {
         LOG_DEBUG("Reallocating array for size");
         // Resize array if too small
-        external_lasr_functions.size *= 2;
-        // FIXME: [Penaz] [2026-08-20] Might lose the original reference if allocation fails
-        external_lasr_functions.functions = realloc(external_lasr_functions.functions, external_lasr_functions.size * sizeof(struct lasr_function));
-        if (!external_lasr_functions.functions) {
+        unsigned int new_size = external_lasr_functions.size * 2;
+        lasr_function* new_lasr_func_arr = realloc(external_lasr_functions.functions, new_size * sizeof(struct lasr_function));
+        if (!new_lasr_func_arr) {
             LOG_ERR("Cannot reallocate external Lua C function array");
             free(external_lasr_functions.functions);
-            // XXX: [Penaz] [2026-08-20] Maybe abort is a bit too much?
-            abort();
+            return -1;
         }
+        external_lasr_functions.size = new_size;
+        external_lasr_functions.functions = new_lasr_func_arr;
     }
     // Add the new function to the array
     //  FIXME: [Penaz] [2026-08-20] Check for NULL and empty function names, eventually for
@@ -57,14 +57,14 @@ static int push_function(TimerHookRegistry* registry, timer_hook_func fn)
     if (registry->count == registry->size) {
         LOG_DEBUG("Reallocating array for size");
         // Resize array
-        registry->size *= 2;
-        // FIXME: [Penaz] [2026-08-20] Might lose the original reference in case of failed allocation
-        registry->functions = realloc(registry->functions, registry->size * sizeof(timer_hook_func));
-        if (!registry->functions) {
+        unsigned int new_size = registry->size * 2;
+        timer_hook_func* realloc_registry = realloc(registry->functions, new_size * sizeof(timer_hook_func));
+        if (!realloc_registry) {
             LOG_ERR("Cannot reallocate memory for timer hook.");
-            // XXX: [Penaz] [2026-08-20] Maybe abort is a bit too much?
-            abort();
+            return -1;
         }
+        registry->size = new_size;
+        registry->functions = realloc_registry;
     }
     registry->functions[registry->count] = fn;
     registry->count++;
