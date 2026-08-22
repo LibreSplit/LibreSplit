@@ -5,16 +5,19 @@
 #include "auto-splitter.h"
 
 #include "./maps/maps.h"
+#include "borrow.h"
 #include "functions.h"
 #include "utils.h"
 
 #include <assert.h>
+#include <errno.h>
 #include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <time.h>
@@ -225,6 +228,152 @@ static void pcall_fix_traceback(lua_State* L, const char* func)
     lua_pushfstring(L, "'%s'", func);
     lua_concat(L, 2);
     lua_remove(L, -2); // remove original stacktrace string
+}
+
+/**
+	Run a sweep of the shared globals struct
+	(TODO: This comment str)
+*/
+static void export_shared_globals(lua_State* L, borrowed_data* head)
+{
+	int type;
+	union {
+		int i;
+		char const * s;
+	} value;
+	size_t len;
+
+	int _debug_state; // TODO: Clean this up before PR
+
+	while (head) {
+		if (atomic_load(&head->state) == LASR_STATE_OWNED) {
+			head = head->next;
+			continue;
+		}
+
+		lua_getglobal(L, head->key);	/* push var to stack */
+		type = lua_type(L, -1);			/* retrieve data type (of var at top of stack) */
+		len = 0;
+
+		/* Retrieve 'flat' copy from lua state */
+		switch (type) {
+			case LUA_TBOOLEAN:
+			case LUA_TNUMBER:
+				value.i = lua_tointeger(L, -1);
+				// TODO: Check for fractional part, different logic may be needed
+				break;
+
+			case LUA_TSTRING:
+				value.s = lua_tolstring(L, -1, &len);
+				break;
+
+			case LUA_TTABLE:
+				// NOTE: No support for now, but there exists huge potential
+				// if this were to be converted into a JSON object.
+				// However, this may be costly.
+			default:
+				// Treat other types as NIL
+				if (atomic_load(&head->atomic_data) != 0) {
+					/* Only prints whenever the value changes. */
+					printf("Unexpected type for lua global: `%s`\n", head->key);
+				}
+			case LUA_TNIL:
+				value.i = 0;
+				break;
+		}
+
+		if (len > 0) {
+			if (head->type != LASR_STRING) {
+				/* Old is atomic, new is not; only convert if we own control */
+				if (atomic_load(&head->state) == LASR_STATE_ATOMIC) {
+					atomic_store(&head->state, LASR_STATE_NEEDED);
+					goto next_export;
+				}
+				if ((_debug_state = atomic_load(&head->state)) != LASR_STATE_BORROWED) {
+					// sanity check (todo refactor this once testing looks good)
+					printf("unexpected state: `%s` (%d, should be BORROWED)\n", head->key, _debug_state);
+					goto next_export;
+				}
+
+				head->dynamic_data = malloc(len + sizeof(string_data));
+				if (!head->dynamic_data) {
+					printf("out of memory allocating lua string\n");
+					goto next_export;
+				}
+				head->dynamic_data->size = len;
+				memcpy(head->dynamic_data->str, value.s, len);
+				atomic_store(&head->state, LASR_STATE_OWNED);
+			}
+			/* String to string is the common path */
+			else {
+				if ((_debug_state = atomic_load(&head->state)) != LASR_STATE_BORROWED) {
+					// sanity check, we should never take this (todo remove once testing looks good)
+					printf("unexpected state: `%s` (%d, should be BORROWED)\n", head->key, _debug_state);
+					goto next_export;
+				}
+				if (len >= head->dynamic_data->size) {
+					errno = 0;
+					head->dynamic_data = realloc(head->dynamic_data, len + sizeof(string_data));
+					if (errno == ENOMEM) {
+						printf("out of memory allocating lua string\n");
+						goto next_export;
+					}
+					else {
+						head->dynamic_data->size = len + sizeof(string_data);
+					}
+				}
+				// TODO: Making an assumption most of these strings will be
+				// relatively short, so I wager it's likely faster to just copy
+				// unconditionally rather than 'memcmp and copy' if
+				// different, since the entire string will be checked if they
+				// are the same anyway.
+				memcpy(head->dynamic_data->str, value.s, len);
+				atomic_store(&head->state, LASR_STATE_OWNED);
+			}
+		}
+		else {
+			if (head->type == LASR_STRING) {
+				/* Old is a string */
+				if ((_debug_state = atomic_load(&head->state)) != LASR_STATE_BORROWED) {
+					// sanity check (todo refactor this once testing looks good)
+					printf("unexpected state: `%s` (%d, should be BORROWED)\n", head->key, _debug_state);
+
+					// TODO: This would be the right transition, but it should
+					// never exist I don't think? Just flag and give up for now.
+					// if (atomic_load(&head->state) == LASR_STATE_ATOMIC) {
+						// atomic_store(&head->state, LASR_STATE_NEEDED);
+					// }
+					goto next_export;
+				} else if (head->dynamic_data == NULL) {
+					// sanity check pt.2
+					printf("string data `%s` is NULL (it shouldn't be)\n", head->key);
+				} else {
+					free(head->dynamic_data);
+				}
+
+				// TODO: Don't like this version because it doesn't really add
+				// any value; considering removing the bool type entirely
+				//>  head->type = (type == LUA_TBOOL) ? LASR_BOOL : LASR_INT;
+
+				head->type = LASR_INT; /* only update this when state is BORROWED */
+				atomic_store(&head->atomic_data, value.i);
+				atomic_store(&head->state, LASR_STATE_ATOMIC); /* pass struct back to timer thread */
+			}
+			/* Bools are flattened so this is trivial (TODO: double type) */
+			else if (atomic_load(&head->atomic_data) != value.i) {
+				atomic_store(&head->atomic_data, value.i);
+
+				// sanity assertion, maybe remove after testing
+				if ((_debug_state = atomic_load(&head->state)) != LASR_STATE_ATOMIC) {
+					printf("unexpected state: `%s` (%d, should be ATOMIC)\n", head->key, _debug_state);
+				}
+			}
+		}
+
+next_export:
+		lua_pop(L, 1);
+		head = head->next;
+	}
 }
 
 /**
