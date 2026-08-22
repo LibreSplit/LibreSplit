@@ -61,13 +61,16 @@ LibreSplit is a speedrun timer based on [urn](https://github.com/3snowp7im/urn) 
   sudo dnf install "https://rpm.libresplit.org/libresplit.$(uname -m).rpm"
   ```
 
-  Official RPM packages are signed with the [LibreSplit RPM signing key](https://rpm.libresplit.org/RPM-GPG-KEY-libresplit) with fingerprint:
+  Official RPM packages are signed with the [LibreSplit RPM signing key](https://rpm.libresplit.org/RPM-GPG-KEY-libresplit)
+  You can verify the package using the following fingerprint:
 
   ```text
   AE81 2B2C ED7C D507 FCD1  B39E 10C0 57F4 106B 63CB
   ```
 
 - Arch-based Distros
+
+  LibreSplit is available on the AUR. You can install it with your AUR manager of choice:
   - `yay libresplit-git`
   - `paru libresplit-git`
 
