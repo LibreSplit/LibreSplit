@@ -18,7 +18,7 @@ int register_lua_function(const char* name, lua_CFunction fn)
     LOG_DEBUGF("Checking name validity of Lua function %s", name);
     // Check for null or empty function names
     if (name == NULL || strcmp(name, "") == 0) {
-        LOG_ERR("Cannot register a Lua function with empty of NULL name");
+        LOG_ERR("Cannot register a Lua function with empty or NULL name");
         return -1;
     }
     LOG_DEBUGF("Checking pointer validity of Lua function %s", name);
