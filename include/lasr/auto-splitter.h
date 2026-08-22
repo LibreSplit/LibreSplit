@@ -40,7 +40,6 @@ typedef struct _ExternalLASRFunctionRegistry {
 
 void check_directories(void);
 void run_auto_splitter(void);
-int init_lasr_functions(void);
 int init_external_lasr_functions(void);
 void unregister_luac_functions(void);
 
