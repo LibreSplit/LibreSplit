@@ -92,6 +92,7 @@ typedef struct _TimerHookRegistry {
     int count; /*!< Current count of functions in the registry */
     int size; /*!< Current size of the registry array */
     timer_hook_func* functions; /*!< Array of fuctions */
+    bool active; /*!< Whether the registry is correctly initialized */
 } TimerHookRegistry;
 
 extern TimerHookRegistry start_hooks;

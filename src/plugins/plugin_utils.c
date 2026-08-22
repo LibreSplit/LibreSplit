@@ -64,6 +64,10 @@ int register_lua_function(const char* name, lua_CFunction fn)
 static int push_function(TimerHookRegistry* registry, timer_hook_func fn)
 {
     LOG_DEBUG("Pushing new function to hooks array");
+    if (!registry->active) {
+        LOG_ERR("Registry not active or initialization failed, skipping registration");
+        return -1;
+    }
     if (registry->count == registry->size) {
         LOG_DEBUG("Reallocating array for size");
         // Resize array

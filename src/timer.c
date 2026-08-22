@@ -22,55 +22,64 @@
 TimerHookRegistry start_hooks = {
     .count = 0,
     .size = 2,
-    .functions = NULL
+    .functions = NULL,
+    .active = false,
 };
 
 TimerHookRegistry stop_hooks = {
     .count = 0,
     .size = 2,
-    .functions = NULL
+    .functions = NULL,
+    .active = false,
 };
 
 TimerHookRegistry split_hooks = {
     .count = 0,
     .size = 2,
-    .functions = NULL
+    .functions = NULL,
+    .active = false,
 };
 
 TimerHookRegistry reset_hooks = {
     .count = 0,
     .size = 2,
-    .functions = NULL
+    .functions = NULL,
+    .active = false,
 };
 
 TimerHookRegistry cancel_hooks = {
     .count = 0,
     .size = 2,
-    .functions = NULL
+    .functions = NULL,
+    .active = false,
 };
 
 TimerHookRegistry skip_hooks = {
     .count = 0,
     .size = 2,
-    .functions = NULL
+    .functions = NULL,
+    .active = false,
 };
 
 TimerHookRegistry unsplit_hooks = {
     .count = 0,
     .size = 2,
-    .functions = NULL
+    .functions = NULL,
+    .active = false,
 };
 
 TimerHookRegistry pause_hooks = {
     .count = 0,
     .size = 2,
-    .functions = NULL
+    .functions = NULL,
+    .active = false,
 };
 
 TimerHookRegistry unpause_hooks = {
     .count = 0,
     .size = 2,
-    .functions = NULL
+    .functions = NULL,
+    .active = false,
 };
 
 /**
@@ -1181,8 +1190,10 @@ int ls_timer_start(ls_timer* timer)
         timer->running = true;
         atomic_store(&run_running, true);
     }
-    for (int i = 0; i < start_hooks.count; i++) {
-        start_hooks.functions[i](timer);
+    if (start_hooks.active) {
+        for (int i = 0; i < start_hooks.count; i++) {
+            start_hooks.functions[i](timer);
+        }
     }
     return timer->running;
 }
@@ -1259,8 +1270,10 @@ int ls_timer_split(ls_timer* timer)
             ls_run_save(timer, "FINISHED");
         }
     }
-    for (int i = 0; i < split_hooks.count; i++) {
-        split_hooks.functions[i](timer);
+    if (split_hooks.active) {
+        for (int i = 0; i < split_hooks.count; i++) {
+            split_hooks.functions[i](timer);
+        }
     }
     return timer->curr_split;
 }
@@ -1291,8 +1304,10 @@ int ls_timer_skip(ls_timer* timer)
     timer->split_info[timer->curr_split] = 0;
     ls_time_clear(&timer->segment_times[timer->curr_split]);
     ls_time_clear(&timer->segment_deltas[timer->curr_split]);
-    for (int i = 0; i < skip_hooks.count; i++) {
-        skip_hooks.functions[i](timer);
+    if (skip_hooks.active) {
+        for (int i = 0; i < skip_hooks.count; i++) {
+            skip_hooks.functions[i](timer);
+        }
     }
     return ++timer->curr_split;
 }
@@ -1322,8 +1337,10 @@ int ls_timer_unsplit(ls_timer* timer)
         timer->running = true;
         atomic_store(&run_running, true);
     }
-    for (int i = 0; i < unsplit_hooks.count; i++) {
-        unsplit_hooks.functions[i](timer);
+    if (unsplit_hooks.active) {
+        for (int i = 0; i < unsplit_hooks.count; i++) {
+            unsplit_hooks.functions[i](timer);
+        }
     }
     return timer->curr_split;
 }
@@ -1337,8 +1354,10 @@ void ls_timer_pause(ls_timer* timer)
 {
     LOG_DEBUG("Pausing timer...");
     timer->loading = 1;
-    for (int i = 0; i < pause_hooks.count; i++) {
-        pause_hooks.functions[i](timer);
+    if (pause_hooks.active) {
+        for (int i = 0; i < pause_hooks.count; i++) {
+            pause_hooks.functions[i](timer);
+        }
     }
 }
 
@@ -1351,8 +1370,10 @@ void ls_timer_unpause(ls_timer* timer)
 {
     LOG_DEBUG("Unpausing timer...");
     timer->loading = 0;
-    for (int i = 0; i < unpause_hooks.count; i++) {
-        unpause_hooks.functions[i](timer);
+    if (unpause_hooks.active) {
+        for (int i = 0; i < unpause_hooks.count; i++) {
+            unpause_hooks.functions[i](timer);
+        }
     }
 }
 
@@ -1366,8 +1387,10 @@ void ls_timer_stop(ls_timer* timer)
     LOG_DEBUG("Stopping timer...");
     timer->running = false;
     atomic_store(&run_running, false);
-    for (int i = 0; i < stop_hooks.count; i++) {
-        stop_hooks.functions[i](timer);
+    if (stop_hooks.active) {
+        for (int i = 0; i < stop_hooks.count; i++) {
+            stop_hooks.functions[i](timer);
+        }
     }
 }
 
@@ -1398,8 +1421,10 @@ int ls_timer_reset(ls_timer* timer, ls_game* game)
         }
     }
 
-    for (int i = 0; i < reset_hooks.count; i++) {
-        reset_hooks.functions[i](timer);
+    if (reset_hooks.active) {
+        for (int i = 0; i < reset_hooks.count; i++) {
+            reset_hooks.functions[i](timer);
+        }
     }
 
     // Save best times/segments before resetting timer.
@@ -1440,8 +1465,10 @@ int ls_timer_cancel(ls_timer* timer)
             --*timer->attempt_count;
         }
     }
-    for (int i = 0; i < cancel_hooks.count; i++) {
-        cancel_hooks.functions[i](timer);
+    if (cancel_hooks.active) {
+        for (int i = 0; i < cancel_hooks.count; i++) {
+            cancel_hooks.functions[i](timer);
+        }
     }
     reset_timer(timer);
     return 1;
@@ -1453,63 +1480,70 @@ int ls_timer_cancel(ls_timer* timer)
  */
 void init_timer_registries(void)
 {
-    // TODO: [Penaz] [2026-08-21] Find a more graceful way of handling failure
-    // ^ instead of aborting on hooks
     LOG_DEBUG("Initializing timer hook registries");
     start_hooks.functions = malloc(start_hooks.size * sizeof(timer_hook_func));
-    if (!start_hooks.functions) {
-        LOG_ERR("Cannot Allocate Timer Start Hooks Registry");
-        abort();
+    if (start_hooks.functions) {
+        start_hooks.active = true;
+        start_hooks.functions[0] = NULL;
+    } else {
+        LOG_ERR("Cannot Allocate Timer Start Hooks Registry, some events will not work");
     }
-    start_hooks.functions[0] = NULL;
     stop_hooks.functions = malloc(stop_hooks.size * sizeof(timer_hook_func));
-    if (!stop_hooks.functions) {
+    if (stop_hooks.functions) {
+        stop_hooks.active = true;
+        stop_hooks.functions[0] = NULL;
+    } else {
         LOG_ERR("Cannot Allocate Timer Stop Hooks Registry");
-        abort();
     }
-    stop_hooks.functions[0] = NULL;
     split_hooks.functions = malloc(split_hooks.size * sizeof(timer_hook_func));
-    if (!split_hooks.functions) {
+    if (split_hooks.functions) {
+        split_hooks.active = true;
+        split_hooks.functions[0] = NULL;
+    } else {
         LOG_ERR("Cannot Allocate Timer Split Hooks Registry");
-        abort();
     }
-    split_hooks.functions[0] = NULL;
     reset_hooks.functions = malloc(reset_hooks.size * sizeof(timer_hook_func));
-    if (!reset_hooks.functions) {
+    if (reset_hooks.functions) {
+        reset_hooks.active = true;
+        reset_hooks.functions[0] = NULL;
+    } else {
         LOG_ERR("Cannot Allocate Timer Reset Hooks Registry");
-        abort();
     }
-    reset_hooks.functions[0] = NULL;
     cancel_hooks.functions = malloc(cancel_hooks.size * sizeof(timer_hook_func));
-    if (!cancel_hooks.functions) {
+    if (cancel_hooks.functions) {
+        cancel_hooks.active = true;
+        cancel_hooks.functions[0] = NULL;
+    } else {
         LOG_ERR("Cannot Allocate Timer Cancel Hooks Registry");
-        abort();
     }
-    cancel_hooks.functions[0] = NULL;
     skip_hooks.functions = malloc(skip_hooks.size * sizeof(timer_hook_func));
-    if (!skip_hooks.functions) {
+    if (skip_hooks.functions) {
+        skip_hooks.active = true;
+        skip_hooks.functions[0] = NULL;
+    } else {
         LOG_ERR("Cannot Allocate Timer Skip Hooks Registry");
-        abort();
     }
-    skip_hooks.functions[0] = NULL;
     unsplit_hooks.functions = malloc(unsplit_hooks.size * sizeof(timer_hook_func));
-    if (!unsplit_hooks.functions) {
+    if (unsplit_hooks.functions) {
+        unsplit_hooks.active = true;
+        unsplit_hooks.functions[0] = NULL;
+    } else {
         LOG_ERR("Cannot Allocate Timer Unsplit Hooks Registry");
-        abort();
     }
-    unsplit_hooks.functions[0] = NULL;
     pause_hooks.functions = malloc(pause_hooks.size * sizeof(timer_hook_func));
-    if (!pause_hooks.functions) {
+    if (pause_hooks.functions) {
+        pause_hooks.active = false;
+        pause_hooks.functions[0] = NULL;
+    } else {
         LOG_ERR("Cannot Allocate Timer Pause Hooks Registry");
-        abort();
     }
-    pause_hooks.functions[0] = NULL;
     unpause_hooks.functions = malloc(unpause_hooks.size * sizeof(timer_hook_func));
-    if (!unpause_hooks.functions) {
+    if (unpause_hooks.functions) {
+        unpause_hooks.active = false;
+        unpause_hooks.functions[0] = NULL;
+    } else {
         LOG_ERR("Cannot Allocate Timer Unpause Hooks Registry");
-        abort();
     }
-    unpause_hooks.functions[0] = NULL;
 }
 
 /**
