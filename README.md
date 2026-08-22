@@ -70,11 +70,11 @@ LibreSplit is a speedrun timer based on [urn](https://github.com/3snowp7im/urn) 
 
 - Arch-based Distros
 
-  LibreSplit is available on the AUR. You can install it with your AUR manager of choice:
+  LibreSplit is available on the Arch User Repository (AUR). You can install it with your AUR manager of choice:
   - `yay libresplit-git`
   - `paru libresplit-git`
 
-  See the [libresplit-git](https://aur.archlinux.org/packages/libresplit-git) package on the Arch User Repository (AUR).
+  See the [libresplit-git](https://aur.archlinux.org/packages/libresplit-git) package on the AUR.
 
 - NixOS
 
