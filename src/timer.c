@@ -88,8 +88,7 @@ TimerHookRegistry unpause_hooks = {
  *
  * @return The current time, in milliseconds
  */
-static long long
-ls_time_now(void)
+static long long ls_time_now(void)
 {
     struct timespec timespec;
     clock_gettime(CLOCK_MONOTONIC, &timespec);
