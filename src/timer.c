@@ -1475,74 +1475,56 @@ int ls_timer_cancel(ls_timer* timer)
 }
 
 /**
+ * Utility function to initialize a single TimerHookRegistry.
+ *
+ * @param hook_registry The registry to initialize.
+ * @returns 0 if the registry initialized correctly, an error code if it didn't
+ */
+static bool init_timer_registry(TimerHookRegistry* hook_registry)
+{
+    hook_registry->functions = malloc(hook_registry->size * sizeof(timer_hook_func));
+    if (hook_registry->functions) {
+        hook_registry->active = true;
+        hook_registry->functions[0] = NULL;
+        return 0;
+    }
+    hook_registry->active = false;
+    return -1;
+}
+
+/**
  * Initializes the timer hook registries, allocating the memory
  * for their usage.
  */
 void init_timer_registries(void)
 {
     LOG_DEBUG("Initializing timer hook registries");
-    start_hooks.functions = malloc(start_hooks.size * sizeof(timer_hook_func));
-    if (start_hooks.functions) {
-        start_hooks.active = true;
-        start_hooks.functions[0] = NULL;
-    } else {
+    if (init_timer_registry(&start_hooks) != 0) {
         LOG_ERR("Cannot Allocate Timer Start Hooks Registry, some events will not work");
     }
-    stop_hooks.functions = malloc(stop_hooks.size * sizeof(timer_hook_func));
-    if (stop_hooks.functions) {
-        stop_hooks.active = true;
-        stop_hooks.functions[0] = NULL;
-    } else {
-        LOG_ERR("Cannot Allocate Timer Stop Hooks Registry");
+    if (init_timer_registry(&stop_hooks) != 0) {
+        LOG_ERR("Cannot Allocate Timer Stop Hooks Registry, some events will not work");
     }
-    split_hooks.functions = malloc(split_hooks.size * sizeof(timer_hook_func));
-    if (split_hooks.functions) {
-        split_hooks.active = true;
-        split_hooks.functions[0] = NULL;
-    } else {
-        LOG_ERR("Cannot Allocate Timer Split Hooks Registry");
+    if (init_timer_registry(&split_hooks) != 0) {
+        LOG_ERR("Cannot Allocate Timer Split Hooks Registry, some events will not work");
     }
-    reset_hooks.functions = malloc(reset_hooks.size * sizeof(timer_hook_func));
-    if (reset_hooks.functions) {
-        reset_hooks.active = true;
-        reset_hooks.functions[0] = NULL;
-    } else {
-        LOG_ERR("Cannot Allocate Timer Reset Hooks Registry");
+    if (init_timer_registry(&reset_hooks) != 0) {
+        LOG_ERR("Cannot Allocate Timer Reset Hooks Registry, some events will not work");
     }
-    cancel_hooks.functions = malloc(cancel_hooks.size * sizeof(timer_hook_func));
-    if (cancel_hooks.functions) {
-        cancel_hooks.active = true;
-        cancel_hooks.functions[0] = NULL;
-    } else {
-        LOG_ERR("Cannot Allocate Timer Cancel Hooks Registry");
+    if (init_timer_registry(&cancel_hooks) != 0) {
+        LOG_ERR("Cannot Allocate Timer Cancel Hooks Registry, some events will not work");
     }
-    skip_hooks.functions = malloc(skip_hooks.size * sizeof(timer_hook_func));
-    if (skip_hooks.functions) {
-        skip_hooks.active = true;
-        skip_hooks.functions[0] = NULL;
-    } else {
-        LOG_ERR("Cannot Allocate Timer Skip Hooks Registry");
+    if (init_timer_registry(&skip_hooks) != 0) {
+        LOG_ERR("Cannot Allocate Timer Skip Hooks Registry, some events will not work");
     }
-    unsplit_hooks.functions = malloc(unsplit_hooks.size * sizeof(timer_hook_func));
-    if (unsplit_hooks.functions) {
-        unsplit_hooks.active = true;
-        unsplit_hooks.functions[0] = NULL;
-    } else {
-        LOG_ERR("Cannot Allocate Timer Unsplit Hooks Registry");
+    if (init_timer_registry(&unsplit_hooks) != 0) {
+        LOG_ERR("Cannot Allocate Timer Unsplit Hooks Registry, some events will not work");
     }
-    pause_hooks.functions = malloc(pause_hooks.size * sizeof(timer_hook_func));
-    if (pause_hooks.functions) {
-        pause_hooks.active = false;
-        pause_hooks.functions[0] = NULL;
-    } else {
-        LOG_ERR("Cannot Allocate Timer Pause Hooks Registry");
+    if (init_timer_registry(&pause_hooks) != 0) {
+        LOG_ERR("Cannot Allocate Timer Pause Hooks Registry, some events will not work");
     }
-    unpause_hooks.functions = malloc(unpause_hooks.size * sizeof(timer_hook_func));
-    if (unpause_hooks.functions) {
-        unpause_hooks.active = false;
-        unpause_hooks.functions[0] = NULL;
-    } else {
-        LOG_ERR("Cannot Allocate Timer Unpause Hooks Registry");
+    if (init_timer_registry(&unpause_hooks) != 0) {
+        LOG_ERR("Cannot Allocate Timer Unpause Hooks Registry, some events will not work");
     }
 }
 
