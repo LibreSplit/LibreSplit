@@ -111,6 +111,22 @@ Where `EVENT` can be one of the following:
 * `PAUSE` - Runs when the timer is paused.
 * `UNPAUSE` - Runs when the timer is unpaused
 
+### Registering a Context Menu Entry/Submenu
+
+Plugins can register their own context (right click) menu entries. To do so, you can fill in the `register_context_menu` entry point with the code that takes care of building your own menu items and submenus.
+
+Here's a quick example:
+
+```c
+int register_context_menu(GtkWidget* parent)
+{
+    GtkWidget* entry = gtk_menu_item_new_with_label("My Awesome Feature");
+    g_signal_connect(entry, "activate", G_CALLBACK(my_awesome_handler), NULL);
+    gtk_menu_shell_append(GTK_MENU_SHELL(parent), entry);
+    return 0;
+}
+```
+
 ### Closing the plugin
 
 Each plugin should have a shutdown function with the following signature:
