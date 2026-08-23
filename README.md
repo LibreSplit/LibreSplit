@@ -150,6 +150,29 @@ A file dialog will then appear, asking you to select a Split JSON file (see [Spl
 
 Initially the window is undecorated. You can toggle window decorations by pressing the `Right Control` key.
 
+### Always on Top
+
+LibreSplit supports Always on Top in X11 sessions via an application setting. This can be toggled on or off in the
+right click context menu. This setting only works on X11 sessions.
+
+On Wayland, always on top can usually be configured in your compositor. If you notice that the "Always on Top" setting
+does not appear, you are on Wayland. An example on KDE specifically for configuring your compositor to always keep LibreSplit
+on top is provided below.
+
+To configure LibreSplit as always on top on KDE:
+- Open: System Settings -> Apps & Windows -> Window Management -> Window Rules
+- Here you can create a new window rule for LibreSplit.
+- Give it any Description you'd like such as "LibreSplit Always on Top"
+- Set "Window class (application)" to "Exact match" and "libresplit"
+- Set "Match whole window class" to "No"
+- Set the "Window types" dropdown to "All selected"
+- Now click "Add Property..."
+  - Scroll and look for "Arrangement & Access"
+  - Under this you should see "Keep above other windows" select that
+- Close the "Add Property..." panel
+- Set Keep above other windows to Force and Yes
+- Click Apply
+
 ### Default Keybinds
 
 The timer is controlled with the following keys
