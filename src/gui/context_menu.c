@@ -3,6 +3,7 @@
 #include "gui/help_dialog.h"
 #include "gui/settings_dialog.h"
 #include "lasr/auto-splitter.h"
+#include "plugins/plugin_loading.h"
 #include <gtk/gtk.h>
 
 /**
@@ -34,11 +35,14 @@ gboolean button_right_click(GtkWidget* widget, GdkEventButton* event, gpointer a
             gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_enable_auto_splitter), atomic_load(&auto_splitter_enabled));
             GtkWidget* menu_enable_win_on_top = gtk_check_menu_item_new_with_label("Always on Top");
             gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_enable_win_on_top), win->opts.win_on_top);
+            GtkWidget* menu_plugins = gtk_menu_item_new_with_label("Plugins");
             GtkWidget* menu_reload = gtk_menu_item_new_with_label("Reload");
             GtkWidget* menu_close = gtk_menu_item_new_with_label("Close");
             GtkWidget* menu_settings = gtk_menu_item_new_with_label("Settings");
             GtkWidget* menu_about = gtk_menu_item_new_with_label("About and help");
             GtkWidget* menu_quit = gtk_menu_item_new_with_label("Quit");
+
+            create_plugin_context_menus(menu_plugins);
 
             // Add the menu items to the menu
             gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_open_splits);
@@ -49,6 +53,8 @@ gboolean button_right_click(GtkWidget* widget, GdkEventButton* event, gpointer a
             gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
             gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_reload);
             gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_close);
+            gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
+            gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_plugins);
             gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
             gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_enable_win_on_top);
             gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_settings);

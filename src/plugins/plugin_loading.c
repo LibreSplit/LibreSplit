@@ -1,4 +1,5 @@
 #include "plugins/plugin_loading.h"
+#include "gtk/gtk.h"
 #include "logging.h"
 #include "plugins/plugin_utils.h"
 #include "settings/utils.h"
@@ -422,5 +423,59 @@ int unload_plugins(void)
     plugin_registry.count = 0;
     plugin_registry.plugins = NULL;
     plugin_registry.enabled = false;
+    return 0;
+}
+
+/**
+ * Calls, in turn, all the register_context_menu functions
+ * of the plugins, to fill in the Plugins submenu.
+ *
+ * @param parent The Plugins submenu.
+ * @returns 0 if everything went well. An error code otherwise.
+ */
+int create_plugin_context_menus(GtkWidget* parent)
+{
+    // XXX: [Penaz] [2026-08-23] As things are now, each plugin has full control
+    // ^ over the "Plugins" submenu. Ideally we would want to isolate each plugin
+    // ^ into its own submenu to reduce interactions.
+    GtkWidget* submenu = gtk_menu_new();
+    if (plugin_registry.enabled) {
+        for (int i = 0; i < plugin_registry.count; i++) {
+            // Purge stale errors
+            dlerror();
+            void* sym = dlsym(plugin_registry.plugins[i].handle, "register_context_menu");
+            const char* err = dlerror();
+            if (err) {
+                LOG_WARNF("Error while loading plugin context menu registration function symbol: %s", err);
+                continue;
+            }
+
+            union context_menu_fn_ptr u;
+            u.obj = sym;
+            context_menu_reg_fn registration_function = u.fn;
+
+            if (!registration_function) {
+                LOG_WARN("Cannot load plugin context menu registration function");
+                continue;
+            }
+
+            // Register the submenu item
+            int result = registration_function(submenu);
+
+            if (result != 0) {
+                LOG_WARNF("Plugin context menu registration function returned exit code %s", result);
+            }
+        }
+    }
+    GList* submenu_children = gtk_container_get_children(GTK_CONTAINER(submenu));
+    if (submenu_children == NULL) {
+        // If, by the end of the registration, there are no items in the "Plugins"
+        // submenu, just fill it with a placeholder entry.
+        GtkWidget* placeholder = gtk_menu_item_new_with_label("No plugin entries.");
+        gtk_widget_set_sensitive(placeholder, FALSE);
+        gtk_menu_shell_append(GTK_MENU_SHELL(submenu), placeholder);
+    }
+    // Set the newly created submenu to the "Plugins" entry in the context menu
+    gtk_menu_item_set_submenu(GTK_MENU_ITEM(parent), submenu);
     return 0;
 }
