@@ -1,0 +1,8 @@
+[libresplit]
+name=LibreSplit
+baseurl=https://rpm.libresplit.org/stable/$basearch/
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://rpm.libresplit.org/RPM-GPG-KEY-libresplit
+skip_if_unavailable=0
