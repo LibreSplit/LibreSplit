@@ -78,7 +78,7 @@ LibreSplit requires the following dependencies on your system to compile:
 
 - `git`
 - `meson`
-- `libgtk+-3.0`
+- `libgtk4`
 - `x11`
 - `libjansson` (for reading JSON split files)
 - `luajit` (for the Lua Auto Splitter Runtime)
@@ -94,7 +94,7 @@ Install the required dependencies:
 - Fedora/RHEL Based Systems
 
     ```sh
-    sudo dnf install binutils gcc git gtk3-devel jansson-devel libX11-devel luajit-devel meson openssl-devel
+    sudo dnf install binutils gcc git gtk4-devel jansson-devel libX11-devel luajit-devel meson openssl-devel
     ```
 
     For optional dependencies:
@@ -107,14 +107,14 @@ Install the required dependencies:
 
     ```sh
     sudo apt update
-    sudo apt install build-essential libgtk-3-dev libjansson-dev meson libluajit-5.1-dev libssl-dev
+    sudo apt install build-essential libgtk-4-dev libjansson-dev meson libluajit-5.1-dev libssl-dev
     ```
 
 - Arch-based systems
 
     ```sh
     sudo pacman -Sy
-    sudo pacman -S gtk3 jansson luajit git meson openssl
+    sudo pacman -S gtk4 jansson luajit git meson openssl
     ```
 
 Clone the project:
