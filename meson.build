@@ -9,6 +9,7 @@ project(
 add_project_arguments('-DAPP_VERSION="@0@"'.format(meson.project_version()), language: 'c')
 add_project_arguments('-D_GNU_SOURCE=1 ', language: 'c')
 add_project_arguments('-DGDK_VERSION_MIN_REQUIRED=GDK_VERSION_4_12', language: 'c')
+add_project_arguments('-DGDK_VERSION_MAX_ALLOWED=GDK_VERSION_4_12', language: 'c')
 
 if get_option('buildtype') == 'debug'
     add_project_arguments('-DDEBUG', language: 'c')
