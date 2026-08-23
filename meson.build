@@ -26,7 +26,7 @@ if ioctl_maps.enabled()
 endif
 
 threads = dependency('threads')
-gtk = dependency('gtk4', version: '>= 4.12')
+gtk = dependency('gtk4', version: '>= 4.12', include_type: 'system')
 luajit = dependency('luajit')
 x11 = dependency('x11')
 jansson = dependency('jansson')

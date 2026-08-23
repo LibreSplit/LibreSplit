@@ -11,8 +11,8 @@
 <a href="https://github.com/LibreSplit/LibreSplit/stargazers">
 <img src="https://img.shields.io/github/stars/LibreSplit/LibreSplit?style=for-the-badge&logo=GitHub"</img>
 </a>
-<a href="https://docs.gtk.org/gtk3/getting_started.html">
-<img src="https://img.shields.io/static/v1?label=Made%20with&message=GTK%203.0&color=725d9c&style=for-the-badge&logo=GTK&logoColor=white"/>
+<a href="https://docs.gtk.org/gtk4/getting_started.html">
+<img src="https://img.shields.io/static/v1?label=Made%20with&message=GTK%204&color=725d9c&style=for-the-badge&logo=GTK&logoColor=white"/>
 </a>
 <a href="https://github.com/LibreSplit/LibreSplit/blob/main/LICENSE">
 <img src="https://img.shields.io/github/license/LibreSplit/LibreSplit?label=license&style=for-the-badge&logo=GNU&logoColor=white&color=b85353"/>
@@ -115,14 +115,14 @@ Install the required dependencies:
 
   ```sh
   sudo apt update
-  sudo apt install build-essential libgtk-3-dev libjansson-dev meson libluajit-5.1-dev libssl-dev
+  sudo apt install build-essential libgtk-4-dev libjansson-dev meson libluajit-5.1-dev libssl-dev
   ```
 
 - Arch-based systems
 
   ```sh
   sudo pacman -Sy
-  sudo pacman -S gtk3 jansson luajit git meson openssl
+  sudo pacman -S gtk4 jansson luajit git meson openssl
   ```
 
 Clone the project:
@@ -286,7 +286,6 @@ For more information, check the [Themes documentation](docs/themes.md).
   .split-icon {
     min-width: 24px;
     min-height: 24px;
-    background-size: 24px;
   }
   ```
 
