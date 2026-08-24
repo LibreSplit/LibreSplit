@@ -127,6 +127,20 @@ int register_context_menu(GtkWidget* parent)
 }
 ```
 
+### Registering a GUI Component
+
+Plugins can register their own GUI components. To do so, you can see how a component is created in the LibreSplit source code and then call the registration function.
+
+Here's a quick example:
+
+```c
+int plug_init(PlugAPI* api)
+{
+    api->register_component("just_a_string", ls_component_string_new);
+    return 0;
+}
+```
+
 ### Closing the plugin
 
 Each plugin should have a shutdown function with the following signature:
