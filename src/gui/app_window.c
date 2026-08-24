@@ -449,9 +449,10 @@ static void ls_app_window_init(LSAppWindow* win)
 
     // Create all available components (TODO: change this in the future)
     LOG_DEBUG("Creating components...");
+    init_components();
     win->components = NULL;
-    for (i = 0; ls_components[i].name != NULL; i++) {
-        LSComponent* component = ls_components[i].new();
+    for (i = 0; i < ls_components.count; i++) {
+        LSComponent* component = ls_components.components[i].new();
         if (component) {
             GtkWidget* widget = component->ops->widget(component);
             if (widget) {
