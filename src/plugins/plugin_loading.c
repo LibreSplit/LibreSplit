@@ -14,7 +14,8 @@
 PlugAPI api = {
     .abi_version = 1, // v0.1
     .register_lua_function = register_lua_function,
-    .register_event_hook = register_event_hook
+    .register_event_hook = register_event_hook,
+    .register_component = register_plugin_component,
 };
 
 static PluginRegistry plugin_registry = {

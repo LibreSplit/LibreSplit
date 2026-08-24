@@ -1,4 +1,5 @@
 #include "plugins/plugin_utils.h"
+#include "gui/component/components.h"
 #include "logging.h"
 #include "lua.h"
 #include "timer.h"
@@ -154,5 +155,14 @@ int init_external_lasr_functions(void)
     external_lasr_functions.functions[0].function_name = NULL;
     external_lasr_functions.functions[0].function_ptr = NULL;
     external_lasr_functions.enabled = true;
+    return 0;
+}
+
+/**
+ * Just bounces the component registration request to the internal function.
+ */
+int register_plugin_component(char* name, ls_component_new_func fn)
+{
+    register_component(name, fn);
     return 0;
 }
