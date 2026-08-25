@@ -1,5 +1,7 @@
 #pragma once
 
+#include "borrow.h"
+
 #include <linux/limits.h>
 #include <lua.h>
 
@@ -35,6 +37,8 @@ typedef struct ProcessMap {
 } ProcessMap;
 
 bool restart_auto_splitter(void);
+owned_data* register_shared_global(char const * key);
+int import_shared_global(owned_data* container, shared_data* buf);
 uintptr_t find_base_address(const char* module);
 bool handle_memory_error(uint32_t err);
 const char* value_to_c_string(lua_State* L, int index);

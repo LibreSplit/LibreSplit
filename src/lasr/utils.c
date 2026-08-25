@@ -7,6 +7,8 @@
 #include <stdatomic.h>
 #include <stdio.h>
 
+extern borrowed_data * shared_globals;
+
 game_process process;
 
 /**
@@ -25,6 +27,101 @@ bool restart_auto_splitter(void)
         atomic_store(&auto_splitter_enabled, true);
     }
     return was_asl_enabled;
+}
+
+// NOTE: key is not strduped right now
+owned_data * register_shared_global(char const * key)
+{
+	// TODO: Reject this call if the autosplitter is running (very unsafe!!!!!)
+
+	owned_data * new = malloc(sizeof(owned_data));
+	if (!new) {
+		return NULL;
+	}
+
+	new->key = key;
+	new->next = (owned_data *) shared_globals;
+	new->type = LASR_VOID; // nil aka "no value"
+	atomic_store(&new->data.atomic, 0);
+	atomic_store(&new->state, LASR_STATE_OWNED);
+
+	/* Attach the new value to the front of the linked list */
+	shared_globals = (borrowed_data *) new;
+
+	return new;
+}
+
+/**
+ * Retrieves a shared value exported by the timer into a buffer.
+ * Buffer should always be 4(?) bytes wide?? See the union in borrow.h for now.
+ * It may make more sense to typedef this as well.
+
+ * Also, naming is hard. Import implies it's a one-time thing sorta, but I also
+ * want to indicate that this call is the "other half" of the state machine and
+ * therefore important.
+
+ * TODO: Not fully sure if this is the best place for this implementation, but
+ * this location follows suit with restart_auto_splitter being an operation
+ * that lets the timer thread interact with the splitter thread.
+
+ * *Also* TODO: This docu-string.
+ * Returns the type that was stored.
+ * If that return type is a LASR_STRING it must be freed!!
+ */
+int import_shared_global(owned_data* container, shared_data* buf)
+{
+	int value;
+	int type = -1;
+	size_t size = 0;
+
+	if (!container) {
+		return -1;
+	}
+
+	switch(atomic_load(&container->state)) {
+		default:
+			// sanity check (TODO: maybe remove me)
+			printf("Unexpected state while loading: %d\n", atomic_load(&container->state));
+			// fallthrough
+		case LASR_STATE_NEEDED: // New data incompatible, no change (yet)
+			atomic_store(&container->state, LASR_STATE_BORROWED);
+			// fallthrough
+		case LASR_STATE_BORROWED: // No change
+			// TODO: Using -1 here doesn't really work with the enum typedef
+			return -1;
+
+		case LASR_STATE_ATOMIC: // Data is trustworthy
+			value = atomic_load(&container->data.atomic);
+			if (buf) {
+				memcpy(buf, &value, sizeof(int));
+			}
+			type = (int) container->type;
+			break;
+
+		case LASR_STATE_OWNED:
+			type = (int) container->type;
+			
+			if (type == LASR_STRING) {
+				size = container->data.dynamic->size;
+				
+				// Treat buf as a char ** instead
+				// Create a new string_data to copy to
+				if (buf) {
+					if ((buf->dynamic = malloc(size))) {
+						memcpy(buf->dynamic, container->data.dynamic, size);
+					}
+					else {
+						printf("not enough memory for string import\n");
+						type = -1;
+					}
+				}
+			}
+
+			// Pass this back to the lua thread
+			atomic_store(&container->state, LASR_STATE_BORROWED);
+			break;
+	}
+	return type;
 }
 
 /**

@@ -24,6 +24,7 @@
 #include <unistd.h>
 
 char auto_splitter_file[PATH_MAX]; /*!< The loaded auto splitter file path */
+borrowed_data * shared_globals = NULL;
 int refresh_rate = 60; /*!< The Auto Splitter's refresh rate applied */
 bool use_game_time = false; /*!< Enables IGT */
 atomic_bool update_game_time = false; /*!< True if the auto splitter is requesting the game time to be updated */
@@ -240,7 +241,7 @@ static void export_shared_globals(lua_State* L, borrowed_data* head)
 	union {
 		int i;
 		char const * s;
-	} value;
+	} lua_value;
 	size_t len;
 
 	int _debug_state; // TODO: Clean this up before PR
@@ -259,12 +260,12 @@ static void export_shared_globals(lua_State* L, borrowed_data* head)
 		switch (type) {
 			case LUA_TBOOLEAN:
 			case LUA_TNUMBER:
-				value.i = lua_tointeger(L, -1);
+				lua_value.i = lua_tointeger(L, -1);
 				// TODO: Check for fractional part, different logic may be needed
 				break;
 
 			case LUA_TSTRING:
-				value.s = lua_tolstring(L, -1, &len);
+				lua_value.s = lua_tolstring(L, -1, &len);
 				break;
 
 			case LUA_TTABLE:
@@ -273,14 +274,19 @@ static void export_shared_globals(lua_State* L, borrowed_data* head)
 				// However, this may be costly.
 			default:
 				// Treat other types as NIL
-				if (atomic_load(&head->atomic_data) != 0) {
+				if (atomic_load(&head->data.atomic) != 0) {
 					/* Only prints whenever the value changes. */
 					printf("Unexpected type for lua global: `%s`\n", head->key);
 				}
 			case LUA_TNIL:
-				value.i = 0;
+				lua_value.i = 0;
 				break;
 		}
+
+		// TODO: Remove me once done debugging
+		// printf("made it to the export loop! `%s:%s`\n", head->key, lua_value.s);
+		// printf("^^ type is `%d`\n", type);
+		// printf("size of string_data: %lu ; size of size_t %lu\n", sizeof(string_data), sizeof(size_t));
 
 		if (len > 0) {
 			if (head->type != LASR_STRING) {
@@ -295,13 +301,14 @@ static void export_shared_globals(lua_State* L, borrowed_data* head)
 					goto next_export;
 				}
 
-				head->dynamic_data = malloc(len + sizeof(string_data));
-				if (!head->dynamic_data) {
+				head->data.dynamic = malloc(len + sizeof(string_data));
+				if (!head->data.dynamic) {
 					printf("out of memory allocating lua string\n");
 					goto next_export;
 				}
-				head->dynamic_data->size = len;
-				memcpy(head->dynamic_data->str, value.s, len);
+				head->type = LASR_STRING;
+				head->data.dynamic->size = len + sizeof(string_data);
+				memcpy(head->data.dynamic->str, lua_value.s, len);
 				atomic_store(&head->state, LASR_STATE_OWNED);
 			}
 			/* String to string is the common path */
@@ -311,24 +318,26 @@ static void export_shared_globals(lua_State* L, borrowed_data* head)
 					printf("unexpected state: `%s` (%d, should be BORROWED)\n", head->key, _debug_state);
 					goto next_export;
 				}
-				if (len >= head->dynamic_data->size) {
+				if (len + sizeof(string_data) > head->data.dynamic->size) {
 					errno = 0;
-					head->dynamic_data = realloc(head->dynamic_data, len + sizeof(string_data));
+					head->data.dynamic = realloc(head->data.dynamic, len + sizeof(string_data));
 					if (errno == ENOMEM) {
 						printf("out of memory allocating lua string\n");
 						goto next_export;
 					}
 					else {
-						head->dynamic_data->size = len + sizeof(string_data);
+						head->data.dynamic->size = len + sizeof(string_data);
 					}
+					memcpy(head->data.dynamic->str, lua_value.s, len);
+					atomic_store(&head->state, LASR_STATE_OWNED);
 				}
-				// TODO: Making an assumption most of these strings will be
-				// relatively short, so I wager it's likely faster to just copy
-				// unconditionally rather than 'memcmp and copy' if
-				// different, since the entire string will be checked if they
-				// are the same anyway.
-				memcpy(head->dynamic_data->str, value.s, len);
-				atomic_store(&head->state, LASR_STATE_OWNED);
+				else if (memcmp(head->data.dynamic->str, lua_value.s, len)) {
+					memcpy(head->data.dynamic->str, lua_value.s, len);
+					atomic_store(&head->state, LASR_STATE_OWNED);
+				}
+				/* Nothing to do if strings are same.
+				 * Timer thread mallocs on every read, so we don't want to pass
+				 * this back and forth more than necessary. */
 			}
 		}
 		else {
@@ -344,11 +353,11 @@ static void export_shared_globals(lua_State* L, borrowed_data* head)
 						// atomic_store(&head->state, LASR_STATE_NEEDED);
 					// }
 					goto next_export;
-				} else if (head->dynamic_data == NULL) {
+				} else if (head->data.dynamic == NULL) {
 					// sanity check pt.2
 					printf("string data `%s` is NULL (it shouldn't be)\n", head->key);
 				} else {
-					free(head->dynamic_data);
+					free(head->data.dynamic);
 				}
 
 				// TODO: Don't like this version because it doesn't really add
@@ -356,12 +365,12 @@ static void export_shared_globals(lua_State* L, borrowed_data* head)
 				//>  head->type = (type == LUA_TBOOL) ? LASR_BOOL : LASR_INT;
 
 				head->type = LASR_INT; /* only update this when state is BORROWED */
-				atomic_store(&head->atomic_data, value.i);
+				atomic_store(&head->data.atomic, lua_value.i);
 				atomic_store(&head->state, LASR_STATE_ATOMIC); /* pass struct back to timer thread */
 			}
 			/* Bools are flattened so this is trivial (TODO: double type) */
-			else if (atomic_load(&head->atomic_data) != value.i) {
-				atomic_store(&head->atomic_data, value.i);
+			else if (atomic_load(&head->data.atomic) != lua_value.i) {
+				atomic_store(&head->data.atomic, lua_value.i);
 
 				// sanity assertion, maybe remove after testing
 				if ((_debug_state = atomic_load(&head->state)) != LASR_STATE_ATOMIC) {
@@ -784,6 +793,10 @@ void run_auto_splitter(void)
         if (reset_exists && atomic_load(&run_running)) {
             reset(L);
         }
+
+		// Export any tracked globals that have changed
+		// TODO: Need to determine how best to clean up...
+		export_shared_globals(L, shared_globals);
 
         // Clear the memory maps cache if needed
         maps_cache_cycles_value--;
