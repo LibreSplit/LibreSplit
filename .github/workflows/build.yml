@@ -150,17 +150,31 @@ jobs:
                     mv "${APPIMAGE_NAME}.zsync" "${ZSYNC_NAME}"
                   fi
 
+            - name: "Verify AppImage"
+              env:
+                APPIMAGE_NAME: ${{ steps.artifacts.outputs.appimage }}
+                ZSYNC_NAME: ${{ steps.artifacts.outputs.zsync }}
+              run: |
+                for file in "${APPIMAGE_NAME}" "${ZSYNC_NAME}"; do
+                  if [[ ! -s "${file}" ]]; then
+                    echo "::error::Required ${file} not found"
+                    exit 1
+                  fi
+                done
+
             - name: "Upload AppImage"
               uses: actions/upload-artifact@v4
               with:
                   path: ${{ steps.artifacts.outputs.appimage }}
                   name: ${{ steps.artifacts.outputs.appimage }}
+                  if-no-files-found: error
 
             - name: "Upload AppImage zsync"
               uses: actions/upload-artifact@v4
               with:
                   path: ${{ steps.artifacts.outputs.zsync }}
                   name: ${{ steps.artifacts.outputs.zsync }}
+                  if-no-files-found: error
 
     rpm:
         if: inputs.version != ''
