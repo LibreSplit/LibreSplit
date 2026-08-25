@@ -20,7 +20,16 @@ permissions: {}
 jobs:
     build:
         runs-on: ubuntu-24.04
-        name: Build
+        name: Build (${{matrix.arch}})
+        runs-on: ${{ matrix.runner }}
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - arch: x86_64
+                      runner: ubuntu-24.04
+                    - arch: aarch64
+                      runner: ubuntu-24.04-arm
         permissions:
             contents: read
         steps:
@@ -67,18 +76,19 @@ jobs:
             - name: Set artifact names
               id: artifacts
               env:
+                  ARCH: ${{ matrix.arch }}
                   STABLE_RELEASE: ${{ inputs.version != '' }}
                   VERSION: ${{ inputs.version }}
               run: |
                   if [[ "${STABLE_RELEASE}" == "true" ]]; then
                     echo "standalone=LibreSplit-${VERSION}-standalone-x86_64" >> "${GITHUB_OUTPUT}"
-                    echo "appimage=LibreSplit-${VERSION}-x86_64.AppImage" >> "${GITHUB_OUTPUT}"
-                    echo "zsync=LibreSplit-${VERSION}-x86_64.AppImage.zsync" >> "${GITHUB_OUTPUT}"
+                    echo "appimage=LibreSplit-${VERSION}-${ARCH}.AppImage" >> "${GITHUB_OUTPUT}"
+                    echo "zsync=LibreSplit-${VERSION}-${ARCH}.AppImage.zsync" >> "${GITHUB_OUTPUT}"
                     echo "update_channel=latest" >> "${GITHUB_OUTPUT}"
                   else
                     echo "standalone=LibreSplit-${build_number}-${git_short_sha}-standalone" >> "${GITHUB_OUTPUT}"
-                    echo "appimage=LibreSplit-${build_number}-${git_short_sha}-nightly-x86_64.AppImage" >> "${GITHUB_OUTPUT}"
-                    echo "zsync=LibreSplit-nightly-x86_64.AppImage.zsync" >> "${GITHUB_OUTPUT}"
+                    echo "appimage=LibreSplit-${build_number}-${git_short_sha}-nightly-${ARCH}.AppImage" >> "${GITHUB_OUTPUT}"
+                    echo "zsync=LibreSplit-nightly-${ARCH}.AppImage.zsync" >> "${GITHUB_OUTPUT}"
                     echo "update_channel=nightly" >> "${GITHUB_OUTPUT}"
                   fi
 
@@ -92,11 +102,13 @@ jobs:
                   cp -r assets release/
 
             - name: "Create standalone archive"
+              if: matrix.arch == 'x86_64'
               env:
                   STANDALONE_NAME: ${{ steps.artifacts.outputs.standalone }}
               run: cd release && zip -qr "../${STANDALONE_NAME}.zip" .
 
             - name: "Upload artifacts"
+              if: matrix.arch == 'x86_64'
               uses: actions/upload-artifact@v4
               with:
                   name: ${{ steps.artifacts.outputs.standalone }}
@@ -131,21 +143,25 @@ jobs:
                   chmod +x AppDir/usr/bin/libresplit-ctl
 
             - name: "Download linuxdeploy"
+              env:
+                  ARCH: ${{ matrix.arch }}
               run: |
-                  wget -O linuxdeploy-x86_64.AppImage https://github.com/linuxdeploy/linuxdeploy/releases/latest/download/linuxdeploy-x86_64.AppImage
-                  wget -O linuxdeploy-plugin-appimage-x86_64.AppImage https://github.com/linuxdeploy/linuxdeploy-plugin-appimage/releases/latest/download/linuxdeploy-plugin-appimage-x86_64.AppImage
-                  chmod +x linuxdeploy-x86_64.AppImage
-                  chmod +x linuxdeploy-plugin-appimage-x86_64.AppImage
+                  wget -O linuxdeploy-${ARCH}.AppImage https://github.com/linuxdeploy/linuxdeploy/releases/latest/download/linuxdeploy-${ARCH}.AppImage
+                  wget -O linuxdeploy-plugin-appimage-${ARCH}.AppImage https://github.com/linuxdeploy/linuxdeploy-plugin-appimage/releases/latest/download/linuxdeploy-plugin-appimage-${ARCH}.AppImage
+                  chmod +x linuxdeploy-${ARCH}.AppImage
+                  chmod +x linuxdeploy-plugin-appimage-${ARCH}.AppImage
 
             - name: "Create AppImage"
               env:
+                  APPIMAGE_EXTRACT_AND_RUN: 1
                   APPIMAGE_NAME: ${{ steps.artifacts.outputs.appimage }}
+                  ARCH: ${{ matrix.arch }}
                   UPDATE_CHANNEL: ${{ steps.artifacts.outputs.update_channel }}
                   ZSYNC_NAME: ${{ steps.artifacts.outputs.zsync }}
               run: |
                   LDAI_OUTPUT="${APPIMAGE_NAME}" \
-                  LDAI_UPDATE_INFORMATION="gh-releases-zsync|${{ github.repository_owner }}|LibreSplit|${UPDATE_CHANNEL}|LibreSplit-*x86_64.AppImage.zsync" \
-                  ./linuxdeploy-x86_64.AppImage --appdir AppDir --desktop-file AppDir/libresplit.desktop --icon-file AppDir/libresplit.png --output appimage
+                  LDAI_UPDATE_INFORMATION="gh-releases-zsync|${{ github.repository_owner }}|LibreSplit|${UPDATE_CHANNEL}|LibreSplit-*-${ARCH}.AppImage.zsync" \
+                  "./linuxdeploy-${ARCH}.AppImage" --appdir AppDir --desktop-file AppDir/libresplit.desktop --icon-file AppDir/libresplit.png --output appimage
                   if [[ "${APPIMAGE_NAME}.zsync" != "${ZSYNC_NAME}" ]]; then
                     mv "${APPIMAGE_NAME}.zsync" "${ZSYNC_NAME}"
                   fi
@@ -314,11 +330,11 @@ jobs:
                   printf "Found files:\n$files\n"
                   for f in $files; do
                     dir=$(basename $f)
-                    if [[ $dir == *-x86_64.AppImage ]]; then
-                      echo "Processing $dir (x86_64 AppImage)"
+                    if [[ $dir == *.AppImage ]]; then
+                      echo "Processing $dir (AppImage)"
                       cp $dir/*.AppImage artifacts-master/
-                    elif [[ $dir == *-x86_64.AppImage.zsync ]]; then
-                      echo "Processing $dir (x86_64 AppImage zsync)"
+                    elif [[ $dir == *.AppImage.zsync ]]; then
+                      echo "Processing $dir (AppImage zsync)"
                       cp $dir/*.AppImage.zsync artifacts-master/
                     elif [[ $dir == *-standalone ]]; then
                       echo "Processing $dir (Standalone x86_64)"
