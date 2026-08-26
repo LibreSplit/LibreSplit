@@ -1,11 +1,5 @@
-/**
- * Shows a message dialog in case of a memory read error.
- *
- * @param data Unused.
- *
- * @return False, to remove the function from the queue.
- */
 #include "src/lasr/auto-splitter.h"
+#include "src/logging.h"
 #include <gio/gio.h>
 #include <glib.h>
 #include <gtk/gtk.h>
@@ -27,6 +21,13 @@ static void dialog_response_cb(GtkWidget* dialog, gint response_id, gpointer use
     gtk_widget_destroy(dialog);
 }
 
+/**
+ * Shows a message dialog in case of a memory read error.
+ *
+ * @param data Unused.
+ *
+ * @return False, to remove the function from the queue.
+ */
 gboolean display_non_capable_mem_read_dialog(gpointer data)
 {
     atomic_store(&auto_splitter_enabled, 0);
@@ -100,6 +101,7 @@ bool display_root_warning_dialog(void)
 
 bool display_confirm_reset_dialog(void)
 {
+    LOG_DEBUG("Detected gold/rainbow split, asking user for confirmation");
     GtkApplication* app = GTK_APPLICATION(g_application_get_default());
     GtkWindow* win = NULL;
     if (app != NULL) {
@@ -110,8 +112,8 @@ bool display_confirm_reset_dialog(void)
         GTK_DIALOG_MODAL,
         GTK_MESSAGE_WARNING,
         GTK_BUTTONS_YES_NO,
-        "This run contains a gold split.\n\n"
-        "Are you sure you want to reset?");
+        "This run contains a gold and/or rainbow split.\n\n"
+        "Are you sure you want to proceed?");
     gtk_window_set_title(GTK_WINDOW(dialog), "Confirm Reset?");
 
     gint response = gtk_dialog_run(GTK_DIALOG(dialog));

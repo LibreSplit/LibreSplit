@@ -5,7 +5,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <sys/time.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include <sys/uio.h>

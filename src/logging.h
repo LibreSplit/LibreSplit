@@ -66,6 +66,7 @@ void* loggingThread(void* arg);
 #define LOG_INFOF(fmt, ...) LOGF([Info], fmt, __VA_ARGS__);
 #else
 #define LOG_INFO(message)
+#define LOG_INFOF(fmt, ...)
 #endif
 
 #if LOG_LEVEL <= LOG_LEVEL_WARN

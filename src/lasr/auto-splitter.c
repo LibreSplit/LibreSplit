@@ -8,6 +8,7 @@
 #include "functions.h"
 #include "utils.h"
 
+#include <assert.h>
 #include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
@@ -167,6 +168,66 @@ void disable_functions(lua_State* L, const char** functions)
 }
 
 /**
+ * @brief Lua error function for generating a stacktrace.
+ *
+ * For use as the `errfunc` argument to `lua_pcall()`:
+ * ```c
+ * lua_pushcfunction(L, traceback);
+ * int base = lua_gettop(L);
+ * lua_getglobal(L, "func");
+ * int status = lua_pcall(L, 0, 1, base);
+ * lua_remove(L, base); // remove traceback function
+ * if (status != LUA_OK) {
+ * 	// ...
+ * }
+ * ```
+ *
+ * @param L Takes a single error object from the top of the Lua stack.
+ * @return Pushes a single string containing a formatted stacktrace.
+ * @copyright MIT license; borrowed from the LuaJIT interpreter.
+ */
+static int traceback(lua_State* L)
+{
+    if (!lua_isstring(L, 1)) { /* Non-string error object? Try metamethod. */
+        if (lua_isnoneornil(L, 1) || !luaL_callmeta(L, 1, "__tostring") || !lua_isstring(L, -1))
+            return 1; /* Return non-string error object. */
+        lua_remove(L, 1); /* Replace object by result of __tostring metamethod. */
+    }
+    luaL_traceback(L, L, lua_tostring(L, 1), 1);
+    return 1;
+}
+
+/**
+ * @brief Modify Lua stacktrace to contain a readable name for the top-level function.
+ *
+ * When calling global Lua functions from C, `luaL_traceback()` loses track of the function name
+ * because it is not associated with any bytecode slot. This results in tracebacks that end in
+ * `in function </path/to/script.lua:line>` rather than `in function 'update'`. This procedure
+ * substitutes that part for an explicit function name, replacing the top of the stack with the
+ * modified string.
+ *
+ * @param L Expects a single error string to be at the top of the stack, such as is produced by `luaL_traceback()`.
+ * @param func The name of the function called from C code.
+ */
+static void pcall_fix_traceback(lua_State* L, const char* func)
+{
+    if (!lua_isstring(L, -1))
+        return;
+    const char* trace = lua_tostring(L, -1);
+    const char* last_line = strrchr(trace, '\n');
+    assert(last_line != NULL && "all stacktraces have at least one newline: the one following the error message");
+    // "\t/path/to/script.lua:line: in function </path/to/script.lua:line>"
+    assert(strlen(last_line) > strlen(auto_splitter_file) + 1);
+    const char* path = strchr(last_line + 1 + strlen(auto_splitter_file), '<'); // auto splitter path may contain a `<` character
+    if (path == NULL)
+        return;
+    lua_pushlstring(L, trace, path - trace);
+    lua_pushfstring(L, "'%s'", func);
+    lua_concat(L, 2);
+    lua_remove(L, -2); // remove original stacktrace string
+}
+
+/**
     Generic function to call lua functions
     Signatures are something like `disb>s`
     1. d = double
@@ -175,15 +236,18 @@ void disable_functions(lua_State* L, const char** functions)
     4. b = boolean
     5. > = return separator
 
-    Example: `call_va("functionName", "dd>d", x, y, &z);`
+    Example: `call_va(L, "functionName", "dd>d", x, y, &z);`
     Calls "functionName" with two doubles as parameters (x and y), returning a double in z
 */
 bool call_va(lua_State* L, const char* func, const char* sig, ...)
 {
     va_list vl;
     int narg, nres; /* number of arguments and results */
+    int status, base;
 
     va_start(vl, sig);
+    lua_pushcfunction(L, traceback);
+    base = lua_gettop(L);
     lua_getglobal(L, func); /* get function */
 
     /* push arguments */
@@ -222,9 +286,19 @@ bool call_va(lua_State* L, const char* func, const char* sig, ...)
 
     /* do the call */
     nres = strlen(sig); /* number of expected results */
-    if (lua_pcall(L, narg, nres, 0) != LUA_OK) {
-        const char* err = lua_tostring(L, -1);
-        printf("error running function '%s': %s\n", func, err);
+    status = lua_pcall(L, narg, nres, base);
+    lua_remove(L, base); /* remove traceback function */
+    if (status != LUA_OK) {
+        /* see the implementation of `report()` and `docall()` in the LuaJIT source */
+        if (!lua_isnil(L, -1)) {
+            const char* err;
+            pcall_fix_traceback(L, func);
+            err = lua_tostring(L, -1);
+            if (err == NULL)
+                err = "(error object is not a string)";
+            fprintf(stderr, "%s\n", err);
+        }
+        lua_pop(L, 1);
         va_end(vl);
         return false;
     }
@@ -296,8 +370,7 @@ bool call_va(lua_State* L, const char* func, const char* sig, ...)
  */
 void startup(lua_State* L)
 {
-    lua_getglobal(L, "startup");
-    lua_pcall(L, 0, 0, 0);
+    call_va(L, "startup", "");
 
     lua_getglobal(L, "refreshRate");
     if (lua_isnumber(L, -1)) {
@@ -460,26 +533,33 @@ void run_auto_splitter(void)
     strcpy(current_file, auto_splitter_file);
 
     // Load the Lua file
+    lua_pushcfunction(L, traceback);
+    int base = lua_gettop(L);
     if (luaL_loadfile(L, auto_splitter_file) != LUA_OK) {
         // Error loading the file
         const char* error_msg = lua_tostring(L, -1);
-        lua_pop(L, 1); // Remove the error message from the stack
         fprintf(stderr, "Lua syntax error: %s\n", error_msg);
+        lua_pop(L, 1); // Remove the error message from the stack
         lua_close(L);
         atomic_store(&auto_splitter_enabled, false);
         return;
     }
 
     // Execute the Lua file
-    if (lua_pcall(L, 0, LUA_MULTRET, 0) != LUA_OK) {
+    if (lua_pcall(L, 0, LUA_MULTRET, base) != LUA_OK) {
         // Error executing the file
-        const char* error_msg = lua_tostring(L, -1);
-        lua_pop(L, 1); // Remove the error message from the stack
-        fprintf(stderr, "Lua runtime error: %s\n", error_msg);
+        if (!lua_isnil(L, -1)) {
+            const char* err = lua_tostring(L, -1);
+            if (err == NULL)
+                err = "(error object is not a string)";
+            fprintf(stderr, "%s\n", err);
+        }
+        lua_pop(L, 1);
         lua_close(L);
         atomic_store(&auto_splitter_enabled, false);
         return;
     }
+    lua_remove(L, base); /* remove traceback function */
 
     lua_getglobal(L, "state");
     bool state_exists = lua_isfunction(L, -1);
