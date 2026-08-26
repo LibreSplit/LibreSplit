@@ -184,9 +184,14 @@ typedef struct LSSplits {
 
 extern LSComponentOps ls_splits_operations;
 
+/**
+ * @brief Frees all heap-allocated arrays owned by the splits component.
+ *
+ * @param self_ The splits component whose arrays should be freed.
+ */
 void free_all(LSSplits* self_)
 {
-    LSSplits* self = (LSSplits*)self_;
+    LSSplits* self = self_;
     if (self->split_rows) {
         free(self->split_rows);
     }
