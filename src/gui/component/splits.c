@@ -695,25 +695,27 @@ static void splits_draw(LSComponent* self_, const ls_game* game, const ls_timer*
     for (unsigned int g = 0; g < self->subsplit_data.group_count; ++g) {
         const split_group* group = &self->subsplit_data.groups[g];
         bool group_active = group_is_active(group, timer);
+        const ls_time_method method = game->comparison_method;
 
         remove_class(self->group_headers[g].time, "time");
         remove_class(self->group_headers[g].time, "done");
         long long display_time = 0;
 
         if (group_active) {
-            if (game->split_times[group->end_idx] && game->split_times[group->end_idx] < LLONG_MAX) {
-                display_time = game->split_times[group->end_idx];
-                if (group->start_idx > 0 && game->split_times[group->start_idx - 1]
-                    && game->split_times[group->start_idx - 1] < LLONG_MAX) {
-                    display_time -= game->split_times[group->start_idx - 1];
+            if (is_time_valid(ls_time_get_by_method(game->split_times[group->end_idx], method))) {
+                display_time = ls_time_get_by_method(game->split_times[group->end_idx], method);
+                if (group->start_idx > 0
+                    && is_time_valid(ls_time_get_by_method(game->split_times[group->start_idx - 1], method))) {
+                    display_time -= ls_time_get_by_method(game->split_times[group->start_idx - 1], method);
                 }
             }
         } else {
-            if (timer->curr_split > group->end_idx && timer->split_times[group->end_idx]) {
-                display_time = timer->split_times[group->end_idx];
+            if (timer->curr_split > group->end_idx
+                && is_time_valid(ls_time_get_by_method(timer->split_times[group->end_idx], method))) {
+                display_time = ls_time_get_by_method(timer->split_times[group->end_idx], method);
                 add_class(self->group_headers[g].time, "done");
-            } else if (game->split_times[group->end_idx] && game->split_times[group->end_idx] < LLONG_MAX) {
-                display_time = game->split_times[group->end_idx];
+            } else if (is_time_valid(ls_time_get_by_method(game->split_times[group->end_idx], method))) {
+                display_time = ls_time_get_by_method(game->split_times[group->end_idx], method);
             }
         }
 
@@ -731,17 +733,20 @@ static void splits_draw(LSComponent* self_, const ls_game* game, const ls_timer*
         gtk_label_set_text(GTK_LABEL(self->group_headers[g].delta), "");
 
         if (group_active
-            && timer->started && timer->split_times[timer->curr_split]) {
-            long long progress = timer->split_times[timer->curr_split];
-            if (group->start_idx > 0 && timer->split_times[group->start_idx - 1])
-                progress -= timer->split_times[group->start_idx - 1];
+            && timer->started
+            && is_time_valid(ls_time_get_by_method(timer->split_times[timer->curr_split], method))) {
+            long long progress = ls_time_get_by_method(timer->split_times[timer->curr_split], method);
+            if (group->start_idx > 0
+                && is_time_valid(ls_time_get_by_method(timer->split_times[group->start_idx - 1], method))) {
+                progress -= ls_time_get_by_method(timer->split_times[group->start_idx - 1], method);
+            }
             if (progress > 0) {
                 add_class(self->group_headers[g].delta, "subsplit-progress");
                 ls_split_string(str, progress, 0);
                 gtk_label_set_text(GTK_LABEL(self->group_headers[g].delta), str);
             }
         } else if (timer->curr_split > group->end_idx && display_time > 0) {
-            long long pb_cum = game->split_times[group->end_idx];
+            long long pb_cum = ls_time_get_by_method(game->split_times[group->end_idx], method);
             long long delta = display_time - pb_cum;
             if (delta > 0)
                 add_class(self->group_headers[g].delta, "behind");
