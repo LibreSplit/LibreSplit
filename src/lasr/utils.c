@@ -53,8 +53,6 @@ owned_data * register_shared_global(char const * key)
 
 /**
  * Retrieves a shared value exported by the timer into a buffer.
- * Buffer should always be 4(?) bytes wide?? See the union in borrow.h for now.
- * It may make more sense to typedef this as well.
 
  * Also, naming is hard. Import implies it's a one-time thing sorta, but I also
  * want to indicate that this call is the "other half" of the state machine and
@@ -67,15 +65,20 @@ owned_data * register_shared_global(char const * key)
  * *Also* TODO: This docu-string.
  * Returns the type that was stored.
  * If that return type is a LASR_STRING it must be freed!!
+
+ * New goal: lasr_export should be fully self-contained.
+ * Memory can be allocated, but it should have all the information needed
+ * for cleanup/realoc, with respect to type and size information.
+ * This will probably be best-suited for helper functions.
  */
-int import_shared_global(owned_data* container, shared_data* buf)
+int import_shared_global(lasr_global * container, lasr_export * value)
 {
-	int value;
-	int type = -1;
+	int type = LASR_TYPE_INVALID;
 	size_t size = 0;
+	// int value;
 
 	if (!container) {
-		return -1;
+		return LASR_TYPE_INVALID;
 	}
 
 	switch(atomic_load(&container->state)) {
@@ -87,32 +90,35 @@ int import_shared_global(owned_data* container, shared_data* buf)
 			atomic_store(&container->state, LASR_STATE_BORROWED);
 			// fallthrough
 		case LASR_STATE_BORROWED: // No change
-			// TODO: Using -1 here doesn't really work with the enum typedef
-			return -1;
+			return LASR_TYPE_INVALID;
 
 		case LASR_STATE_ATOMIC: // Data is trustworthy
 			value = atomic_load(&container->data.atomic);
 			if (buf) {
 				memcpy(buf, &value, sizeof(int));
 			}
-			type = (int) container->type;
+			type = container->type;
 			break;
 
 		case LASR_STATE_OWNED:
-			type = (int) container->type;
-			
-			if (type == LASR_STRING) {
+			if (container->type == LASR_TYPE_DYNAMIC) {
 				size = container->data.dynamic->size;
 				
 				// Treat buf as a char ** instead
 				// Create a new string_data to copy to
+
+				// I don't like this malloc
+				// It feels "extra" but...
+				// Using realloc is error-prone because the caller needs to
+				// save the previous state to know if we came from a pointer
+				// (dynamic) type or an atomic type
 				if (buf) {
 					if ((buf->dynamic = malloc(size))) {
 						memcpy(buf->dynamic, container->data.dynamic, size);
+						type = container->type;
 					}
 					else {
 						printf("not enough memory for string import\n");
-						type = -1;
 					}
 				}
 			}

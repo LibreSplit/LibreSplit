@@ -5,7 +5,7 @@
 #include "auto-splitter.h"
 
 #include "./maps/maps.h"
-#include "borrow.h"
+#include "export.h"
 #include "functions.h"
 #include "utils.h"
 
@@ -269,9 +269,9 @@ static void export_shared_globals(lua_State* L, borrowed_data* head)
 				break;
 
 			case LUA_TTABLE:
-				// NOTE: No support for now, but there exists huge potential
-				// if this were to be converted into a JSON object.
-				// However, this may be costly.
+				// NOTE: No support for now, but there exists considerable
+				// potential if this were to be converted into a JSON object.
+				// However, doing so may be relatively costly.
 			default:
 				// Treat other types as NIL
 				if (atomic_load(&head->data.atomic) != 0) {
