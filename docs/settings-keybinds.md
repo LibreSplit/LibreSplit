@@ -53,3 +53,13 @@ See the [complete list of keynames](https://github.com/GNOME/gtk/blob/main/gdk/k
 You can edit the settings by directly changing the `settings.json` file inside of LibreSplit's configuration directory.
 
 Alternatively, you can use the settings Dialog by right clicking the LibreSplit window, and clicking on "Settings".
+
+## Wayland Workaround
+
+To work around Wayland not allowing global hotkeys it's possible to use compatability modes.  
+On KDE this involves going to Settings -> Legacy X11 App Support -> Listening for keystrokes: Always allowed  
+This is the least secure setting, but allows LibreSplit to see your inputs.  
+Then in the environment variables you need to set `GDK_BACKEND=x11 LIBRESPLIT_FORCE_GLOBAL_HOTKEYS=1`
+
+A full launch command for this looks like: `GDK_BACKEND=x11 LIBRESPLIT_FORCE_GLOBAL_HOTKEYS=1 libresplit`  
+A GUI edited KDE menu application may look like this: <img width="815" height="460" alt="image" src="https://github.com/user-attachments/assets/30f86d4c-7393-4108-9aee-02ae5d2964b4" />
