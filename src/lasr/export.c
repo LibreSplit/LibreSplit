@@ -64,29 +64,74 @@ lasr_global * lasr_global_create(char const * key)
  */
 void export_atomic_global(lasr_global * container, int const value, int const type)
 {
-	// TODO: Assert type (fix this when correcting the nil check)
+	int container_state;
+	int container_type;
 
-	int container_state = atomic_load(&container->state);
-	if (container_state == LASR_STATE_NEEDED) {
-		return;
-	}
-	else if (container_state == LASR_STATE_OWNED) {
-		atomic_store(&container->state, LASR_STATE_NEEDED);
+	if (type == LASR_TYPE_INVALID || type == LASR_TYPE_DYNAMIC) {
+		LOG_DEBUG("Call to store non-atomic value as atomic");
 		return;
 	}
 
-	if (container->value.type == LASR_TYPE_DYNAMIC) {
-		/* ^^ old is dynamic */
-		if (container->value.dynamic == NULL) {
-			/* Sanity check assertion */
-			LOG_DEBUGF("String data `%s` is NULL (it shouldn't be)", container->key);
-		} 
+	container_state = atomic_load(&container->state);
+	container_type = atomic_load(&container->value.type);
 
-		(void) lasr_export_resize((lasr_export *) &container->value, 0);
-		((lasr_export *) &container->value)->type = type;
+	/* Asserted by auto-splitter.c:update_shared_globals() (caller)
+	 * PR TODO: Would this function be improved by making it a static symbol
+	 * in autosplitter.c?
+	if (container_state == LASR_STATE_NEEDED || container_state == LASR_STATE_OWNED) {
+		return;
+	}
+	 */
+
+	switch (container_type) {
+		case LASR_TYPE_NIL:
+			if (type != LASR_TYPE_NIL) {
+				/* nil -> value: store value, then store type */
+				atomic_store(&container->value.atomic, value);
+				atomic_store(&container->value.type, type);
+			}
+			/* (else) nil -> nil: do nothing */
+			break;
+
+		case LASR_TYPE_ATOMIC:
+			if (type != LASR_TYPE_NIL) {
+				/* value -> value: store value */
+				atomic_store(&container->value.atomic, value);
+			}
+			else {
+				/* value -> nil: store type only */
+				atomic_store(&container->value.type, type);
+			}
+			break;
+
+		case LASR_TYPE_DYNAMIC:
+		default:
+			/* Conversion inbound, full ownership needed */
+			if (container_state != LASR_STATE_BORROWED) {
+				atomic_store(&container->state, LASR_STATE_NEEDED);
+				return;
+			}
+
+			if (container->value.dynamic == NULL) {
+				/* sanity assertion -- possible if type was INVALID but that should
+				 * never happen, either */
+				LOG_DEBUGF("String data `%s` is NULL (it shouldn't be)", container->key);
+			} 
+
+			(void) lasr_export_resize((lasr_export *) &container->value, 0);
+			atomic_store(&container->value.type, type);
+
+			if (type != LASR_TYPE_NIL) {
+				atomic_store(&container->value.atomic, value);
+			}
+			else {
+				/* Store a zero because the old data (a pointer) is certainly
+				 * invalid. Note that BORROWED state is asserted here. */
+				atomic_store(&container->value.atomic, 0);
+			}
+			break;
 	}
 
-	atomic_store(&container->value.atomic, value);
 	if (container_state == LASR_STATE_BORROWED) {
 		atomic_store(&container->state, LASR_STATE_ATOMIC);
 	}
@@ -166,61 +211,68 @@ void export_dynamic_global(lasr_global * container, char const * const value, si
  */
 int import_shared_global(lasr_global * container, lasr_export * target)
 {
-	int type = LASR_TYPE_INVALID;
 	size_t len = 0;
-	int import_state;
-	int import_val;
+
+	int container_state;
+	int container_type;
 
 	if (!container) {
 		return LASR_TYPE_INVALID;
 	}
 
-	switch((import_state = atomic_load(&container->state))) {
+	container_type = atomic_load(&container->value.type);
+	container_state = atomic_load(&container->state);
+
+	switch(container_state) {
 		default:
-			LOG_DEBUGF("Unexpected state while loading: %d", atomic_load(&container->state));
+			LOG_DEBUGF("Unexpected state while loading: %d", container_state);
 			// fallthrough
-		case LASR_STATE_NEEDED: // New data incompatible, no change (yet)
+		case LASR_STATE_NEEDED:
+			/* New data incompatible, no change (yet) */
 			atomic_store(&container->state, LASR_STATE_BORROWED);
 			// fallthrough
-		case LASR_STATE_BORROWED: // No change
+		case LASR_STATE_BORROWED:
+			/* No change */
 			return LASR_TYPE_INVALID;
 
+		case LASR_STATE_ATOMIC:
+			if (container_type == LASR_TYPE_DYNAMIC) {
+				LOG_DEBUGF("Invalid export `%s` -- state is atomic, but data is variable", container->key);
+				return LASR_TYPE_INVALID;
+			}
+			// fallthrough
 		case LASR_STATE_OWNED:
-			if ((type = container->value.type) == LASR_TYPE_DYNAMIC) {
-				/* TODO: For now, I've implemented this to resize every time,
-				 * even if the new allocation is smaller. It might be better to
-				 * only realloc if more space is needed, but this is hard to
-				 * say without testing. */
-				len = lasr_export_resize(target, container->value.dynamic->len);
-				if (len > 0) {
-					memcpy(target->dynamic->bytes, container->value.dynamic->bytes, len);
-					target->type = type;
-				}
-
-			}
-			else if (target) {
-				(void) lasr_export_resize(target, 0);
-				memcpy(&target->fixed, &import_val, sizeof(int));
-				target->type = type;
-			}
-
-			// Pass this back to the lua thread
-			atomic_store(&container->state, LASR_STATE_BORROWED);
-			break;
-
-		case LASR_STATE_ATOMIC: // Data is trustworthy
-			type = container->value.type;
-			import_val = atomic_load(&container->value.atomic);
-
 			if (target) {
-				(void) lasr_export_resize(target, 0);
-				memcpy(&target->fixed, &import_val, sizeof(int));
-				/* NOTE: type cannot be changed in the atomic state */
+				switch (container_type) {
+					case LASR_TYPE_DYNAMIC:
+						len = lasr_export_resize(target, container->value.dynamic->len);
+						if (len > 0) {
+							memcpy(target->dynamic->bytes, container->value.dynamic->bytes, len);
+							target->type = LASR_TYPE_DYNAMIC;
+						}
+						break; /* nested switch */
+
+					case LASR_TYPE_NIL:
+						(void) lasr_export_resize(target, 0);
+						target->fixed = 0;
+						target->type = LASR_TYPE_NIL;
+						break;
+
+					case LASR_TYPE_ATOMIC:
+						(void) lasr_export_resize(target, 0);
+						target->fixed = atomic_load(&container->value.atomic);
+						target->type = LASR_TYPE_ATOMIC;
+						break; /* nested switch */
+				}
+			}
+
+			/* Pass this back to the lua thread, atomic otherwise */
+			if (container_state == LASR_STATE_OWNED) {
+				atomic_store(&container->state, LASR_STATE_BORROWED);
 			}
 			break;
-
 	}
-	return type;
+	return container_type;
 }
 
 /**

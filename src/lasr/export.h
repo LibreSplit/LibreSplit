@@ -76,7 +76,7 @@ typedef struct {
  * LASR_STATE state machine.
  */
 typedef struct {
-	int const type;        /*!> data type (LASR_TYPE_XXX) */
+	atomic_int type;       /*!> data type (LASR_TYPE_XXX) */
 	union {
 		atomic_int atomic; /*!> accessor for fixed-length data */
 		lasr_dynamic_data const * const dynamic; /*!> accessor for variable-length data */
