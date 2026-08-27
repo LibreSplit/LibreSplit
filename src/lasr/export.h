@@ -17,47 +17,27 @@
 // etc., but my initial implementation ultimately shadowed the above.
 // Should it be left to the components to assume/interpret the type they expect?
 
-// very rough types skel....needs love
-// TODO: Might be better to just use an int and defines...be a little more
-// consistent with LUA_TXXX
-typedef enum {
-	LASR_VOID = 40,
-	LASR_BOOL,
-	LASR_INT,
-	LASR_STRING,
-} lasr_type;
-
 /**
  * Lua string type representation (struct extends)
  *
  * TODO: Might nest this within shared_data to be less confusing which is which
  *
- * sizeof(lasr_dynamic_data) === sizeof(size_t)
- * ^^ sizeof(lasr_dynamic_data.bytes) is 0
  */
 typedef struct {
-	size_t size; /* allocated size, not string length */
+	size_t len;
 	char bytes[];
 } lasr_dynamic_data;
 
-/**
- * Union of possible shared data storage formats
- */
-// typedef union {
-	// atomic_int atomic;
-	// string_data * dynamic;
-// } shared_data;
-
 // TODO: Consider renaming me??
 typedef struct {
-	int type; /* data type (LASR_TYPE_XXX) */
+	int const type; /* data type (LASR_TYPE_XXX) */
 	union {
 		atomic_int atomic;
-		lasr_dynamic_data * dynamic;
+		lasr_dynamic_data const * const dynamic;
 	};
 } lasr_value;
 
-/* shadow of lasr_value but for the thread-safe use */
+/* shadow of lasr_value but for asserted thread-safe use */
 typedef struct {
 	int type;
 	union {
@@ -78,3 +58,21 @@ struct _lasr_global {
 	atomic_int state; /* how this is being used */
 	lasr_value value;
 };
+
+// TODO: Still not sure this is the best spot for this
+// The other candidates are utils.c (where registration currently is)
+// or auto-splitter.c which is what depends on the complete list.
+// 
+// For now, I'm moving everything to one file so it's easier to consider in the
+// complete scope.
+extern lasr_global * shared_globals;
+
+lasr_global * register_shared_global(char const * key);
+int import_shared_global(lasr_global * container, lasr_export * value);
+
+size_t lasr_export_resize(lasr_export * value, size_t len);
+void lasr_export_release(lasr_export * value);
+lasr_global * lasr_global_release(lasr_global * global);
+
+// void export_shared_globals(lua_State* L, borrowed_data* head);
+// ^^ currently static in auto-splitter.c

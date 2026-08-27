@@ -3,7 +3,7 @@
  * Implementation of the lua title component
  */
 #include "components.h"
-#include "../../lasr/utils.h"
+#include "../../lasr/export.h"
 
 /**
  * @brief The component representing the title.
@@ -14,7 +14,7 @@ typedef struct _LSLuaTitle {
     LSComponent base; /*!< The base struct that is extended */
     GtkWidget* header; /*!< The container for the title */
     GtkWidget* title; /*!< The label containing the title itself */
-	owned_data* title_data;
+	lasr_global * contents;
 } LSLuaTitle;
 extern LSComponentOps ls_lua_title_operations; // defined at the end of the file
 
@@ -31,7 +31,7 @@ LSComponent* ls_component_lua_title_new(void)
     }
     self->base.ops = &ls_lua_title_operations;
 
-	self->title_data = register_shared_global("luaTitleVar");
+	self->contents = register_shared_global("luaTitleVar");
 
     self->header = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
     add_class(self->header, "header");
@@ -52,9 +52,11 @@ LSComponent* ls_component_lua_title_new(void)
  *
  * @param self The component to destroy
  */
-static void lua_title_delete(LSComponent* self)
+static void lua_title_delete(LSComponent* self_)
 {
-    free(self);
+    LSLuaTitle* self = (LSLuaTitle*)self_;
+	lasr_global_release(self->contents);
+    free(self_);
 }
 
 /**
@@ -111,18 +113,23 @@ static void lua_title_show_game(LSComponent* self_, const ls_game* game,
 static void lua_title_draw(LSComponent* self_, const ls_game* game, const ls_timer* timer)
 {
     LSLuaTitle* self = (LSLuaTitle*)self_;
-	// TODO: For testing, improve this later
-	static string_data * title_ref = NULL;
 
-	shared_data title = { 0 };
-	int type = import_shared_global(self->title_data, &title);
+	lasr_export title_ = { 0 };
+	int type = import_shared_global(self->contents, &title_);
+	char buf[32];
 
-	if (type == LASR_STRING) {
+	if (type == LASR_TYPE_DYNAMIC) {
 		// TODO: Currently assuming string is NUL terminated, which may not be true??
-		gtk_label_set_text(GTK_LABEL(self->title), title.dynamic->str);
-		if (title_ref) free(title_ref);
-		title_ref = title.dynamic;
+		gtk_label_set_text(GTK_LABEL(self->title), title_.dynamic->bytes);
 	}
+	else if (type == LASR_TYPE_ATOMIC) {
+		/* Numeric type */
+		snprintf(buf, sizeof(buf), "%d", title_.fixed);
+		gtk_label_set_text(GTK_LABEL(self->title), buf);
+	}
+
+	// cleanup -- no allocation if string not changed
+	lasr_export_resize(&title_, 0);
 }
 
 LSComponentOps ls_lua_title_operations = {
