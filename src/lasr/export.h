@@ -28,7 +28,9 @@ typedef struct {
 	char bytes[];
 } lasr_dynamic_data;
 
-// TODO: Consider renaming me??
+/**
+ * todo
+ */
 typedef struct {
 	int const type; /* data type (LASR_TYPE_XXX) */
 	union {
@@ -59,19 +61,12 @@ struct _lasr_global {
 	lasr_value value;
 };
 
-// TODO: Still not sure this is the best spot for this
-// The other candidates are utils.c (where registration currently is)
-// or auto-splitter.c which is what depends on the complete list.
-// 
-// For now, I'm moving everything to one file so it's easier to consider in the
-// complete scope.
-extern lasr_global * shared_globals;
-
-lasr_global * register_shared_global(char const * key);
-int import_shared_global(lasr_global * container, lasr_export * value);
+lasr_global * lasr_global_create(char const * key);
+void export_atomic_global(lasr_global * container, int const value, int const type);
+void export_dynamic_global(lasr_global * container, char const * const value, size_t const len);
+int import_shared_global(lasr_global * container, lasr_export * target);
 
 size_t lasr_export_resize(lasr_export * value, size_t len);
-void lasr_export_release(lasr_export * value);
 lasr_global * lasr_global_release(lasr_global * global);
 
 // void export_shared_globals(lua_State* L, borrowed_data* head);

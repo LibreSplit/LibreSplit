@@ -1,28 +1,19 @@
 #include "export.h"
-#include "auto-splitter.h"
-// extern atomic_bool auto_splitter_running;
-// ^^ TODO: Which is better?
 
 #include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
-lasr_global * shared_globals = NULL;
-
 /**
  * (TODO doc)
  */
-lasr_global * register_shared_global(char const * key)
+lasr_global * lasr_global_create(char const * key)
 {
 	lasr_global * new;
 	lasr_export value_;
 
-	if (!key || atomic_load(&auto_splitter_running)) {
-		/* Reject this call if the autosplitter is running
-		 * The linked list is not atomic, so we are certain to "randomly"
-		 * crash if this would happen */
-		printf("Reject registration of export var `%s`\n", key ? key : "<none>");
+	if (!key) {
 		return NULL;
 	}
 
@@ -42,12 +33,78 @@ lasr_global * register_shared_global(char const * key)
 	value_.fixed = 0;
 
 	memcpy(&new->value, &value_, sizeof(lasr_value));
-	new->next = shared_globals;
-
-	/* Attach the new value to the front of the linked list */
-	shared_globals = new;
-
 	return new;
+}
+
+void export_atomic_global(lasr_global * container, int const value, int const type)
+{
+	int container_state = atomic_load(&container->state);
+	if (container_state != LASR_STATE_BORROWED
+		|| container_state != LASR_STATE_ATOMIC) {
+		atomic_store(&container->state, LASR_STATE_NEEDED);
+		return;
+	}
+
+	if (container->value.type == LASR_TYPE_DYNAMIC) {
+		/* ^^ old is dynamic */
+		if (container->value.dynamic == NULL) {
+			// debugging sanity check (TODO: cleanup)
+			printf("string data `%s` is NULL (it shouldn't be)\n", container->key);
+		} 
+
+		(void) lasr_export_resize((lasr_export *) &container->value, 0);
+		((lasr_export *) &container->value)->type = type;
+	}
+
+
+	atomic_store(&container->value.atomic, value);
+	if (container_state == LASR_STATE_BORROWED) {
+		atomic_store(&container->state, LASR_STATE_ATOMIC);
+	}
+}
+
+/* NOTE: This should only be called by the writing thread...maybe best to put
+ * it with the autosplitter logic, but the state machine is easier to see with
+ * all of the meat in one place. */
+void export_dynamic_global(lasr_global * container, char const * const value, size_t const len)
+{
+	size_t new_len = len;
+	int container_state = atomic_load(&container->state);
+	if (container_state != LASR_STATE_BORROWED) {
+		atomic_store(&container->state, LASR_STATE_NEEDED);
+		return;
+	}
+
+	if (container->value.type != LASR_TYPE_DYNAMIC) {
+		/* ^^ old is atomic; convert it now that we have control */
+		((lasr_export *) &container->value)->type = LASR_TYPE_DYNAMIC;
+		((lasr_export *) &container->value)->dynamic = NULL; /* flag for allocation */
+	}
+
+	if ((!container->value.dynamic)
+		|| (container->value.dynamic->len != len)) {
+		/* Strings are trivially different
+		 * new_len is possibly smaller than len if realloc failed with ENOMEM */
+		new_len = lasr_export_resize((lasr_export *) &container->value, len + 1);
+
+		if (new_len == 0) {
+			return;
+		}
+	} 
+	else if (memcmp(&container->value.dynamic->bytes, value, new_len)) {
+		/* fallthrough block -- strings are different */
+		(void) 0;
+	}
+	else {
+		/* Strings are the same, nothing to do.
+		 * Timer thread reallocs on every read, so we don't want to pass
+		 * this back and forth more than necessary. */
+		return;
+	}
+
+	memcpy(((lasr_export *) &container->value)->dynamic->bytes, value, new_len);
+	((lasr_export *) &container->value)->dynamic->bytes[new_len - 1] = '\0'; /* Enforce NUL byte */
+	atomic_store(&container->state, LASR_STATE_OWNED);
 }
 
 /**
@@ -72,37 +129,37 @@ lasr_global * register_shared_global(char const * key)
  * for cleanup/realoc, with respect to type and size information.
  * This will probably be best-suited for helper functions.
  */
-int import_shared_global(lasr_global * import, lasr_export * target)
+int import_shared_global(lasr_global * container, lasr_export * target)
 {
 	int type = LASR_TYPE_INVALID;
 	size_t len = 0;
 	int import_state;
 	int import_val;
 
-	if (!import) {
+	if (!container) {
 		return LASR_TYPE_INVALID;
 	}
 
-	switch((import_state = atomic_load(&import->state))) {
+	switch((import_state = atomic_load(&container->state))) {
 		default:
 			// sanity check (TODO: maybe remove me)
-			printf("Unexpected state while loading: %d\n", atomic_load(&import->state));
+			printf("Unexpected state while loading: %d\n", atomic_load(&container->state));
 			// fallthrough
 		case LASR_STATE_NEEDED: // New data incompatible, no change (yet)
-			atomic_store(&import->state, LASR_STATE_BORROWED);
+			atomic_store(&container->state, LASR_STATE_BORROWED);
 			// fallthrough
 		case LASR_STATE_BORROWED: // No change
 			return LASR_TYPE_INVALID;
 
 		case LASR_STATE_OWNED:
-			if ((type = import->value.type) == LASR_TYPE_DYNAMIC) {
+			if ((type = container->value.type) == LASR_TYPE_DYNAMIC) {
 				/* TODO: For now, I've implemented this to resize every time,
 				 * even if the new allocation is smaller. It might be better to
 				 * only realloc if more space is needed, but this is hard to
 				 * say without testing. */
-				len = lasr_export_resize(target, import->value.dynamic->len);
+				len = lasr_export_resize(target, container->value.dynamic->len);
 				if (len > 0) {
-					memcpy(target->dynamic->bytes, import->value.dynamic->bytes, len);
+					memcpy(target->dynamic->bytes, container->value.dynamic->bytes, len);
 					target->type = type;
 				}
 
@@ -114,12 +171,12 @@ int import_shared_global(lasr_global * import, lasr_export * target)
 			}
 
 			// Pass this back to the lua thread
-			atomic_store(&import->state, LASR_STATE_BORROWED);
+			atomic_store(&container->state, LASR_STATE_BORROWED);
 			break;
 
 		case LASR_STATE_ATOMIC: // Data is trustworthy
-			type = import->value.type;
-			import_val = atomic_load(&import->value.atomic);
+			type = container->value.type;
+			import_val = atomic_load(&container->value.atomic);
 
 			if (target) {
 				(void) lasr_export_resize(target, 0);
@@ -177,17 +234,6 @@ size_t lasr_export_resize(lasr_export * value, size_t len)
 
 /**
  * (TODO doc)
- */
-void lasr_export_release(lasr_export * value)
-{
-	if (value) {
-		(void) lasr_export_resize(value, 0);
-		free(value);
-	}
-}
-
-/**
- * (TODO doc)
  *
  * Returns the value of next
  *
@@ -196,9 +242,12 @@ void lasr_export_release(lasr_export * value)
 lasr_global * lasr_global_release(lasr_global * global)
 {
 	if (global) {
-		if (global->key) free((void *) global->key); /* strdup-ed on init */
+		if (global->key) {
+			free((void *) global->key); /* strdup-ed on init */
+		}
+		lasr_export_resize((lasr_export *) &global->value, 0);
+
 		/* do nothing with `next` to avoid risk of accidental double-free */
-		lasr_export_release((lasr_export *) &global->value);
 		return global->next;
 	}
 	return NULL;

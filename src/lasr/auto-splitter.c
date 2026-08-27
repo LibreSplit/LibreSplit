@@ -28,6 +28,7 @@ int refresh_rate = 60; /*!< The Auto Splitter's refresh rate applied */
 bool use_game_time = false; /*!< Enables IGT */
 atomic_bool update_game_time = false; /*!< True if the auto splitter is requesting the game time to be updated */
 atomic_llong game_time_value = 0; /*!< The in-game time value, in milliseconds */
+lasr_global * shared_globals = NULL;
 
 /**
  * Defines the behaviour of the map cache.
@@ -234,7 +235,7 @@ static void pcall_fix_traceback(lua_State* L, const char* func)
 	Run a sweep of the shared globals struct
 	(TODO: This comment str)
 */
-static void export_shared_globals(lua_State * L, lasr_global * head)
+static void update_shared_globals(lua_State * L, lasr_global * head)
 {
 	int lasr_type;
 	union {
@@ -242,11 +243,12 @@ static void export_shared_globals(lua_State * L, lasr_global * head)
 		char const * s;
 	} lua_value;
 	size_t lstring_len;
-	int export_state;
+	int container_state;
 
 	while (head) {
-		export_state = atomic_load(&head->state);
-		if (export_state == LASR_STATE_OWNED || export_state == LASR_STATE_NEEDED) {
+		container_state = atomic_load(&head->state);
+		if (container_state == LASR_STATE_OWNED
+			|| container_state == LASR_STATE_NEEDED) {
 			/* NOTE: It would be possible to transition from needed back to
 			 * owned/atomic by inspecting the 'incoming' *and* stored types,
 			 * but I see no value in doing so. */
@@ -254,7 +256,7 @@ static void export_shared_globals(lua_State * L, lasr_global * head)
 			continue;
 		}
 
-		lua_getglobal(L, head->key);	/* push var to stack */
+		lua_getglobal(L, head->key); /* push var to stack */
 		lasr_type = LASR_TYPE_INVALID;
 		lstring_len = 0;
 
@@ -272,101 +274,32 @@ static void export_shared_globals(lua_State * L, lasr_global * head)
 				break;
 
 			case LUA_TTABLE:
-				// NOTE: No support for now, but there exists considerable
-				// potential if this were to be converted into a JSON object.
-				// However, doing so may be relatively costly.
+				/* NOTE: No support for now, but there exists considerable
+				 * potential if this were to be converted into a JSON object.
+				 * However, doing so may be relatively costly. */
 			default:
-				// Treat other types as NIL
+				/* Treat other types as nil */
 				if (atomic_load(&head->value.atomic) != 0) {
-					/* Only prints whenever the value changes. */
-					printf("Unexpected type for lua global: `%s`\n", head->key);
+					/* Only prints whenever the value changes */
+					printf("Unsupported type for lua export: `%s`\n", head->key);
 				}
 			case LUA_TNIL:
+				// TODO: Instead of storing i as 0, first check if nil, and
+				// make the type atomic and authoritative. Effectively meaning
+				// that a thread reading atomic data from earlier will still
+				// be valid, albeit out of date.
 				lua_value.i = 0;
 				lasr_type = LASR_TYPE_NIL;
 				break;
 		}
 
-		// TODO: Remove me once done debugging
-		// printf("made it to the export loop! `%s:%s`\n", head->key, lua_value.s);
-		// printf("^^ type is `%d`\n", lasr_type);
-		// printf("size of string_data: %lu ; size of size_t %lu\n", sizeof(string_data), sizeof(size_t));
-
 		if (lasr_type == LASR_TYPE_DYNAMIC) {
-			/* ^^ incoming type needs dymamic storage */
-			if (head->value.type != LASR_TYPE_DYNAMIC) {
-				/* ^^ old is atomic; only convert if we own control */
-				if (export_state != LASR_STATE_BORROWED) {
-					atomic_store(&head->state, LASR_STATE_NEEDED);
-					goto next_export;
-				}
-				((lasr_export *) &head->value)->type = LASR_TYPE_DYNAMIC;
-				((lasr_export *) &head->value)->dynamic = NULL; /* flag for allocation */
-			}
-
-			if (export_state != LASR_STATE_BORROWED) {
-				// sanity check (todo refactor this once testing looks good)
-				printf("unexpected state: `%s` (%d, should be BORROWED)\n", head->key, export_state);
-				goto next_export;
-			}
-
-			if ((!head->value.dynamic)
-				|| (head->value.dynamic->len != lstring_len)) {
-				/* Strings are trivially different */
-				lstring_len = lasr_export_resize((lasr_export *) &head->value, lstring_len);
-			} 
-			else if (memcmp(&head->value.dynamic->bytes, lua_value.s, lstring_len)) {
-				/* fallthrough block -- strings are different */
-				(void) 0;
-			}
-			else {
-				/* Strings are the same, nothing to do.
-				 * Timer thread reallocs on every read, so we don't want to pass
-				 * this back and forth more than necessary. */
-				goto next_export;
-			}
-
-			memcpy(((lasr_export *) &head->value.dynamic->bytes), lua_value.s, lstring_len);
-			atomic_store(&head->state, LASR_STATE_OWNED);
+			export_dynamic_global(head, lua_value.s, lstring_len);
 		}
 		else {
-			/* Incoming type can be atomic */
-			if (head->value.type == LASR_TYPE_DYNAMIC) {
-				/* Old was dynamic */
-				if (export_state != LASR_STATE_BORROWED) {
-					// sanity check (todo refactor this once testing looks good)
-					printf("unexpected state: `%s` (%d, should be BORROWED)\n", head->key, export_state);
-
-					// TODO: This would be the right transition, but it should
-					// never exist I don't think? Just flag and give up for now.
-					// if (export_state == LASR_STATE_ATOMIC) {
-						// atomic_store(&head->state, LASR_STATE_NEEDED);
-					// }
-					goto next_export;
-				} else if (head->value.dynamic == NULL) {
-					// sanity check pt.2
-					printf("string data `%s` is NULL (it shouldn't be)\n", head->key);
-				} 
-
-				(void) lasr_export_resize((lasr_export *) &head->value, 0);
-				((lasr_export *) &head->value)->type = lasr_type; /* state asserted BORROWED */
-				atomic_store(&head->value.atomic, lua_value.i);
-				atomic_store(&head->state, LASR_STATE_ATOMIC); /* pass struct back to timer thread */
-			}
-			else {
-				/* Bools are flattened so this is trivial (TODO: float types) */
-				atomic_store(&head->value.atomic, lua_value.i);
-
-				// sanity assertion, maybe remove after testing
-				// technically possible/valid to be borrowed depending on init
-				// so maybe just set it unconditionally? (TODO)
-				if (export_state != LASR_STATE_ATOMIC) {
-					printf("unexpected state: `%s` (%d, should be ATOMIC)\n", head->key, export_state);
-				}
-			}
+			export_atomic_global(head, lua_value.i, lasr_type);
 		}
 
-next_export:
 		lua_pop(L, 1);
 		head = head->next;
 	}
@@ -783,7 +716,7 @@ void run_auto_splitter(void)
 
 		// Export any tracked globals that have changed
 		// TODO: Need to determine how best to clean up...
-		export_shared_globals(L, shared_globals);
+		update_shared_globals(L, shared_globals);
 
         // Clear the memory maps cache if needed
         maps_cache_cycles_value--;

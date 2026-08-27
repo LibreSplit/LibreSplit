@@ -28,6 +28,24 @@ bool restart_auto_splitter(void)
 }
 
 /**
+ * todo doc
+ */
+void register_shared_global(lasr_global * new)
+{
+	if (!new || atomic_load(&auto_splitter_running)) {
+		/* Reject this call if the autosplitter is running (developer error if
+		 * this happens.)
+		 * The linked list is not atomic, so we are certain to spontaneously
+		 * crash if this were ignored */
+		printf("Reject registration of export var `%s`\n", new ? new->key : "<none>");
+		return;
+	}
+
+	new->next = shared_globals;
+	shared_globals = new;
+}
+
+/**
  * Gets the base address of a module.
  *
  * @param module The module name for which to find the base address of. If NULL, the main process is used.

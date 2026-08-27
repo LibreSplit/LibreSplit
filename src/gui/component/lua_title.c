@@ -4,6 +4,7 @@
  */
 #include "components.h"
 #include "../../lasr/export.h"
+#include "../../lasr/utils.h"
 
 /**
  * @brief The component representing the title.
@@ -31,7 +32,12 @@ LSComponent* ls_component_lua_title_new(void)
     }
     self->base.ops = &ls_lua_title_operations;
 
-	self->contents = register_shared_global("luaTitleVar");
+	/* NOTE: This implementation is mostly a stubbed example. Once configurable
+	 * splitter components are introduced, this variable name can be derived
+	 * from that, allowing the user to specify a value that is meaningful. */
+	self->contents = lasr_global_create("dummyLuaTitleVar");
+	register_shared_global(self->contents);
+	/* *** */
 
     self->header = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
     add_class(self->header, "header");
