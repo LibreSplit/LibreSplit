@@ -37,19 +37,19 @@ bool restart_auto_splitter(void)
  * @param container A non-null reference to a 'lasr_global' container to be
  * tracked.
  */
-void register_shared_global(lasr_global * new)
+void register_shared_global(lasr_global* new)
 {
-	if (!new || atomic_load(&auto_splitter_running)) {
-		/* Reject this call if the autosplitter is running (developer error if
-		 * this happens.)
-		 * The linked list is not atomic, so we are certain to spontaneously
-		 * crash if this were ignored */
-		printf("Reject registration of export var `%s`\n", new ? new->key : "<none>");
-		return;
-	}
+    if (!new || atomic_load(&auto_splitter_running)) {
+        /* Reject this call if the autosplitter is running (developer error if
+         * this happens.)
+         * The linked list is not atomic, so we are certain to spontaneously
+         * crash if this were ignored */
+        printf("Reject registration of export var `%s`\n", new ? new->key : "<none>");
+        return;
+    }
 
-	new->next = shared_globals;
-	shared_globals = new;
+    new->next = shared_globals;
+    shared_globals = new;
 }
 
 /**

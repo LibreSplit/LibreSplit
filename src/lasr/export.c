@@ -1,3 +1,9 @@
+/** \file export.c
+ *
+ * Functions for handling the exchange of shared global values between the
+ * lua auto-splitter runtime thread and the main timer thread.
+ */
+
 #include "export.h"
 
 #include "../logging.h"
@@ -154,28 +160,28 @@ void export_atomic_global(lasr_global* container, int const value, int const typ
 void export_dynamic_global(lasr_global* container, char const* const value, size_t const len)
 {
     size_t new_len = len;
+    lasr_export* container_value = (lasr_export*)&container->value;
     int container_state = atomic_load(&container->state);
+
     if (container_state != LASR_STATE_BORROWED) {
         atomic_store(&container->state, LASR_STATE_NEEDED);
         return;
     }
 
-    if (container->value.type != LASR_TYPE_DYNAMIC) {
-        /* ^^ old is atomic; convert it now that we have control */
-        ((lasr_export*)&container->value)->type = LASR_TYPE_DYNAMIC;
-        ((lasr_export*)&container->value)->dynamic = NULL; /* flag for allocation */
+    if (container_value->type != LASR_TYPE_DYNAMIC) {
+        container_value->dynamic = NULL; /* flag for allocation */
+        container_value->type = LASR_TYPE_DYNAMIC;
     }
 
-    if ((!container->value.dynamic)
-        || (container->value.dynamic->len != len)) {
+    if ((!container_value->dynamic) || (container_value->dynamic->len != len)) {
         /* Strings are trivially different
          * new_len is possibly smaller than len if realloc failed with ENOMEM */
-        new_len = lasr_export_resize((lasr_export*)&container->value, len + 1);
+        new_len = lasr_export_resize(container_value, len + 1);
 
         if (new_len == 0) {
             return;
         }
-    } else if (memcmp(&container->value.dynamic->bytes, value, new_len)) {
+    } else if (memcmp(container_value->dynamic->bytes, value, new_len)) {
         /* fallthrough block -- strings are different */
         (void)0;
     } else {
@@ -185,8 +191,8 @@ void export_dynamic_global(lasr_global* container, char const* const value, size
         return;
     }
 
-    memcpy(((lasr_export*)&container->value)->dynamic->bytes, value, new_len);
-    ((lasr_export*)&container->value)->dynamic->bytes[new_len - 1] = '\0'; /* Enforce NUL byte */
+    memcpy(container_value->dynamic->bytes, value, new_len);
+    container_value->dynamic->bytes[new_len - 1] = '\0'; /* Enforce NUL byte */
     atomic_store(&container->state, LASR_STATE_OWNED);
 }
 

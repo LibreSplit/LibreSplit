@@ -265,9 +265,9 @@ static void update_shared_globals(lua_State* L, lasr_global* head)
         switch (lua_type(L, -1)) { /* retrieve data type (of var at top of stack) */
             case LUA_TBOOLEAN:
             case LUA_TNUMBER:
-				/* NOTE: Floating types are not yet supported, but it could be
-				 * introduced here by checking the fractional part of the lua
-				 * variable. */
+                /* NOTE: Floating types are not yet supported, but it could be
+                 * introduced here by checking the fractional part of the lua
+                 * variable. */
                 lua_value.i = lua_tointeger(L, -1);
                 lasr_type = LASR_TYPE_ATOMIC;
                 break;

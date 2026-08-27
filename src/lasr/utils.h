@@ -37,7 +37,7 @@ typedef struct ProcessMap {
 } ProcessMap;
 
 bool restart_auto_splitter(void);
-void register_shared_global(lasr_global * new);
+void register_shared_global(lasr_global* new);
 uintptr_t find_base_address(const char* module);
 bool handle_memory_error(uint32_t err);
 const char* value_to_c_string(lua_State* L, int index);
