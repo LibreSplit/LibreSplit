@@ -4,14 +4,13 @@
  */
 #include "auto-splitter.h"
 
+#include "../logging.h"
 #include "./maps/maps.h"
 #include "export.h"
 #include "functions.h"
 #include "utils.h"
-#include "../logging.h"
 
 #include <assert.h>
-#include <errno.h> /////////
 #include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
@@ -29,7 +28,7 @@ int refresh_rate = 60; /*!< The Auto Splitter's refresh rate applied */
 bool use_game_time = false; /*!< Enables IGT */
 atomic_bool update_game_time = false; /*!< True if the auto splitter is requesting the game time to be updated */
 atomic_llong game_time_value = 0; /*!< The in-game time value, in milliseconds */
-lasr_global * shared_globals = NULL;
+lasr_global* shared_globals = NULL;
 
 /**
  * Defines the behaviour of the map cache.
@@ -241,74 +240,67 @@ static void pcall_fix_traceback(lua_State* L, const char* func)
  *
  * @param head Reference to the first tracked export in a linked list.
  */
-static void update_shared_globals(lua_State * L, lasr_global * head)
+static void update_shared_globals(lua_State* L, lasr_global* head)
 {
-	int lasr_type;
-	union {
-		int i;
-		char const * s;
-	} lua_value;
-	size_t lstring_len;
-	int container_state;
+    int lasr_type;
+    union {
+        int i;
+        char const* s;
+    } lua_value;
+    size_t lstring_len;
+    int container_state;
 
-	while (head) {
-		container_state = atomic_load(&head->state);
-		if (container_state == LASR_STATE_OWNED
-			|| container_state == LASR_STATE_NEEDED) {
-			/* NOTE: It would be possible to transition from needed back to
-			 * owned/atomic by inspecting the 'incoming' *and* stored types,
-			 * but I see no value in doing so. */
-			head = head->next;
-			continue;
-		}
+    while (head) {
+        container_state = atomic_load(&head->state);
+        if (container_state == LASR_STATE_OWNED
+            || container_state == LASR_STATE_NEEDED) {
+            head = head->next;
+            continue;
+        }
 
-		lua_getglobal(L, head->key); /* push var to stack */
-		lasr_type = LASR_TYPE_INVALID;
-		lstring_len = 0;
+        lua_getglobal(L, head->key); /* push var to stack */
+        lasr_type = LASR_TYPE_INVALID;
+        lstring_len = 0;
 
-		switch (lua_type(L, -1)) { /* retrieve data type (of var at top of stack) */
-			case LUA_TBOOLEAN:
-			case LUA_TNUMBER:
-				lua_value.i = lua_tointeger(L, -1);
-				lasr_type = LASR_TYPE_ATOMIC;
-				// TODO: Check for fractional part, different logic may be needed
-				break;
+        switch (lua_type(L, -1)) { /* retrieve data type (of var at top of stack) */
+            case LUA_TBOOLEAN:
+            case LUA_TNUMBER:
+				/* NOTE: Floating types are not yet supported, but it could be
+				 * introduced here by checking the fractional part of the lua
+				 * variable. */
+                lua_value.i = lua_tointeger(L, -1);
+                lasr_type = LASR_TYPE_ATOMIC;
+                break;
 
-			case LUA_TSTRING:
-				lua_value.s = lua_tolstring(L, -1, &lstring_len);
-				lasr_type = LASR_TYPE_DYNAMIC;
-				break;
+            case LUA_TSTRING:
+                lua_value.s = lua_tolstring(L, -1, &lstring_len);
+                lasr_type = LASR_TYPE_DYNAMIC;
+                break;
 
-			case LUA_TTABLE:
-				/* NOTE: No support for now, but there exists considerable
-				 * potential if this were to be converted into a JSON object.
-				 * However, doing so may be relatively costly. */
-			default:
-				/* Treat other types as nil */
-				if (atomic_load(&head->value.atomic) != 0) {
-					/* Only prints whenever the value changes */
-					LOG_DEBUGF("Unsupported type for lua export: `%s`", head->key);
-				}
-			case LUA_TNIL:
-				// TODO: Instead of storing i as 0, first check if nil, and
-				// make the type atomic and authoritative. Effectively meaning
-				// that a thread reading atomic data from earlier will still
-				// be valid, albeit out of date.
-				lua_value.i = 0;
-				lasr_type = LASR_TYPE_NIL;
-				break;
-		}
+            case LUA_TTABLE:
+                /* NOTE: No support for now, but there exists considerable
+                 * potential if this were to be converted into a JSON object.
+                 * However, doing so may be relatively costly. */
+            default:
+                /* Treat other types as nil */
+                if (atomic_load(&head->value.type) != LASR_TYPE_NIL) {
+                    /* Only prints whenever the value changes */
+                    LOG_DEBUGF("Unsupported type for lua export: `%s`", head->key);
+                }
+            case LUA_TNIL:
+                lasr_type = LASR_TYPE_NIL;
+                break;
+        }
 
-		if (lasr_type == LASR_TYPE_DYNAMIC) {
-			export_dynamic_global(head, lua_value.s, lstring_len);
-		}
-		else {
-			export_atomic_global(head, lua_value.i, lasr_type);
-		}
+        if (lasr_type == LASR_TYPE_DYNAMIC) {
+            export_dynamic_global(head, lua_value.s, lstring_len);
+        } else {
+            export_atomic_global(head, lua_value.i, lasr_type);
+        }
 
-		lua_pop(L, 1);
-		head = head->next;
-	}
+        lua_pop(L, 1);
+        head = head->next;
+    }
 }
 
 /**
@@ -720,9 +712,8 @@ void run_auto_splitter(void)
             reset(L);
         }
 
-		// Export any tracked globals that have changed
-		// TODO: Need to determine how best to clean up...
-		update_shared_globals(L, shared_globals);
+        /* Export any tracked globals that have changed */
+        update_shared_globals(L, shared_globals);
 
         // Clear the memory maps cache if needed
         maps_cache_cycles_value--;

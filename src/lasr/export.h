@@ -28,10 +28,10 @@
  * read thread. It will only be returned to the write thread once the read
  * thread has consumed the value.
  */
-#define LASR_STATE_ATOMIC	-1  /* Value is shared via atomic instructions */
-#define LASR_STATE_BORROWED	 0  /* Write thread has full control */
-#define LASR_STATE_OWNED	 1  /* Read thread has full control */
-#define LASR_STATE_NEEDED	 2  /* Write thread requesting full control */
+#define LASR_STATE_ATOMIC -1 /* Value is shared via atomic instructions */
+#define LASR_STATE_BORROWED 0 /* Write thread has full control */
+#define LASR_STATE_OWNED 1 /* Read thread has full control */
+#define LASR_STATE_NEEDED 2 /* Write thread requesting full control */
 
 /**
  * Enumeration of possible `lasr_global` data storage types.
@@ -54,10 +54,10 @@
  * the responsibility of the component that needs the value to assume the data
  * format and perform conversions as necessary.
  */
-#define LASR_TYPE_INVALID	 0  /* Corresponding data cannot be resolved and should be ignored */
-#define LASR_TYPE_NIL		 1  /* There exists no data (null, none, nil, etc.) */
-#define LASR_TYPE_ATOMIC	 2  /* "Simple" data that can be read with atomic instructions */
-#define LASR_TYPE_DYNAMIC	 3  /* "Array" data that requires stricter thread safety */
+#define LASR_TYPE_INVALID 0 /* Corresponding data cannot be resolved and should be ignored */
+#define LASR_TYPE_NIL 1 /* There exists no data (null, none, nil, etc.) */
+#define LASR_TYPE_ATOMIC 2 /* "Simple" data that can be read with atomic instructions */
+#define LASR_TYPE_DYNAMIC 3 /* "Array" data that requires stricter thread safety */
 
 /**
  * Type for variable-length data of a known length for use with lua shared
@@ -65,8 +65,8 @@
  * extensible struct to avoid nested memory allocations.
  */
 typedef struct {
-	size_t len;   /*!> length of payload, excludes a NUL byte */
-	char bytes[]; /*!> Array pointer to payload (struct extends) */
+    size_t len; /*!> length of payload, excludes a NUL byte */
+    char bytes[]; /*!> Array pointer to payload (struct extends) */
 } lasr_dynamic_data;
 
 /**
@@ -76,11 +76,11 @@ typedef struct {
  * LASR_STATE state machine.
  */
 typedef struct {
-	atomic_int type;       /*!> data type (LASR_TYPE_XXX) */
-	union {
-		atomic_int atomic; /*!> accessor for fixed-length data */
-		lasr_dynamic_data const * const dynamic; /*!> accessor for variable-length data */
-	};
+    atomic_int type; /*!> data type (LASR_TYPE_XXX) */
+    union {
+        atomic_int atomic; /*!> accessor for fixed-length data */
+        lasr_dynamic_data const* const dynamic; /*!> accessor for variable-length data */
+    };
 } lasr_value;
 
 /**
@@ -89,11 +89,11 @@ typedef struct {
  * buffer during the exchange routine.
  */
 typedef struct {
-	int type;      /*!> data type (LASR_TYPE_XXX) */
-	union {
-		int fixed; /*!> accessor for fixed-length data */
-		lasr_dynamic_data * dynamic; /*!> accessor for variable-length data */
-	};
+    int type; /*!> data type (LASR_TYPE_XXX) */
+    union {
+        int fixed; /*!> accessor for fixed-length data */
+        lasr_dynamic_data* dynamic; /*!> accessor for variable-length data */
+    };
 } lasr_export;
 
 /**
@@ -110,16 +110,16 @@ typedef struct {
  */
 typedef struct _lasr_global lasr_global;
 struct _lasr_global {
-    char const * key;   /*!> name of tracked lua variable */
-	lasr_global * next; /*!> next tracked value in sequence */
-	atomic_int state;   /*!> data exchange state */
-	lasr_value value;   /*!> exported value */
+    char const* key; /*!> name of tracked lua variable */
+    lasr_global* next; /*!> next tracked value in sequence */
+    atomic_int state; /*!> data exchange state */
+    lasr_value value; /*!> exported value */
 };
 
-lasr_global * lasr_global_create(char const * key);
-void export_atomic_global(lasr_global * container, int const value, int const type);
-void export_dynamic_global(lasr_global * container, char const * const value, size_t const len);
-int import_shared_global(lasr_global * container, lasr_export * target);
+lasr_global* lasr_global_create(char const* key);
+void export_atomic_global(lasr_global* container, int const value, int const type);
+void export_dynamic_global(lasr_global* container, char const* const value, size_t const len);
+int import_shared_global(lasr_global* container, lasr_export* target);
 
-size_t lasr_export_resize(lasr_export * value, size_t len);
-void lasr_global_release(lasr_global * global);
+size_t lasr_export_resize(lasr_export* value, size_t len);
+void lasr_global_release(lasr_global* global);

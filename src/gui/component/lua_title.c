@@ -2,9 +2,9 @@
  *
  * Implementation of the lua title component
  */
-#include "components.h"
 #include "../../lasr/export.h"
 #include "../../lasr/utils.h"
+#include "components.h"
 
 /**
  * @brief The component representing the title.
@@ -15,7 +15,7 @@ typedef struct _LSLuaTitle {
     LSComponent base; /*!< The base struct that is extended */
     GtkWidget* header; /*!< The container for the title */
     GtkWidget* title; /*!< The label containing the title itself */
-	lasr_global * contents;
+    lasr_global* contents;
 } LSLuaTitle;
 extern LSComponentOps ls_lua_title_operations; // defined at the end of the file
 
@@ -32,12 +32,12 @@ LSComponent* ls_component_lua_title_new(void)
     }
     self->base.ops = &ls_lua_title_operations;
 
-	/* NOTE: This implementation is mostly a stubbed example. Once configurable
-	 * splitter components are introduced, this variable name can be derived
-	 * from that, allowing the user to specify a value that is meaningful. */
-	self->contents = lasr_global_create("dummyLuaTitleVar");
-	register_shared_global(self->contents);
-	/* *** */
+    /* NOTE: This implementation is mostly a stubbed example. Once configurable
+     * splitter components are introduced, this variable name can be derived
+     * from that, allowing the user to specify a value that is meaningful. */
+    self->contents = lasr_global_create("dummyLuaTitleVar");
+    register_shared_global(self->contents);
+    /* *** */
 
     self->header = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
     add_class(self->header, "header");
@@ -61,7 +61,7 @@ LSComponent* ls_component_lua_title_new(void)
 static void lua_title_delete(LSComponent* self_)
 {
     LSLuaTitle* self = (LSLuaTitle*)self_;
-	lasr_global_release(self->contents);
+    lasr_global_release(self->contents);
     free(self_);
 }
 
@@ -119,21 +119,20 @@ static void lua_title_draw(LSComponent* self_, const ls_game* game, const ls_tim
 {
     LSLuaTitle* self = (LSLuaTitle*)self_;
 
-	lasr_export title_ = { 0 };
-	int type = import_shared_global(self->contents, &title_);
-	char buf[32];
+    lasr_export title_ = { 0 };
+    int type = import_shared_global(self->contents, &title_);
+    char buf[32];
 
-	if (type == LASR_TYPE_DYNAMIC) {
-		gtk_label_set_text(GTK_LABEL(self->title), title_.dynamic->bytes);
-	}
-	else if (type == LASR_TYPE_ATOMIC) {
-		/* Numeric type */
-		snprintf(buf, sizeof(buf), "%d", title_.fixed);
-		gtk_label_set_text(GTK_LABEL(self->title), buf);
-	}
+    if (type == LASR_TYPE_DYNAMIC) {
+        gtk_label_set_text(GTK_LABEL(self->title), title_.dynamic->bytes);
+    } else if (type == LASR_TYPE_ATOMIC) {
+        /* Numeric type */
+        snprintf(buf, sizeof(buf), "%d", title_.fixed);
+        gtk_label_set_text(GTK_LABEL(self->title), buf);
+    }
 
-	/* Cleanup -- no memory was allocated if string not changed */
-	lasr_export_resize(&title_, 0);
+    /* Cleanup -- no memory was allocated if string not changed */
+    lasr_export_resize(&title_, 0);
 }
 
 LSComponentOps ls_lua_title_operations = {
