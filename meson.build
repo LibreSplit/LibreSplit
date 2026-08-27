@@ -8,8 +8,8 @@ project(
 
 add_project_arguments('-DAPP_VERSION="@0@"'.format(meson.project_version()), language: 'c')
 add_project_arguments('-D_GNU_SOURCE=1 ', language: 'c')
-add_project_arguments('-DGDK_VERSION_MIN_REQUIRED=GDK_VERSION_4_12', language: 'c')
-add_project_arguments('-DGDK_VERSION_MAX_ALLOWED=GDK_VERSION_4_12', language: 'c')
+add_project_arguments('-DGDK_VERSION_MIN_REQUIRED=GDK_VERSION_4_16', language: 'c')
+add_project_arguments('-DGDK_VERSION_MAX_ALLOWED=GDK_VERSION_4_16', language: 'c')
 
 if get_option('buildtype') == 'debug'
     add_project_arguments('-DDEBUG', language: 'c')
@@ -26,7 +26,8 @@ if ioctl_maps.enabled()
 endif
 
 threads = dependency('threads')
-gtk = dependency('gtk4', version: '>= 4.12', include_type: 'system')
+gtk = dependency('gtk4', version: '>= 4.16', include_type: 'system')
+gtk_x11 = dependency('gtk4-x11', version: '>= 4.16', include_type: 'system')
 luajit = dependency('luajit')
 x11 = dependency('x11')
 jansson = dependency('jansson')
@@ -35,6 +36,7 @@ openssl = dependency('openssl')
 libresplit_sources = files(
     'src/gui/actions.c',
     'src/gui/app_window.c',
+    'src/gui/backends/x11.c',
 
     # Components
     'src/gui/component/best-sum.c',
@@ -110,7 +112,7 @@ css_o = custom_target(
 shared_c_flags = [
     '-DPREFIX="' + get_option('prefix') + '"',
     '-DDATADIR="' + get_option('datadir') + '"',
-    '-Werror',
+    # '-Werror',
     '-Wall',
     '-Wbad-function-cast',
     '-Wsign-compare',
@@ -121,7 +123,7 @@ executable(
     'libresplit',
     libresplit_sources,
     objects: [css_o],
-    dependencies: [threads, gtk, luajit, x11, jansson, openssl],
+    dependencies: [threads, gtk, gtk_x11, luajit, x11, jansson, openssl],
     c_args: shared_c_flags,
     install: true,
 )

@@ -4,7 +4,6 @@
 #include "src/settings/definitions.h"
 #include "src/settings/settings.h"
 
-#include <gdk-pixbuf/gdk-pixbuf.h>
 #include <gdk/gdk.h>
 #include <glib-object.h>
 #include <glibconfig.h>
@@ -39,22 +38,17 @@ static size_t enumerate_settings(AppConfig cfg)
 }
 
 /**
- * Frees memory when the help/about dialog is closed
+ * Frees memory when the settings dialog is destroyed.
  *
  * @param widget The Window itself
- * @param event unused
  * @param user_data unused
- *
- * @return True if everything went well.
  */
-static gboolean on_help_window_delete(GtkWidget* widget, GdkEvent* event, gpointer user_data)
+static void on_settings_window_destroy(GtkWidget* widget, gpointer user_data)
 {
     LOG_DEBUG("Destroying the settings window...");
     settings_window_singleton = NULL;
-    gtk_widget_destroy(widget);
     free(gui_settings);
     gui_settings = NULL;
-    return TRUE;
 }
 
 /**
@@ -79,7 +73,7 @@ static void get_key_string(gint keyval, GdkModifierType modifiers, char* buffer,
     if (modifiers & GDK_SHIFT_MASK) {
         strcat(str_modifiers, "<Shift>");
     }
-    if (modifiers & GDK_MOD1_MASK) {
+    if (modifiers & GDK_ALT_MASK) {
         strcat(str_modifiers, "<Alt>");
     }
     if (modifiers & GDK_SUPER_MASK) {
@@ -94,17 +88,21 @@ static void get_key_string(gint keyval, GdkModifierType modifiers, char* buffer,
 /**
  * Handler for key press events on "Key Grabber" entries.
  *
- * @param widget The entry widget
- * @param event The key pressed event
+ * @param controller The key controller attached to the entry widget
+ * @param keyval The pressed key value
+ * @param keycode The pressed hardware keycode
+ * @param state The active keyboard modifiers
  * @param data unused
  *
  * @return True if the handler terminated correctly.
  */
-bool on_key_press(GtkWidget* widget, GdkEventKey* event, gpointer data)
+gboolean on_key_press(GtkEventControllerKey* controller, guint keyval, guint keycode, GdkModifierType state, gpointer data)
 {
     char key_buffer[128];
-    get_key_string(event->keyval, event->state, key_buffer, sizeof(key_buffer));
-    gtk_entry_set_text(GTK_ENTRY(widget), key_buffer);
+    get_key_string(keyval, state, key_buffer, sizeof(key_buffer));
+    gtk_editable_set_text(
+        GTK_EDITABLE(gtk_event_controller_get_widget(GTK_EVENT_CONTROLLER(controller))),
+        key_buffer);
     return TRUE;
 }
 
@@ -113,15 +111,11 @@ bool on_key_press(GtkWidget* widget, GdkEventKey* event, gpointer data)
  *
  * @param widget The entry widget
  * @param icon_pos The position of the icon clicked (unused).
- * @param event The icon clicked event
  * @param data unused
- *
- * @return True if the handler terminated correctly.
  */
-bool on_entry_clear_press(GtkEntry* widget, GtkEntryIconPosition icon_pos, GdkEvent* event, gpointer data)
+void on_entry_clear_press(GtkEntry* widget, GtkEntryIconPosition icon_pos, gpointer data)
 {
-    gtk_entry_set_text(GTK_ENTRY(widget), "");
-    return TRUE;
+    gtk_editable_set_text(GTK_EDITABLE(widget), "");
 }
 
 static void save_gui_settings(GtkButton* button, gpointer app)
@@ -141,7 +135,7 @@ static void save_gui_settings(GtkButton* button, gpointer app)
                 }
             case CFG_BOOL:
                 {
-                    bool bool_value = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(setting_to_save.widget));
+                    bool bool_value = gtk_check_button_get_active(GTK_CHECK_BUTTON(setting_to_save.widget));
                     setting_to_save.settings_entry->value.b = bool_value;
                     break;
                 }
@@ -195,7 +189,7 @@ static void build_settings_dialog(GtkApplication* app, gpointer data)
     settings_window_singleton = window;
     gtk_window_set_default_size(GTK_WINDOW(window), 500, 500);
     gtk_window_set_resizable(GTK_WINDOW(window), FALSE);
-    g_signal_connect(window, "delete-event", G_CALLBACK(on_help_window_delete), NULL);
+    g_signal_connect(window, "destroy", G_CALLBACK(on_settings_window_destroy), NULL);
     GtkWidget* main_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 2);
     set_widget_defaults(main_box);
     GtkWidget* tabs = gtk_notebook_new();
@@ -208,7 +202,7 @@ static void build_settings_dialog(GtkApplication* app, gpointer data)
         }
         GtkWidget* box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 2);
         set_widget_defaults(box);
-        GtkWidget* title = gtk_accel_label_new(section_info.name);
+        GtkWidget* title = gtk_label_new(section_info.name);
         for (size_t i = 0; i < section_info.count; ++i) {
             ConfigEntry entry = ((ConfigEntry*)section_info.entries)[i];
             gui_settings[settings_idx].settings_entry = &((ConfigEntry*)section_info.entries)[i];
@@ -216,45 +210,48 @@ static void build_settings_dialog(GtkApplication* app, gpointer data)
                 case CFG_STRING:
                     {
                         GtkWidget* lbl_str = gtk_label_new(entry.desc);
-                        gtk_container_add(GTK_CONTAINER(box), lbl_str);
+                        gtk_box_append(GTK_BOX(box), lbl_str);
 
                         gui_settings[settings_idx].entry_buffer = gtk_entry_buffer_new(entry.value.s, sizeof(entry.value.s));
                         gui_settings[settings_idx].widget = gtk_entry_new_with_buffer(gui_settings[settings_idx].entry_buffer);
                         gtk_entry_set_icon_from_icon_name(GTK_ENTRY(gui_settings[settings_idx].widget), GTK_ENTRY_ICON_SECONDARY, "edit-clear");
                         g_signal_connect(gui_settings[settings_idx].widget, "icon-press", G_CALLBACK(on_entry_clear_press), NULL);
-                        gtk_container_add(GTK_CONTAINER(box), gui_settings[settings_idx].widget);
+                        gtk_box_append(GTK_BOX(box), gui_settings[settings_idx].widget);
                         break;
                     }
                 case CFG_KEYBIND:
                     {
                         GtkWidget* lbl_kb = gtk_label_new(entry.desc);
-                        gtk_container_add(GTK_CONTAINER(box), lbl_kb);
+                        gtk_box_append(GTK_BOX(box), lbl_kb);
 
                         gui_settings[settings_idx].entry_buffer = gtk_entry_buffer_new(entry.value.s, sizeof(entry.value.s));
                         gui_settings[settings_idx].widget = gtk_entry_new_with_buffer(gui_settings[settings_idx].entry_buffer);
                         gtk_entry_set_icon_from_icon_name(GTK_ENTRY(gui_settings[settings_idx].widget), GTK_ENTRY_ICON_SECONDARY, "edit-clear");
-                        g_signal_connect(gui_settings[settings_idx].widget, "key-press-event", G_CALLBACK(on_key_press), NULL);
+                        GtkEventController* key_controller = gtk_event_controller_key_new();
+                        gtk_event_controller_set_propagation_phase(key_controller, GTK_PHASE_CAPTURE);
+                        g_signal_connect(key_controller, "key-pressed", G_CALLBACK(on_key_press), NULL);
+                        gtk_widget_add_controller(gui_settings[settings_idx].widget, key_controller);
                         g_signal_connect(gui_settings[settings_idx].widget, "icon-press", G_CALLBACK(on_entry_clear_press), NULL);
-                        gtk_container_add(GTK_CONTAINER(box), gui_settings[settings_idx].widget);
+                        gtk_box_append(GTK_BOX(box), gui_settings[settings_idx].widget);
                         break;
                     }
                 case CFG_BOOL:
                     {
                         gui_settings[settings_idx].widget = gtk_check_button_new_with_label(entry.desc);
-                        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(gui_settings[settings_idx].widget), entry.value.b);
-                        gtk_container_add(GTK_CONTAINER(box), gui_settings[settings_idx].widget);
+                        gtk_check_button_set_active(GTK_CHECK_BUTTON(gui_settings[settings_idx].widget), entry.value.b);
+                        gtk_box_append(GTK_BOX(box), gui_settings[settings_idx].widget);
                         break;
                     }
                 case CFG_INT:
                     {
                         GtkWidget* lbl_int = gtk_label_new(entry.desc);
-                        gtk_container_add(GTK_CONTAINER(box), lbl_int);
+                        gtk_box_append(GTK_BOX(box), lbl_int);
                         char setting_as_str[64];
                         sprintf(setting_as_str, "%d", entry.value.i);
 
                         gui_settings[settings_idx].entry_buffer = gtk_entry_buffer_new(setting_as_str, sizeof(setting_as_str));
                         gui_settings[settings_idx].widget = gtk_entry_new_with_buffer(gui_settings[settings_idx].entry_buffer);
-                        gtk_container_add(GTK_CONTAINER(box), gui_settings[settings_idx].widget);
+                        gtk_box_append(GTK_BOX(box), gui_settings[settings_idx].widget);
                         break;
                     }
             }
@@ -262,12 +259,11 @@ static void build_settings_dialog(GtkApplication* app, gpointer data)
         }
         gtk_notebook_append_page(GTK_NOTEBOOK(tabs), box, title);
     }
-    gtk_container_add(GTK_CONTAINER(main_box), tabs);
+    gtk_box_append(GTK_BOX(main_box), tabs);
     GtkWidget* save_btn = gtk_button_new_with_label("Save");
     g_signal_connect(save_btn, "clicked", G_CALLBACK(save_gui_settings), parent);
-    gtk_container_add(GTK_CONTAINER(main_box), save_btn);
-    gtk_container_add(GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(window))), main_box);
-    gtk_widget_show_all(window);
+    gtk_box_append(GTK_BOX(main_box), save_btn);
+    gtk_box_append(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(window))), main_box);
     gtk_window_present(GTK_WINDOW(window));
 }
 

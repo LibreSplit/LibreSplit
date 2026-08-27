@@ -21,7 +21,7 @@ BuildRequires:  appstream
 BuildRequires:  binutils
 BuildRequires:  desktop-file-utils
 BuildRequires:  gcc
-BuildRequires:  gtk4-devel >= 4.12
+BuildRequires:  gtk4-devel >= 4.16
 BuildRequires:  jansson-devel
 BuildRequires:  libX11-devel
 BuildRequires:  luajit-devel

@@ -1,3 +1,4 @@
+#include "src/gui/dialogs.h"
 #include "src/lasr/auto-splitter.h"
 #include "src/logging.h"
 #include <gio/gio.h>
@@ -6,19 +7,69 @@
 #include <stdatomic.h>
 #include <stdbool.h>
 
+// TODO: Remove temp helpers
+/** Temporary sync dialog compatibility helpers - ignore these */
+typedef struct {
+    GMainLoop* loop;
+    gint response;
+} DialogRun;
+
+static void dialog_response(GtkDialog* dialog, gint response, gpointer data)
+{
+    DialogRun* run = data;
+    run->response = response;
+    g_main_loop_quit(run->loop);
+}
+
+static gboolean dialog_close_request(GtkWindow* window, gpointer data)
+{
+    DialogRun* run = data;
+    run->response = GTK_RESPONSE_DELETE_EVENT;
+    g_main_loop_quit(run->loop);
+    return TRUE;
+}
+
+gint run_dialog(GtkDialog* dialog)
+{
+    DialogRun run = {
+        .loop = g_main_loop_new(NULL, FALSE),
+        .response = GTK_RESPONSE_NONE,
+    };
+    gboolean was_modal = gtk_window_get_modal(GTK_WINDOW(dialog));
+    gulong response_handler = g_signal_connect(dialog,
+        "response", G_CALLBACK(dialog_response), &run);
+    gulong close_handler = g_signal_connect(dialog,
+        "close-request", G_CALLBACK(dialog_close_request), &run);
+
+    if (!was_modal) {
+        gtk_window_set_modal(GTK_WINDOW(dialog), TRUE);
+    }
+    gtk_window_present(GTK_WINDOW(dialog));
+    g_main_loop_run(run.loop);
+
+    if (!was_modal) {
+        gtk_window_set_modal(GTK_WINDOW(dialog), FALSE);
+    }
+    g_signal_handler_disconnect(dialog, response_handler);
+    g_signal_handler_disconnect(dialog, close_handler);
+    g_main_loop_unref(run.loop);
+
+    return run.response;
+}
+/** End temporary sync dialog compatibility helpers */
+
 /**
  * Opens the default browser on the LibreSplit troubleshooting documentation.
  *
  * @param dialog The dialog that triggered this callback.
- * @param response_id Unused.
+ * @param response_id The selected dialog response.
  * @param user_data Unused.
  */
-static void dialog_response_cb(GtkWidget* dialog, gint response_id, gpointer user_data)
+static void dialog_response_cb(GtkDialog* dialog, gint response_id, gpointer user_data)
 {
     if (response_id == GTK_RESPONSE_OK) {
-        gtk_show_uri_on_window(GTK_WINDOW(NULL), "https://github.com/LibreSplit/LibreSplit/wiki/troubleshooting", 0, NULL);
+        gtk_show_uri(NULL, "https://github.com/LibreSplit/LibreSplit/wiki/troubleshooting", 0);
     }
-    gtk_widget_destroy(dialog);
 }
 
 /**
@@ -55,10 +106,8 @@ gboolean display_non_capable_mem_read_dialog(gpointer data)
         "Open documentation", GTK_RESPONSE_OK, NULL);
 
     g_signal_connect(dialog, "response", G_CALLBACK(dialog_response_cb), NULL);
-    gtk_widget_show_all(dialog);
-
-    gtk_dialog_run(GTK_DIALOG(dialog));
-    gtk_widget_destroy(dialog);
+    run_dialog(GTK_DIALOG(dialog));
+    gtk_window_destroy(GTK_WINDOW(dialog));
 
     // Connect the response signal to the callback function
     return FALSE; // False removes this function from the queue
@@ -93,8 +142,8 @@ bool display_root_warning_dialog(void)
 
     gtk_window_set_title(GTK_WINDOW(dialog), "Unsafe Configuration");
 
-    gtk_dialog_run(GTK_DIALOG(dialog));
-    gtk_widget_destroy(dialog);
+    run_dialog(GTK_DIALOG(dialog));
+    gtk_window_destroy(GTK_WINDOW(dialog));
 
     return true;
 }
@@ -116,7 +165,7 @@ bool display_confirm_reset_dialog(void)
         "Are you sure you want to proceed?");
     gtk_window_set_title(GTK_WINDOW(dialog), "Confirm Reset?");
 
-    gint response = gtk_dialog_run(GTK_DIALOG(dialog));
-    gtk_widget_destroy(dialog);
+    gint response = run_dialog(GTK_DIALOG(dialog));
+    gtk_window_destroy(GTK_WINDOW(dialog));
     return response == GTK_RESPONSE_YES;
 }

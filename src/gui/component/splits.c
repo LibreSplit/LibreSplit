@@ -62,36 +62,29 @@ LSComponent* ls_component_splits_new(void)
 
     self->split_adjust = gtk_adjustment_new(0., 0., 0., 0., 0., 0.);
 
-    self->split_scroller = gtk_scrolled_window_new(NULL, self->split_adjust);
+    self->split_scroller = gtk_scrolled_window_new();
+    gtk_scrolled_window_set_vadjustment(GTK_SCROLLED_WINDOW(self->split_scroller), self->split_adjust);
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(self->split_scroller), GTK_POLICY_EXTERNAL, GTK_POLICY_EXTERNAL);
     gtk_widget_set_vexpand(self->split_scroller, TRUE);
     gtk_widget_set_hexpand(self->split_scroller, TRUE);
-    gtk_widget_show(self->split_scroller);
-    gtk_widget_add_events(self->split_scroller, GDK_SCROLL_MASK);
-    gtk_widget_hide(gtk_scrolled_window_get_vscrollbar(GTK_SCROLLED_WINDOW(self->split_scroller)));
-    gtk_widget_hide(gtk_scrolled_window_get_hscrollbar(GTK_SCROLLED_WINDOW(self->split_scroller)));
 
     self->split_viewport = gtk_viewport_new(NULL, NULL);
-    gtk_container_add(GTK_CONTAINER(self->split_scroller),
-        self->split_viewport);
-    gtk_widget_show(self->split_viewport);
+    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(self->split_scroller), self->split_viewport);
 
     self->splits = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     add_class(self->splits, "splits");
     gtk_widget_set_hexpand(self->splits, TRUE);
-    gtk_container_add(GTK_CONTAINER(self->split_viewport), self->splits);
-    gtk_widget_show(self->splits);
+    gtk_viewport_set_child(GTK_VIEWPORT(self->split_viewport), self->splits);
 
     self->icons_css_provider = NULL;
 
     self->split_last = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     add_class(self->split_last, "split-last");
     gtk_widget_set_hexpand(self->split_last, TRUE);
-    gtk_widget_show(self->split_last);
 
     self->container = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-    gtk_container_add(GTK_CONTAINER(self->container), self->split_scroller);
-    gtk_container_add(GTK_CONTAINER(self->container), self->split_last);
-    gtk_widget_show(self->container);
+    gtk_box_append(GTK_BOX(self->container), self->split_scroller);
+    gtk_box_append(GTK_BOX(self->container), self->split_last);
     return (LSComponent*)self;
 }
 
@@ -124,29 +117,29 @@ static void splits_trailer(LSComponent* self_)
     double scroll_max = gtk_adjustment_get_upper(self->split_adjust);
     double page_size = gtk_adjustment_get_page_size(self->split_adjust);
     g_object_ref(self->split_rows[last]);
-    split_h = gtk_widget_get_allocated_height(self->split_titles[last]);
-    height = gtk_widget_get_allocated_height(self->splits);
+    split_h = gtk_widget_get_height(self->split_titles[last]);
+    height = gtk_widget_get_height(self->splits);
     if (gtk_widget_get_parent(self->split_rows[last]) == self->splits) {
         if (curr_scroll + page_size < scroll_max) {
             // move last split to split_last
-            gtk_container_remove(GTK_CONTAINER(self->splits),
+            gtk_box_remove(GTK_BOX(self->splits),
                 self->split_rows[last]);
-            gtk_container_add(GTK_CONTAINER(self->split_last),
+            gtk_box_append(GTK_BOX(self->split_last),
                 self->split_rows[last]);
-            gtk_widget_show(self->split_last);
+            gtk_widget_set_visible(self->split_last, TRUE);
         }
     } else {
         if (curr_scroll + page_size == scroll_max) {
             // move last split to split box
-            gtk_container_remove(GTK_CONTAINER(self->split_last),
+            gtk_box_remove(GTK_BOX(self->split_last),
                 self->split_rows[last]);
-            gtk_container_add(GTK_CONTAINER(self->splits),
+            gtk_box_append(GTK_BOX(self->splits),
                 self->split_rows[last]);
             gtk_adjustment_set_upper(self->split_adjust,
                 scroll_max + height);
             gtk_adjustment_set_value(self->split_adjust,
                 curr_scroll + split_h);
-            gtk_widget_hide(self->split_last);
+            gtk_widget_set_visible(self->split_last, FALSE);
         }
     }
     g_object_unref(self->split_rows[last]);
@@ -200,7 +193,7 @@ static void splits_show_game(LSComponent* self_, const ls_game* game,
         self->split_rows[i] = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
         add_class(self->split_rows[i], "split");
         gtk_widget_set_hexpand(self->split_rows[i], TRUE);
-        gtk_container_add(GTK_CONTAINER(self->splits),
+        gtk_box_append(GTK_BOX(self->splits),
             self->split_rows[i]);
 
         self->split_titles[i] = gtk_label_new(game->split_titles[i]);
@@ -237,35 +230,32 @@ static void splits_show_game(LSComponent* self_, const ls_game* game,
             add_class(self->split_icons[i], "split-icon");
             // set size but allow to dinamically change it from css with min-width and min-height
             gtk_widget_set_size_request(self->split_icons[i], 20, 20);
-            gtk_container_add(GTK_CONTAINER(self->split_rows[i]), self->split_icons[i]);
-            gtk_widget_show(self->split_icons[i]);
+            gtk_box_append(GTK_BOX(self->split_rows[i]), self->split_icons[i]);
         }
-        gtk_container_add(GTK_CONTAINER(self->split_rows[i]), self->split_titles[i]);
+        gtk_box_append(GTK_BOX(self->split_rows[i]), self->split_titles[i]);
 
         self->split_deltas[i] = gtk_label_new(NULL);
         add_class(self->split_deltas[i], "split-delta");
         gtk_widget_set_size_request(self->split_deltas[i], 1, -1);
-        gtk_container_add(GTK_CONTAINER(self->split_rows[i]),
+        gtk_box_append(GTK_BOX(self->split_rows[i]),
             self->split_deltas[i]);
 
         self->split_times[i] = gtk_label_new(NULL);
         add_class(self->split_times[i], "split-time");
         gtk_widget_set_halign(self->split_times[i], GTK_ALIGN_END);
-        gtk_container_add(GTK_CONTAINER(self->split_rows[i]),
+        gtk_box_append(GTK_BOX(self->split_rows[i]),
             self->split_times[i]);
 
         if (ls_time_get_by_method(game->split_times[i], game->comparison_method)) {
             ls_split_string(str, ls_time_get_by_method(game->split_times[i], game->comparison_method), 0);
             gtk_label_set_text(GTK_LABEL(self->split_times[i]), str);
         }
-
-        gtk_widget_show_all(self->split_rows[i]);
     }
 
     if (self->icons_css_provider) {
         // remove old css provider
-        gtk_style_context_remove_provider_for_screen(
-            gdk_screen_get_default(),
+        gtk_style_context_remove_provider_for_display(
+            gtk_widget_get_display(self->container),
             GTK_STYLE_PROVIDER(self->icons_css_provider));
         g_object_unref(self->icons_css_provider);
         self->icons_css_provider = NULL;
@@ -273,20 +263,18 @@ static void splits_show_game(LSComponent* self_, const ls_game* game,
 
     if (icons_css_src->len > 0) {
         self->icons_css_provider = gtk_css_provider_new();
-        gtk_css_provider_load_from_data(
+        gtk_css_provider_load_from_string(
             self->icons_css_provider,
-            icons_css_src->str,
-            icons_css_src->len,
-            NULL);
+            icons_css_src->str);
         // add new css provider
-        gtk_style_context_add_provider_for_screen(
-            gdk_screen_get_default(),
+        gtk_style_context_add_provider_for_display(
+            gtk_widget_get_display(self->container),
             GTK_STYLE_PROVIDER(self->icons_css_provider),
             GTK_STYLE_PROVIDER_PRIORITY_USER);
         g_string_free(icons_css_src, TRUE);
     }
 
-    gtk_widget_show(self->splits);
+    gtk_widget_set_visible(self->splits, TRUE);
     if (self->split_count)
         splits_trailer(self_);
 }
@@ -300,12 +288,15 @@ static void splits_clear_game(LSComponent* self_)
 {
     LSSplits* self = (LSSplits*)self_;
     int i;
-    gtk_widget_hide(self->splits);
-    gtk_widget_hide(self->split_last);
+    gtk_widget_set_visible(self->splits, FALSE);
+    gtk_widget_set_visible(self->split_last, FALSE);
     for (i = self->split_count - 1; i >= 0; --i) {
-        gtk_container_remove(
-            GTK_CONTAINER(gtk_widget_get_parent(self->split_rows[i])),
-            self->split_rows[i]);
+        GtkWidget* parent = gtk_widget_get_parent(self->split_rows[i]);
+        if (parent == self->splits) {
+            gtk_box_remove(GTK_BOX(self->splits), self->split_rows[i]);
+        } else if (parent == self->split_last) {
+            gtk_box_remove(GTK_BOX(self->split_last), self->split_rows[i]);
+        }
     }
     gtk_adjustment_set_value(self->split_adjust, 0);
     free_all(self);
@@ -391,11 +382,11 @@ static void splits_draw(LSComponent* self_, const ls_game* game, const ls_timer*
         int width;
         int time_width = 0, delta_width = 0;
         for (unsigned int i = 0; i < self->split_count; ++i) {
-            width = gtk_widget_get_allocated_width(self->split_deltas[i]);
+            width = gtk_widget_get_width(self->split_deltas[i]);
             if (width > delta_width) {
                 delta_width = width;
             }
-            width = gtk_widget_get_allocated_width(self->split_times[i]);
+            width = gtk_widget_get_width(self->split_times[i]);
             if (width > time_width) {
                 time_width = width;
             }
@@ -406,7 +397,7 @@ static void splits_draw(LSComponent* self_, const ls_game* game, const ls_timer*
                     self->split_deltas[i], delta_width, -1);
             }
             if (time_width) {
-                width = gtk_widget_get_allocated_width(
+                width = gtk_widget_get_width(
                     self->split_times[i]);
                 gtk_widget_set_margin_start(self->split_times[i],
                     /*WINDOW_PAD*/ 8 * 2 + (time_width - width));
@@ -427,11 +418,12 @@ static void splits_draw(LSComponent* self_, const ls_game* game, const ls_timer*
 static void splits_scroll_to_split(LSComponent* self_, const ls_timer* timer)
 {
     LSSplits* self = (LSSplits*)self_;
-    int split_x, split_y;
     int split_h;
     int scroller_h;
     double curr_scroll;
     double min_scroll, max_scroll;
+    const graphene_point_t origin = GRAPHENE_POINT_INIT(0, 0);
+    graphene_point_t split_position;
 
     if (timer->game->split_count == 0)
         return;
@@ -449,23 +441,25 @@ static void splits_scroll_to_split(LSComponent* self_, const ls_timer* timer)
         next = self->split_count - 1;
     }
     curr_scroll = gtk_adjustment_get_value(self->split_adjust);
-    gtk_widget_translate_coordinates(
-        self->split_titles[prev],
-        self->split_viewport,
-        0, 0, &split_x, &split_y);
-    scroller_h = gtk_widget_get_allocated_height(self->split_scroller);
-    split_h = gtk_widget_get_allocated_height(self->split_titles[prev]);
+    if (!gtk_widget_compute_point(
+            self->split_titles[prev],
+            self->split_viewport,
+            &origin, &split_position)) {
+        return;
+    }
+    scroller_h = gtk_widget_get_height(self->split_scroller);
+    split_h = gtk_widget_get_height(self->split_titles[prev]);
     if (curr != next && curr != prev) {
-        split_h += gtk_widget_get_allocated_height(self->split_titles[curr]);
+        split_h += gtk_widget_get_height(self->split_titles[curr]);
     }
     if (next != prev) {
-        int h = gtk_widget_get_allocated_height(self->split_titles[next]);
+        int h = gtk_widget_get_height(self->split_titles[next]);
         if (split_h + h < scroller_h) {
             split_h += h;
         }
     }
-    min_scroll = split_y + curr_scroll - scroller_h + split_h;
-    max_scroll = split_y + curr_scroll;
+    min_scroll = split_position.y + curr_scroll - scroller_h + split_h;
+    max_scroll = split_position.y + curr_scroll;
     if (curr_scroll > max_scroll) {
         gtk_adjustment_set_value(self->split_adjust, max_scroll);
     } else if (curr_scroll < min_scroll) {

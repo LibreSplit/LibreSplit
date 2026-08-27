@@ -37,83 +37,73 @@ LSComponent* ls_component_detailed_timer_new(void)
     self->base.ops = &ls_detailed_timer_operations;
     //
     self->detailed_timer = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-    gtk_widget_show(self->detailed_timer);
     add_class(self->detailed_timer, "timer-container");
 
     self->detailed_info = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-    gtk_box_pack_start(GTK_BOX(self->detailed_timer), self->detailed_info, FALSE, FALSE, 0);
-    gtk_widget_show(self->detailed_info);
+    gtk_box_append(GTK_BOX(self->detailed_timer), self->detailed_info);
     add_class(self->detailed_info, "detailed-timer");
+
+    spacer = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+    gtk_widget_set_vexpand(spacer, TRUE);
+    gtk_box_append(GTK_BOX(self->detailed_info), spacer);
 
     self->segment_best = gtk_label_new(NULL);
     add_class(self->segment_best, "segment-best");
-    gtk_box_pack_end(GTK_BOX(self->detailed_info), self->segment_best, FALSE, FALSE, 0);
-    gtk_widget_show(self->segment_best);
 
     self->segment_pb = gtk_label_new(NULL);
     add_class(self->segment_pb, "segment-pb");
-    gtk_box_pack_end(GTK_BOX(self->detailed_info), self->segment_pb, FALSE, FALSE, 0);
-    gtk_widget_show(self->segment_pb);
+    gtk_box_append(GTK_BOX(self->detailed_info), self->segment_pb);
+    gtk_box_append(GTK_BOX(self->detailed_info), self->segment_best);
     //
     self->detailed_time = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     add_class(self->detailed_time, "timer");
-    gtk_box_pack_end(GTK_BOX(self->detailed_timer), self->detailed_time, TRUE, TRUE, 0);
-    gtk_widget_show(self->detailed_time);
+    gtk_widget_set_hexpand(self->detailed_time, TRUE);
+    gtk_box_append(GTK_BOX(self->detailed_timer), self->detailed_time);
 
     self->time = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
     add_class(self->time, "timer");
     add_class(self->time, "time");
-    gtk_box_pack_start(GTK_BOX(self->detailed_time), self->time, FALSE, FALSE, 0);
-    gtk_widget_show(self->time);
+    gtk_box_append(GTK_BOX(self->detailed_time), self->time);
 
     spacer = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
     gtk_widget_set_hexpand(spacer, TRUE);
-    gtk_container_add(GTK_CONTAINER(self->time), spacer);
-    gtk_widget_show(spacer);
+    gtk_box_append(GTK_BOX(self->time), spacer);
 
     self->time_seconds = gtk_label_new(NULL);
     add_class(self->time_seconds, "timer-seconds");
-    gtk_widget_set_valign(self->time_seconds, GTK_ALIGN_BASELINE);
-    gtk_container_add(GTK_CONTAINER(self->time), self->time_seconds);
-    gtk_widget_show(self->time_seconds);
+    gtk_widget_set_valign(self->time_seconds, GTK_ALIGN_BASELINE_FILL);
+    gtk_box_append(GTK_BOX(self->time), self->time_seconds);
 
     spacer = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     gtk_widget_set_valign(spacer, GTK_ALIGN_END);
-    gtk_container_add(GTK_CONTAINER(self->time), spacer);
-    gtk_widget_show(spacer);
+    gtk_box_append(GTK_BOX(self->time), spacer);
 
     self->time_millis = gtk_label_new(NULL);
     add_class(self->time_millis, "timer-millis");
-    gtk_widget_set_valign(self->time_millis, GTK_ALIGN_BASELINE);
-    gtk_container_add(GTK_CONTAINER(spacer), self->time_millis);
-    gtk_widget_show(self->time_millis);
+    gtk_widget_set_valign(self->time_millis, GTK_ALIGN_BASELINE_FILL);
+    gtk_box_append(GTK_BOX(spacer), self->time_millis);
 
     self->segment = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
     add_class(self->segment, "segment");
-    gtk_box_pack_start(GTK_BOX(self->detailed_time), self->segment, FALSE, FALSE, 0);
-    gtk_widget_show(self->segment);
+    gtk_box_append(GTK_BOX(self->detailed_time), self->segment);
 
     spacer = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
     gtk_widget_set_hexpand(spacer, TRUE);
-    gtk_container_add(GTK_CONTAINER(self->segment), spacer);
-    gtk_widget_show(spacer);
+    gtk_box_append(GTK_BOX(self->segment), spacer);
 
     self->segment_seconds = gtk_label_new(NULL);
     add_class(self->segment_seconds, "segment-seconds");
-    gtk_widget_set_valign(self->segment_seconds, GTK_ALIGN_BASELINE);
-    gtk_container_add(GTK_CONTAINER(self->segment), self->segment_seconds);
-    gtk_widget_show(self->segment_seconds);
+    gtk_widget_set_valign(self->segment_seconds, GTK_ALIGN_BASELINE_FILL);
+    gtk_box_append(GTK_BOX(self->segment), self->segment_seconds);
 
     spacer = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
     gtk_widget_set_valign(spacer, GTK_ALIGN_END);
-    gtk_container_add(GTK_CONTAINER(self->segment), spacer);
-    gtk_widget_show(spacer);
+    gtk_box_append(GTK_BOX(self->segment), spacer);
 
     self->segment_millis = gtk_label_new(NULL);
     add_class(self->segment_millis, "segment-millis");
-    gtk_widget_set_valign(self->segment_millis, GTK_ALIGN_BASELINE);
-    gtk_container_add(GTK_CONTAINER(self->segment), self->segment_millis);
-    gtk_widget_show(self->segment_millis);
+    gtk_widget_set_valign(self->segment_millis, GTK_ALIGN_BASELINE_FILL);
+    gtk_box_append(GTK_BOX(self->segment), self->segment_millis);
 
     return (LSComponent*)self;
 }

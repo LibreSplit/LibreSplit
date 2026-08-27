@@ -28,7 +28,7 @@
 #include <X11/XKBlib.h>
 #include <X11/Xlib.h>
 #include <gdk/gdk.h>
-#include <gdk/gdkx.h>
+#include <gdk/x11/gdkx.h>
 #include <gtk/gtk.h>
 
 #include "bind.h"
@@ -73,6 +73,122 @@ struct Binding {
 static GSList* bindings = NULL;
 static guint32 last_event_time = 0;
 static gboolean processing_event = FALSE;
+static GdkModifierType modmap[8];
+static int xkb_event_type = 0;
+
+/* Build a map from X11's real modifier slots to the corresponding
+ * Meta, Super, and Hyper modifiers. This replaces the modifier map
+ * that GdkKeymap maintained internally in GTK 3.
+ */
+static void
+update_modmap(Display* xdisplay)
+{
+    static struct {
+        const char* name;
+        Atom atom;
+        GdkModifierType mask;
+    } virtual_modifiers[] = {
+        { "Meta", None, GDK_META_MASK },
+        { "Super", None, GDK_SUPER_MASK },
+        { "Hyper", None, GDK_HYPER_MASK },
+    };
+    XkbDescPtr xkb;
+    guint i;
+    guint j;
+    guint k;
+
+    for (i = 0; i < 8; i++) {
+        modmap[i] = 1 << i;
+    }
+
+    xkb = XkbGetMap(xdisplay, XkbVirtualModsMask, XkbUseCoreKbd);
+    if (xkb == NULL) {
+        return;
+    }
+
+    if (XkbGetNames(xdisplay, XkbVirtualModNamesMask, xkb) != Success) {
+        XkbFreeKeyboard(xkb, XkbAllComponentsMask, TRUE);
+        return;
+    }
+
+    for (i = 0; i < G_N_ELEMENTS(virtual_modifiers); i++) {
+        if (virtual_modifiers[i].atom == None) {
+            virtual_modifiers[i].atom = XInternAtom(xdisplay,
+                virtual_modifiers[i].name,
+                False);
+        }
+    }
+
+    for (i = 0; i < XkbNumVirtualMods; i++) {
+        for (j = 0; j < G_N_ELEMENTS(virtual_modifiers); j++) {
+            if (xkb->names->vmods[i] != virtual_modifiers[j].atom) {
+                continue;
+            }
+
+            for (k = 0; k < 8; k++) {
+                if (xkb->server->vmods[i] & (1 << k)) {
+                    modmap[k] |= virtual_modifiers[j].mask;
+                }
+            }
+        }
+    }
+
+    XkbFreeKeyboard(xkb, XkbAllComponentsMask, TRUE);
+}
+
+/* Add the X11 modifier bits represented by virtual GTK modifiers.
+ */
+static gboolean
+map_virtual_modifiers(GdkModifierType* modifiers)
+{
+    const GdkModifierType virtual_modifiers[] = {
+        GDK_SUPER_MASK,
+        GDK_HYPER_MASK,
+        GDK_META_MASK,
+    };
+    gboolean success = TRUE;
+    guint i;
+    guint j;
+
+    for (j = 0; j < G_N_ELEMENTS(virtual_modifiers); j++) {
+        if (*modifiers & virtual_modifiers[j]) {
+            for (i = 4; i < 8; i++) {
+                if (modmap[i] & virtual_modifiers[j]) {
+                    if (*modifiers & (1 << i)) {
+                        success = FALSE;
+                    } else {
+                        *modifiers |= 1 << i;
+                    }
+                }
+            }
+        }
+    }
+
+    return success;
+}
+
+/* Add the virtual GTK modifiers represented by X11 modifier bits.
+ * This makes an incoming X event comparable with a GTK accelerator.
+ */
+static void
+add_virtual_modifiers(GdkModifierType* modifiers)
+{
+    guint i;
+
+    for (i = 4; i < 8; i++) {
+        if (*modifiers & (1 << i)) {
+            if (modmap[i] & GDK_SUPER_MASK) {
+                *modifiers |= GDK_SUPER_MASK;
+            }
+            if (modmap[i] & GDK_HYPER_MASK) {
+                *modifiers |= GDK_HYPER_MASK;
+            }
+            if (modmap[i] & GDK_META_MASK) {
+                *modifiers |= GDK_META_MASK;
+            }
+        }
+    }
+}
 
 /* Return the modifier mask that needs to be pressed to produce key in the
  * given group (keyboard layout) and level ("shift level").
@@ -129,7 +245,7 @@ FinallyGetModifiersForKeycode(XkbDescPtr xkb,
  * including each ignorable modifier in turn.
  */
 static gboolean
-grab_ungrab_with_ignorable_modifiers(GdkWindow* rootwin,
+grab_ungrab_with_ignorable_modifiers(Window rootwin,
     uint keycode,
     uint modifiers,
     gboolean grab)
@@ -137,31 +253,32 @@ grab_ungrab_with_ignorable_modifiers(GdkWindow* rootwin,
     guint i;
     gboolean success = FALSE;
     GdkDisplay* display = gdk_display_get_default();
+    Display* xdisplay = gdk_x11_display_get_xdisplay(display);
 
     /* Ignorable modifiers */
     guint mod_masks[] = {
         0, /* modifier only */
-        GDK_MOD2_MASK,
+        Mod2Mask,
         GDK_LOCK_MASK,
-        GDK_MOD2_MASK | GDK_LOCK_MASK,
+        Mod2Mask | GDK_LOCK_MASK,
     };
 
     gdk_x11_display_error_trap_push(display);
 
     for (i = 0; i < G_N_ELEMENTS(mod_masks); i++) {
         if (grab) {
-            XGrabKey(GDK_WINDOW_XDISPLAY(rootwin),
+            XGrabKey(xdisplay,
                 keycode,
                 modifiers | mod_masks[i],
-                GDK_WINDOW_XID(rootwin),
+                rootwin,
                 True,
                 GrabModeSync,
                 GrabModeSync);
         } else {
-            XUngrabKey(GDK_WINDOW_XDISPLAY(rootwin),
+            XUngrabKey(xdisplay,
                 keycode,
                 modifiers | mod_masks[i],
-                GDK_WINDOW_XID(rootwin));
+                rootwin);
         }
     }
     gdk_display_flush(display);
@@ -185,26 +302,25 @@ grab_ungrab_with_ignorable_modifiers(GdkWindow* rootwin,
  * Includes ignorable modifiers using grab_ungrab_with_ignorable_modifiers.
  */
 static gboolean
-grab_ungrab(GdkWindow* rootwin,
+grab_ungrab(Window rootwin,
     uint keyval,
     uint modifiers,
     gboolean grab)
 {
     int k;
-    GdkKeymap* map;
     GdkKeymapKey* keys;
     gint n_keys;
     GdkModifierType add_modifiers;
     XkbDescPtr xmap;
     gboolean success = FALSE;
+    GdkDisplay* display = gdk_display_get_default();
+    Display* xdisplay = gdk_x11_display_get_xdisplay(display);
 
-    xmap = XkbGetMap(GDK_WINDOW_XDISPLAY(rootwin),
+    xmap = XkbGetMap(xdisplay,
         XkbAllClientInfoMask,
         XkbUseCoreKbd);
 
-    GdkDisplay* display = gdk_display_get_default();
-    map = gdk_keymap_get_for_display(display);
-    gdk_keymap_get_entries_for_keyval(map, keyval, &keys, &n_keys);
+    gdk_display_map_keyval(display, keyval, &keys, &n_keys);
 
     if (n_keys == 0)
         return FALSE;
@@ -264,7 +380,7 @@ modifiers_equal(GdkModifierType mf1, GdkModifierType mf2)
     GdkModifierType ignored = 0;
 
     /* Accept MOD1 + META as MOD1 */
-    if (mf1 & mf2 & GDK_MOD1_MASK) {
+    if (mf1 & mf2 & GDK_ALT_MASK) {
         ignored |= GDK_META_MASK;
     }
     /* Accept SUPER + HYPER as SUPER */
@@ -281,14 +397,13 @@ static gboolean
 do_grab_key(struct Binding* binding)
 {
     gboolean success;
-    GdkWindow* rootwin = gdk_get_default_root_window();
     GdkDisplay* display = gdk_display_get_default();
-    GdkKeymap* keymap = gdk_keymap_get_for_display(display);
+    Window rootwin = gdk_x11_display_get_xrootwindow(display);
 
     GdkModifierType modifiers;
     guint keysym = 0;
 
-    if (keymap == NULL || rootwin == NULL) {
+    if (rootwin == None) {
         return FALSE;
     }
 
@@ -304,7 +419,7 @@ do_grab_key(struct Binding* binding)
         keysym, modifiers, binding->keystring));
 
     /* Map virtual modifiers to non-virtual modifiers */
-    gdk_keymap_map_virtual_modifiers(keymap, &modifiers);
+    map_virtual_modifiers(&modifiers);
 
     if (modifiers == binding->modifiers && (GDK_SUPER_MASK | GDK_HYPER_MASK | GDK_META_MASK) & modifiers) {
         g_warning("Failed to map virtual modifiers");
@@ -324,11 +439,10 @@ static gboolean
 do_ungrab_key(struct Binding* binding)
 {
     GdkDisplay* display = gdk_display_get_default();
-    GdkKeymap* keymap = gdk_keymap_get_for_display(display);
-    GdkWindow* rootwin = gdk_get_default_root_window();
+    Window rootwin = gdk_x11_display_get_xrootwindow(display);
     GdkModifierType modifiers;
 
-    if (keymap == NULL || rootwin == NULL) {
+    if (rootwin == None) {
         return FALSE;
     }
 
@@ -337,26 +451,33 @@ do_ungrab_key(struct Binding* binding)
 
     /* Map virtual modifiers to non-virtual modifiers */
     modifiers = binding->modifiers;
-    gdk_keymap_map_virtual_modifiers(keymap, &modifiers);
+    map_virtual_modifiers(&modifiers);
 
     grab_ungrab(rootwin, binding->keyval, modifiers, FALSE /* ungrab */);
     return TRUE;
 }
 
-static GdkFilterReturn
-filter_func(GdkXEvent* gdk_xevent, GdkEvent* event, gpointer data)
+static void keymap_changed(Display* xdisplay);
+
+static gboolean
+filter_func(GdkDisplay* display, gpointer gdk_xevent, gpointer data)
 {
     XEvent* xevent = (XEvent*)gdk_xevent;
-    GdkDisplay* display = gdk_display_get_default();
-    GdkKeymap* keymap = gdk_keymap_get_for_display(display);
+    Display* xdisplay = gdk_x11_display_get_xdisplay(display);
+    Window rootwin = GDK_POINTER_TO_XID(data);
     guint keyval;
     GdkModifierType consumed, modifiers;
     guint mod_mask = gtk_accelerator_get_default_mod_mask();
     GSList* iter;
-    GdkWindow* rootwin = data;
 
-    //(void) event;
-    (void)data;
+    if (xevent->type == MappingNotify || (xkb_event_type != 0 && xevent->type == xkb_event_type && (((XkbEvent*)xevent)->any.xkb_type == XkbNewKeyboardNotify || ((XkbEvent*)xevent)->any.xkb_type == XkbMapNotify))) {
+        keymap_changed(xdisplay);
+        return FALSE;
+    }
+
+    if (xevent->xany.window != rootwin) {
+        return FALSE;
+    }
 
     switch (xevent->type) {
         case KeyPress:
@@ -366,8 +487,8 @@ filter_func(GdkXEvent* gdk_xevent, GdkEvent* event, gpointer data)
                 xevent->xkey.keycode,
                 xevent->xkey.state));
 
-            gdk_keymap_translate_keyboard_state(
-                keymap,
+            gdk_display_translate_key(
+                display,
                 xevent->xkey.keycode,
                 modifiers,
                 /* See top comment why we don't use this here:
@@ -378,7 +499,7 @@ filter_func(GdkXEvent* gdk_xevent, GdkEvent* event, gpointer data)
 
             /* Map non-virtual to virtual modifiers */
             modifiers &= ~consumed;
-            gdk_keymap_add_virtual_modifiers(keymap, &modifiers);
+            add_virtual_modifiers(&modifiers);
             modifiers &= mod_mask;
 
             TRACE(g_print("Translated keyval: %u, vmodifiers: 0x%x, name: %s\n",
@@ -415,21 +536,20 @@ filter_func(GdkXEvent* gdk_xevent, GdkEvent* event, gpointer data)
             TRACE(g_print("Got KeyRelease! \n"));
             break;
     }
-    XAllowEvents(GDK_WINDOW_XDISPLAY(rootwin),
-        ReplayKeyboard, xevent->xkey.time);
-    XFlush(GDK_WINDOW_XDISPLAY(rootwin));
+    XAllowEvents(xdisplay, ReplayKeyboard, xevent->xkey.time);
+    XFlush(xdisplay);
 
-    return GDK_FILTER_CONTINUE;
+    return FALSE;
 }
 
 static void
-keymap_changed(GdkKeymap* map)
+keymap_changed(Display* xdisplay)
 {
     GSList* iter;
 
-    (void)map;
-
     TRACE(g_print("Keymap changed! Regrabbing keys..."));
+
+    update_modmap(xdisplay);
 
     for (iter = bindings; iter != NULL; iter = iter->next) {
         struct Binding* binding = iter->data;
@@ -453,22 +573,25 @@ keymap_changed(GdkKeymap* map)
 void keybinder_init(void)
 {
     GdkDisplay* display = gdk_display_get_default();
-    GdkKeymap* keymap = gdk_keymap_get_for_display(display);
-    GdkWindow* rootwin = gdk_get_default_root_window();
+    Display* xdisplay = gdk_x11_display_get_xdisplay(display);
+    Window rootwin = gdk_x11_display_get_xrootwindow(display);
+    int xkb_opcode;
+    int xkb_error_type;
+    int xkb_major = XkbMajorVersion;
+    int xkb_minor = XkbMinorVersion;
 
-    gdk_window_add_filter(rootwin, filter_func, rootwin);
+    XkbQueryExtension(xdisplay,
+        &xkb_opcode,
+        &xkb_event_type,
+        &xkb_error_type,
+        &xkb_major,
+        &xkb_minor);
+    update_modmap(xdisplay);
 
-    /* Workaround: Make sure modmap is up to date
-     * There is possibly a bug in GTK+ where virtual modifiers are not
-     * mapped because the modmap is not updated. The following function
-     * updates it.
-     */
-    (void)gdk_keymap_have_bidi_layouts(keymap);
-
-    g_signal_connect(keymap,
-        "keys_changed",
-        G_CALLBACK(keymap_changed),
-        NULL);
+    g_signal_connect_after(display,
+        "xevent",
+        G_CALLBACK(filter_func),
+        GDK_XID_TO_POINTER(rootwin));
 }
 
 /**

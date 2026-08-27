@@ -33,28 +33,25 @@ LSComponent* ls_component_title_new(void)
 
     self->header = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
     add_class(self->header, "header");
-    gtk_widget_show(self->header);
 
     self->title = gtk_label_new(NULL);
     add_class(self->title, "title");
     gtk_label_set_justify(GTK_LABEL(self->title), GTK_JUSTIFY_CENTER);
-    gtk_label_set_line_wrap(GTK_LABEL(self->title), TRUE);
+    gtk_label_set_wrap(GTK_LABEL(self->title), TRUE);
     gtk_widget_set_hexpand(self->title, TRUE);
-    gtk_container_add(GTK_CONTAINER(self->header), self->title);
+    gtk_box_append(GTK_BOX(self->header), self->title);
 
     self->attempt_count = gtk_label_new(NULL);
     add_class(self->attempt_count, "attempt-count");
     gtk_widget_set_margin_start(self->attempt_count, 8);
     gtk_widget_set_valign(self->attempt_count, GTK_ALIGN_START);
-    gtk_container_add(GTK_CONTAINER(self->header), self->attempt_count);
-    gtk_widget_show(self->attempt_count);
+    gtk_box_append(GTK_BOX(self->header), self->attempt_count);
 
     self->finished_count = gtk_label_new(NULL);
     add_class(self->finished_count, "finished_count");
     gtk_widget_set_margin_start(self->finished_count, 8);
     gtk_widget_set_valign(self->finished_count, GTK_ALIGN_START);
-    gtk_container_add(GTK_CONTAINER(self->header), self->finished_count);
-    gtk_widget_show(self->finished_count);
+    gtk_box_append(GTK_BOX(self->header), self->finished_count);
 
     return (LSComponent*)self;
 }
@@ -78,32 +75,6 @@ static void title_delete(LSComponent* self)
 static GtkWidget* title_widget(LSComponent* self)
 {
     return ((LSTitle*)self)->header;
-}
-
-/**
- * Function to execute when resize_window is executed (the LibreSplit window is resized).
- *
- * @param self_ The title component itself.
- * @param win_width The new window width.
- * @param win_height The new window height.
- */
-static void title_resize(LSComponent* self_, int win_width, int win_height)
-{
-    GdkRectangle rect;
-    int attempt_count_width;
-    int finished_count_width;
-    int title_width;
-    LSTitle* self = (LSTitle*)self_;
-
-    gtk_widget_hide(self->title);
-    gtk_widget_get_allocation(self->attempt_count, &rect);
-    attempt_count_width = rect.width;
-    gtk_widget_get_allocation(self->finished_count, &rect);
-    finished_count_width = rect.width;
-    title_width = win_width - (attempt_count_width + finished_count_width);
-    rect.width = title_width;
-    gtk_widget_show(self->title);
-    gtk_widget_set_allocation(self->title, &rect);
 }
 
 /**
@@ -147,7 +118,6 @@ static void title_draw(LSComponent* self_, const ls_game* game, const ls_timer* 
 LSComponentOps ls_title_operations = {
     .delete = title_delete,
     .widget = title_widget,
-    .resize = title_resize,
     .show_game = title_show_game,
     .draw = title_draw
 };
