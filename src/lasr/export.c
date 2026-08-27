@@ -1,12 +1,21 @@
 #include "export.h"
 
+#include "../logging.h"
+
 #include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
 /**
- * (TODO doc)
+ * Allocates and initializes a new `lasr_global` type for data shared between
+ * a reading and writing thread.
+ *
+ * @param key C-string indicating the name of the Lua variable that this
+ * instance will track.
+ *
+ * @return A pointer to the new instance. Returned value should be freed with
+ * lasr_global_release()
  */
 lasr_global * lasr_global_create(char const * key)
 {
@@ -36,11 +45,32 @@ lasr_global * lasr_global_create(char const * key)
 	return new;
 }
 
+/**
+ * Helper function that will store an "incoming" atomic-width value into a
+ * 'lasr_global' export container. This function should only be invoked by the
+ * WRITEing thread.
+ *
+ * Handles memory reallocation, including the case when the previously stored
+ * value was dynamically allocated.
+ *
+ * @param container A non-null reference to a 'lasr_global' container. This is
+ * the data destination.
+ *
+ * @param value The new value to be written. The value may be cast, but the
+ * READer must know the expected type if so.
+ *
+ * @param type The lasr type of the new value to be written; must be an atomic
+ * type (not DYNAMIC.)
+ */
 void export_atomic_global(lasr_global * container, int const value, int const type)
 {
+	// TODO: Assert type (fix this when correcting the nil check)
+
 	int container_state = atomic_load(&container->state);
-	if (container_state != LASR_STATE_BORROWED
-		|| container_state != LASR_STATE_ATOMIC) {
+	if (container_state == LASR_STATE_NEEDED) {
+		return;
+	}
+	else if (container_state == LASR_STATE_OWNED) {
 		atomic_store(&container->state, LASR_STATE_NEEDED);
 		return;
 	}
@@ -48,14 +78,13 @@ void export_atomic_global(lasr_global * container, int const value, int const ty
 	if (container->value.type == LASR_TYPE_DYNAMIC) {
 		/* ^^ old is dynamic */
 		if (container->value.dynamic == NULL) {
-			// debugging sanity check (TODO: cleanup)
-			printf("string data `%s` is NULL (it shouldn't be)\n", container->key);
+			/* Sanity check assertion */
+			LOG_DEBUGF("String data `%s` is NULL (it shouldn't be)", container->key);
 		} 
 
 		(void) lasr_export_resize((lasr_export *) &container->value, 0);
 		((lasr_export *) &container->value)->type = type;
 	}
-
 
 	atomic_store(&container->value.atomic, value);
 	if (container_state == LASR_STATE_BORROWED) {
@@ -63,9 +92,22 @@ void export_atomic_global(lasr_global * container, int const value, int const ty
 	}
 }
 
-/* NOTE: This should only be called by the writing thread...maybe best to put
- * it with the autosplitter logic, but the state machine is easier to see with
- * all of the meat in one place. */
+/**
+ * Helper function that will store an "incoming" dynamically-sized value into a
+ * 'lasr_global' export container. This function should only be invoked by the
+ * WRITEing thread.
+ *
+ * Handles memory reallocation, including the case when the previously stored
+ * value had no allocation. Exits early if old data is the same as the new.
+ *
+ * @param container A non-null reference to a 'lasr_global' container. This is
+ * the data destination.
+ *
+ * @param value Reference to the new data to be written. Will always be NUL-
+ * terminated, even if data is a binary string.
+ *
+ * @param len Number of bytes in the new value, excluding a NUL byte.
+ */
 void export_dynamic_global(lasr_global * container, char const * const value, size_t const len)
 {
 	size_t new_len = len;
@@ -109,25 +151,18 @@ void export_dynamic_global(lasr_global * container, char const * const value, si
 
 /**
  * Retrieves a shared value exported by the timer into a buffer.
-
- * Also, naming is hard. Import implies it's a one-time thing sorta, but I also
- * want to indicate that this call is the "other half" of the state machine and
- * therefore important.
-
- * TODO: Not fully sure if this is the best place for this implementation, but
- * this location follows suit with restart_auto_splitter being an operation
- * that lets the timer thread interact with the splitter thread.
-
- * *Also* TODO: This docu-string.
-
- * Returns the type that was stored.
- * For now, this is returned even if there is no target to write to.
- * The state machine may continue even if the output is not needed.
-
- * New goal: lasr_export should be fully self-contained.
- * Memory can be allocated, but it should have all the information needed
- * for cleanup/realoc, with respect to type and size information.
- * This will probably be best-suited for helper functions.
+ *
+ * @param container A non-null reference to a 'lasr_global' container. This is
+ * the data source.
+ *
+ * @param target A non-null reference to a 'lasr_export' value. This is the
+ * data destination. Memory referenced by this type will be allocated or freed
+ * as necessary, indicated by the value of target->type after return. However,
+ * it must later be released by the caller if target is not in static storage.
+ *
+ * @return The type that was stored. This is returned even if there is no
+ * target to write to so that the state machine may continue even if the output
+ * is not needed.
  */
 int import_shared_global(lasr_global * container, lasr_export * target)
 {
@@ -142,8 +177,7 @@ int import_shared_global(lasr_global * container, lasr_export * target)
 
 	switch((import_state = atomic_load(&container->state))) {
 		default:
-			// sanity check (TODO: maybe remove me)
-			printf("Unexpected state while loading: %d\n", atomic_load(&container->state));
+			LOG_DEBUGF("Unexpected state while loading: %d", atomic_load(&container->state));
 			// fallthrough
 		case LASR_STATE_NEEDED: // New data incompatible, no change (yet)
 			atomic_store(&container->state, LASR_STATE_BORROWED);
@@ -190,14 +224,18 @@ int import_shared_global(lasr_global * container, lasr_export * target)
 }
 
 /**
- * NOTE: Like realloc, a size of 0 will free the contents.
- * NOTE: We always trust the associated type in this operation.
- * If it is corrupt, then that is a bug elsewhere.
+ * Reallocate a 'lasr_export' value to support dynamic data of a given length.
  *
- * size: number of bytes of dynamic data
- * return: new length of the dynamic data (ideally always the same as ^^ )
+ * @param value A non-null reference to a 'lasr_export' value to be resized.
  *
- * (TODO doc)
+ * @param len Number of bytes in the array to be stored. If nonzero, the actual
+ * allocated size will be adjusted as necessary to accomidate the prefix.
+ * Otherwise, when zero, the dynamic data will be freed and the export value
+ * can be used to safely store fixed-length values.
+ *
+ * @return New length of the dynamic data (ideally always the same as len.)
+ * This value is possibly smaller than len if realloc() fails, but never
+ * larger.
  */
 size_t lasr_export_resize(lasr_export * value, size_t len)
 {
@@ -233,22 +271,18 @@ size_t lasr_export_resize(lasr_export * value, size_t len)
 }
 
 /**
- * (TODO doc)
+ * Safely frees a 'lasr_global' container, including any nested allocations.
  *
- * Returns the value of next
- *
- * NOTE: There is no check for the current atomic state, caller to assert that
+ * @param container A non-null reference to a 'lasr_global' container that will
+ * be released.
  */
-lasr_global * lasr_global_release(lasr_global * global)
+void lasr_global_release(lasr_global * global)
 {
 	if (global) {
 		if (global->key) {
 			free((void *) global->key); /* strdup-ed on init */
 		}
 		lasr_export_resize((lasr_export *) &global->value, 0);
-
 		/* do nothing with `next` to avoid risk of accidental double-free */
-		return global->next;
 	}
-	return NULL;
 }

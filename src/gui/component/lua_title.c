@@ -105,8 +105,7 @@ static void lua_title_show_game(LSComponent* self_, const ls_game* game,
     const ls_timer* timer)
 {
     LSLuaTitle* self = (LSLuaTitle*)self_;
-    // gtk_label_set_text(GTK_LABEL(self->title), game->title);
-    gtk_label_set_text(GTK_LABEL(self->title), "silly game 10000");
+    gtk_label_set_text(GTK_LABEL(self->title), "(null)");
 }
 
 /**
@@ -125,7 +124,6 @@ static void lua_title_draw(LSComponent* self_, const ls_game* game, const ls_tim
 	char buf[32];
 
 	if (type == LASR_TYPE_DYNAMIC) {
-		// TODO: Currently assuming string is NUL terminated, which may not be true??
 		gtk_label_set_text(GTK_LABEL(self->title), title_.dynamic->bytes);
 	}
 	else if (type == LASR_TYPE_ATOMIC) {
@@ -134,7 +132,7 @@ static void lua_title_draw(LSComponent* self_, const ls_game* game, const ls_tim
 		gtk_label_set_text(GTK_LABEL(self->title), buf);
 	}
 
-	// cleanup -- no allocation if string not changed
+	/* Cleanup -- no memory was allocated if string not changed */
 	lasr_export_resize(&title_, 0);
 }
 

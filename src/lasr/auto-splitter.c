@@ -8,6 +8,7 @@
 #include "export.h"
 #include "functions.h"
 #include "utils.h"
+#include "../logging.h"
 
 #include <assert.h>
 #include <errno.h> /////////
@@ -232,9 +233,14 @@ static void pcall_fix_traceback(lua_State* L, const char* func)
 }
 
 /**
-	Run a sweep of the shared globals struct
-	(TODO: This comment str)
-*/
+ * Runs a sweep of all tracked shared globals for export.
+ * When the data exchange state allows it, changes to the tracked value will
+ * be pushed to the respective data container.
+ *
+ * @param L The lua Stack
+ *
+ * @param head Reference to the first tracked export in a linked list.
+ */
 static void update_shared_globals(lua_State * L, lasr_global * head)
 {
 	int lasr_type;
@@ -281,7 +287,7 @@ static void update_shared_globals(lua_State * L, lasr_global * head)
 				/* Treat other types as nil */
 				if (atomic_load(&head->value.atomic) != 0) {
 					/* Only prints whenever the value changes */
-					printf("Unsupported type for lua export: `%s`\n", head->key);
+					LOG_DEBUGF("Unsupported type for lua export: `%s`", head->key);
 				}
 			case LUA_TNIL:
 				// TODO: Instead of storing i as 0, first check if nil, and

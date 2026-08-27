@@ -28,7 +28,14 @@ bool restart_auto_splitter(void)
 }
 
 /**
- * todo doc
+ * Associates a 'lasr_global' container tracking a lua value with the lua
+ * runtime itself. Omitting this call, the value will remain unchanged
+ * regardless of the lua state.
+ *
+ * NOTE: This cannot be called while the splitter is running
+ *
+ * @param container A non-null reference to a 'lasr_global' container to be
+ * tracked.
  */
 void register_shared_global(lasr_global * new)
 {
