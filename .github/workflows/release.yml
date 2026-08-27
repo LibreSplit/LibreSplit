@@ -167,6 +167,8 @@ jobs:
             LibreSplit-${{ needs.prepare.outputs.version }}-standalone-x86_64/LibreSplit-${{ needs.prepare.outputs.version }}-standalone-x86_64.zip
             LibreSplit-${{ needs.prepare.outputs.version }}-x86_64.AppImage/LibreSplit-${{ needs.prepare.outputs.version }}-x86_64.AppImage
             LibreSplit-${{ needs.prepare.outputs.version }}-x86_64.AppImage.zsync/LibreSplit-${{ needs.prepare.outputs.version }}-x86_64.AppImage.zsync
+            LibreSplit-${{ needs.prepare.outputs.version }}-aarch64.AppImage/LibreSplit-${{ needs.prepare.outputs.version }}-aarch64.AppImage
+            LibreSplit-${{ needs.prepare.outputs.version }}-aarch64.AppImage.zsync/LibreSplit-${{ needs.prepare.outputs.version }}-aarch64.AppImage.zsync
 
       - name: Create publication token
         id: publication-token
