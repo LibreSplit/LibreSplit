@@ -26,9 +26,9 @@ jobs:
             matrix:
                 include:
                     - arch: x86_64
-                      runner: ubuntu-26.04
+                      runner: ubuntu-24.04
                     - arch: aarch64
-                      runner: ubuntu-26.04-arm
+                      runner: ubuntu-24.04-arm
         permissions:
             contents: read
         steps:
@@ -52,11 +52,13 @@ jobs:
               with:
                   packages: >
                       meson
-                      libgtk-4-dev
                       libx11-dev
                       libjansson-dev
                       libluajit-5.1-dev
                   version: 1.0
+
+            - name: "Build GTK"
+              uses: ./.github/actions/build-gtk
 
             - name: "Configure"
               run: meson setup build -Dbuildtype=release -Dprefix=/usr
@@ -158,9 +160,24 @@ jobs:
                   UPDATE_CHANNEL: ${{ steps.artifacts.outputs.update_channel }}
                   ZSYNC_NAME: ${{ steps.artifacts.outputs.zsync }}
               run: |
+                  resolved_gtk="$(
+                    ldd AppDir/usr/bin/libresplit |
+                      awk '$1 == "libgtk-4.so.1" { print $3; exit }'
+                  )"
+                  if [[ -z "${resolved_gtk}" || "${resolved_gtk}" != "${GTK_PREFIX}/"* ]]; then
+                    echo "::error::LibreSplit resolved GTK outside the configured prefix: ${resolved_gtk}"
+                    exit 1
+                  fi
+
                   LDAI_OUTPUT="${APPIMAGE_NAME}" \
                   LDAI_UPDATE_INFORMATION="gh-releases-zsync|${{ github.repository_owner }}|LibreSplit|${UPDATE_CHANNEL}|LibreSplit-*-${ARCH}.AppImage.zsync" \
                   "./linuxdeploy-${ARCH}.AppImage" --appdir AppDir --desktop-file AppDir/libresplit.desktop --icon-file AppDir/libresplit.png --output appimage
+
+                  if ! find AppDir -type f -name 'libgtk-4.so.1*' -print -quit | grep -q .; then
+                    echo "::error::The AppImage does not contain GTK 4"
+                    exit 1
+                  fi
+
                   if [[ "${APPIMAGE_NAME}.zsync" != "${ZSYNC_NAME}" ]]; then
                     mv "${APPIMAGE_NAME}.zsync" "${ZSYNC_NAME}"
                   fi
@@ -203,9 +220,9 @@ jobs:
             matrix:
                 include:
                     - architecture: x86_64
-                      runner: ubuntu-26.04
+                      runner: ubuntu-24.04
                     - architecture: aarch64
-                      runner: ubuntu-26.04-arm
+                      runner: ubuntu-24.04-arm
         env:
             RPM_RELEASE: ${{ inputs.rpm_release }}
             SOURCE_SHA: ${{ inputs.source_sha }}
@@ -288,7 +305,7 @@ jobs:
     create-nightly-release:
         name: "Upload nightly release"
         needs: [build]
-        runs-on: ubuntu-26.04
+        runs-on: ubuntu-24.04
         permissions:
             contents: write
         concurrency:
