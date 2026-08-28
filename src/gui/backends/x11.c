@@ -16,6 +16,14 @@ bool is_x11_display()
     return display != NULL && GDK_IS_X11_DISPLAY(display);
 }
 
+/**
+ * Requests that the X11 window manager add or remove a window state
+ *
+ * @param display The GDK X11 display associated with the window
+ * @param window The X11 window to update
+ * @param state The name of the _NET_WM_STATE to update
+ * @param add Whether to add or remove the state
+ */
 static void change_wm_state(GdkDisplay* display, Window window, const char* state, gboolean add)
 {
     XClientMessageEvent event = { 0 };
@@ -36,6 +44,15 @@ static void change_wm_state(GdkDisplay* display, Window window, const char* stat
         (XEvent*)&event);
 }
 
+/**
+ * Requests that an X11 window be kept above other windows
+ *
+ * Enabling the state also removes _NET_WM_STATE_BELOW. This function does
+ * nothing when the window is not backed by a mapped X11 surface.
+ *
+ * @param window The GTK window to update
+ * @param setting Whether the window should be kept above other windows
+ */
 void x11_set_keep_above(GtkWindow* window, gboolean setting)
 {
     GdkDisplay* display;
