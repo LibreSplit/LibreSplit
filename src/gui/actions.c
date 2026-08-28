@@ -118,8 +118,7 @@ void open_activated(GSimpleAction* action,
 
     // We couldn't recover any previous split, open the file dialog
     GFile* folder = g_file_new_for_path(splits_path);
-    gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(dialog),
-        folder, NULL);
+    gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(dialog), folder, NULL);
     g_object_unref(folder);
 
     res = run_dialog(GTK_DIALOG(dialog));
@@ -430,8 +429,7 @@ void open_auto_splitter(GSimpleAction* action,
         }
     }
     GFile* folder = g_file_new_for_path(auto_splitters_path);
-    gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(dialog),
-        folder, NULL);
+    gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(dialog), folder, NULL);
     g_object_unref(folder);
 
     res = run_dialog(GTK_DIALOG(dialog));
