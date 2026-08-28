@@ -46,7 +46,7 @@ runs:
 
         - name: Restore GTK cache
           id: gtk-cache
-          uses: actions/cache/restore@v4
+          uses: actions/cache/restore@v6
           with:
               path: ${{ runner.temp }}/gtk-prefix-${{ inputs.version }}
               key: gtk-${{ inputs.version }}-ubuntu-${{ runner.arch }}-v2
@@ -137,7 +137,7 @@ runs:
 
         - name: Save GTK cache
           if: steps.gtk-cache.outputs.cache-hit != 'true'
-          uses: actions/cache/save@v4
+          uses: actions/cache/save@v6
           with:
               path: ${{ runner.temp }}/gtk-prefix-${{ inputs.version }}
               key: ${{ steps.gtk-cache.outputs.cache-primary-key }}
