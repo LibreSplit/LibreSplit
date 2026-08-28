@@ -13,7 +13,7 @@ permissions:
 
 jobs:
     publish-wiki:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-26.04
         steps:
             - uses: actions/checkout@v3
             - uses: Andrew-Chen-Wang/github-wiki-action@v5

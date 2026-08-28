@@ -2,7 +2,7 @@ on: [push, pull_request]
 
 jobs:
     format-check:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-26.04
 
         steps:
             - name: Checkout repository
@@ -23,7 +23,7 @@ jobs:
                   fi
 
     linter-check:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-26.04
 
         steps:
             - name: Checkout repository

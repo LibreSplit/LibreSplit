@@ -288,7 +288,7 @@ jobs:
     create-nightly-release:
         name: "Upload nightly release"
         needs: [build]
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-26.04
         permissions:
             contents: write
         concurrency:
