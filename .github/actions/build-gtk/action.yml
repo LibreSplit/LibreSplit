@@ -14,16 +14,20 @@ inputs:
 runs:
     using: composite
     steps:
-        - name: Install GTK build dependencies
+        - name: Restore GTK cache
+          id: gtk-cache
+          uses: actions/cache/restore@v6
+          with:
+              path: ${{ runner.temp }}/gtk-prefix-${{ inputs.version }}
+              key: >-
+                  gtk-${{ inputs.version }}-${{ inputs.sha256 }}-ubuntu-${{ runner.arch }}-${{ hashFiles('.github/actions/build-gtk/action.yml') }}
+
+        - name: Install required dependencies
           shell: bash
           run: |
               set -euo pipefail
               sudo apt-get update
               sudo env DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends \
-                  build-essential \
-                  ca-certificates \
-                  curl \
-                  gettext \
                   gir1.2-cairo-1.0-dev \
                   gir1.2-gdkpixbuf-2.0-dev \
                   gir1.2-gio-2.0-dev \
@@ -31,31 +35,23 @@ runs:
                   gir1.2-pango-1.0-dev \
                   gir1.2-pangocairo-1.0-dev \
                   gir1.2-xlib-2.0-dev \
-                  gobject-introspection \
-                  glslc \
                   libcairo2-dev \
-                  libcolord-dev \
-                  libcpdb-dev \
-                  libcpdb-frontend-dev \
-                  libdrm-dev \
+                  libcolord2 \
+                  libcpdb2t64 \
+                  libcpdb-frontend2t64 \
                   libegl1-mesa-dev \
                   libepoxy-dev \
                   libfontconfig-dev \
-                  libfribidi-dev \
                   libgdk-pixbuf-2.0-dev \
                   libglib2.0-dev \
                   libgraphene-1.0-dev \
-                  libgstreamer-plugins-bad1.0-dev \
-                  libgstreamer-plugins-base1.0-dev \
-                  libgstreamer1.0-dev \
-                  libharfbuzz-dev \
-                  libjpeg-dev \
+                  libgstreamer-gl1.0-0 \
+                  libgstreamer-plugins-bad1.0-0 \
+                  libgstreamer-plugins-base1.0-0 \
+                  libgstreamer1.0-0 \
                   libpango1.0-dev \
-                  libpng-dev \
-                  libpolkit-gobject-1-dev \
-                  librsvg2-dev \
-                  libsysprof-capture-4-dev \
-                  libtiff-dev \
+                  libpolkit-gobject-1-0 \
+                  librsvg2-common \
                   libvulkan-dev \
                   libwayland-dev \
                   libx11-dev \
@@ -67,24 +63,46 @@ runs:
                   libxi-dev \
                   libxinerama-dev \
                   libxkbcommon-dev \
+                  libxrandr-dev \
+                  pkg-config \
+                  wayland-protocols
+
+        - name: Install GTK build dependencies
+          if: steps.gtk-cache.outputs.cache-hit != 'true'
+          shell: bash
+          run: |
+              set -euo pipefail
+              sudo env DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends \
+                  build-essential \
+                  ca-certificates \
+                  curl \
+                  gettext \
+                  gobject-introspection \
+                  glslc \
+                  libcolord-dev \
+                  libcloudproviders-dev \
+                  libcpdb-dev \
+                  libcpdb-frontend-dev \
+                  libdrm-dev \
+                  libfribidi-dev \
+                  libgstreamer-plugins-bad1.0-dev \
+                  libgstreamer-plugins-base1.0-dev \
+                  libgstreamer1.0-dev \
+                  libharfbuzz-dev \
+                  libjpeg-dev \
+                  libpng-dev \
+                  libpolkit-gobject-1-dev \
+                  librsvg2-dev \
+                  libsysprof-capture-4-dev \
+                  libtiff-dev \
                   libxkbfile-dev \
                   libxml2-utils \
-                  libxrandr-dev \
                   meson \
                   ninja-build \
-                  pkg-config \
                   sassc \
-                  wayland-protocols \
                   xz-utils
 
               pkg-config --atleast-version=1.36 wayland-protocols
-
-        - name: Restore GTK cache
-          id: gtk-cache
-          uses: actions/cache/restore@v6
-          with:
-              path: ${{ runner.temp }}/gtk-prefix-${{ inputs.version }}
-              key: gtk-${{ inputs.version }}-ubuntu-${{ runner.arch }}-v2
 
         - name: Build GTK
           if: steps.gtk-cache.outputs.cache-hit != 'true'
@@ -123,6 +141,7 @@ runs:
                   -Dprint-cpdb=enabled \
                   -Dprint-cups=disabled \
                   -Dcolord=enabled \
+                  -Dcloudproviders=disabled \
                   -Dsysprof=enabled \
                   -Dintrospection=enabled \
                   -Ddocumentation=false \
@@ -144,7 +163,8 @@ runs:
               prefix="${RUNNER_TEMP}/gtk-prefix-${GTK_VERSION}"
               pkg_config_path="${prefix}/lib/pkgconfig"
               library_path="${prefix}/lib"
-              series="${GTK_VERSION%.*}"
+              gir_path="${prefix}/share/gir-1.0"
+              typelib_path="${prefix}/lib/girepository-1.0"
 
               if [[ -n "${PKG_CONFIG_PATH:-}" ]]; then
                   pkg_config_path="${pkg_config_path}:${PKG_CONFIG_PATH}"
@@ -152,23 +172,30 @@ runs:
               if [[ -n "${LD_LIBRARY_PATH:-}" ]]; then
                   library_path="${library_path}:${LD_LIBRARY_PATH}"
               fi
+              if [[ -n "${GI_GIR_PATH:-}" ]]; then
+                  gir_path="${gir_path}:${GI_GIR_PATH}"
+              fi
+              if [[ -n "${GI_TYPELIB_PATH:-}" ]]; then
+                  typelib_path="${typelib_path}:${GI_TYPELIB_PATH}"
+              fi
 
               printf 'GTK_PREFIX=%s\n' "${prefix}" >> "${GITHUB_ENV}"
               printf 'PKG_CONFIG_PATH=%s\n' "${pkg_config_path}" >> "${GITHUB_ENV}"
               printf 'LD_LIBRARY_PATH=%s\n' "${library_path}" >> "${GITHUB_ENV}"
+              printf 'GI_GIR_PATH=%s\n' "${gir_path}" >> "${GITHUB_ENV}"
+              printf 'GI_TYPELIB_PATH=%s\n' "${typelib_path}" >> "${GITHUB_ENV}"
               printf 'XDG_DATA_DIRS=%s/share:%s\n' \
                   "${prefix}" \
                   "${XDG_DATA_DIRS:-/usr/local/share:/usr/share}" >> "${GITHUB_ENV}"
               printf '%s/bin\n' "${prefix}" >> "${GITHUB_PATH}"
 
-              actual_version="$(PKG_CONFIG_PATH="${pkg_config_path}" pkg-config --modversion gtk4)"
-              if [[ "${actual_version}" != "${GTK_VERSION}" ]]; then
-                  echo "Expected GTK ${GTK_VERSION}, found ${actual_version}." >&2
-                  exit 1
-              fi
-
-              PKG_CONFIG_PATH="${pkg_config_path}" pkg-config --atleast-version="$series" gtk4
-              PKG_CONFIG_PATH="${pkg_config_path}" pkg-config --atleast-version="$series" gtk4-x11
+              for module in gtk4 gtk4-broadway gtk4-wayland gtk4-x11; do
+                  actual_version="$(PKG_CONFIG_PATH="${pkg_config_path}" pkg-config --modversion "${module}")"
+                  if [[ "${actual_version}" != "${GTK_VERSION}" ]]; then
+                      echo "Expected ${module} ${GTK_VERSION}, found ${actual_version}." >&2
+                      exit 1
+                  fi
+              done
 
         - name: Save GTK cache
           if: steps.gtk-cache.outputs.cache-hit != 'true'
