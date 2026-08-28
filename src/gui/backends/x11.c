@@ -21,8 +21,7 @@ static void change_wm_state(GdkDisplay* display, Window window, const char* stat
     XClientMessageEvent event = { 0 };
     event.type = ClientMessage;
     event.window = window;
-    event.message_type = gdk_x11_get_xatom_by_name_for_display(display,
-        "_NET_WM_STATE");
+    event.message_type = gdk_x11_get_xatom_by_name_for_display(display, "_NET_WM_STATE");
     event.format = 32;
     event.data.l[0] = add ? NET_WM_STATE_ADD : NET_WM_STATE_REMOVE;
     event.data.l[1] = gdk_x11_get_xatom_by_name_for_display(display, state);
