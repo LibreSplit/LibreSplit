@@ -108,7 +108,7 @@ jobs:
 
             - name: "Upload artifacts"
               if: matrix.arch == 'x86_64'
-              uses: actions/upload-artifactactions/upload-artifact@v7
+              uses: actions/upload-artifact@v7
               with:
                   name: ${{ steps.artifacts.outputs.standalone }}
                   path: ${{ steps.artifacts.outputs.standalone }}.zip
@@ -178,14 +178,14 @@ jobs:
                 done
 
             - name: "Upload AppImage"
-              uses: actions/upload-artifactactions/upload-artifact@v7
+              uses: actions/upload-artifact@v7
               with:
                   path: ${{ steps.artifacts.outputs.appimage }}
                   name: ${{ steps.artifacts.outputs.appimage }}
                   if-no-files-found: error
 
             - name: "Upload AppImage zsync"
-              uses: actions/upload-artifactactions/upload-artifact@v7
+              uses: actions/upload-artifact@v7
               with:
                   path: ${{ steps.artifacts.outputs.zsync }}
                   name: ${{ steps.artifacts.outputs.zsync }}
