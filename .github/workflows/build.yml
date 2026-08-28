@@ -33,7 +33,7 @@ jobs:
             contents: read
         steps:
             - name: "Checkout"
-              uses: actions/checkout@v4
+              uses: actions/checkout@v7
               with:
                   fetch-depth: 0
                   ref: ${{ inputs.source_sha }}
@@ -108,7 +108,7 @@ jobs:
 
             - name: "Upload artifacts"
               if: matrix.arch == 'x86_64'
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifactactions/upload-artifact@v7
               with:
                   name: ${{ steps.artifacts.outputs.standalone }}
                   path: ${{ steps.artifacts.outputs.standalone }}.zip
@@ -178,14 +178,14 @@ jobs:
                 done
 
             - name: "Upload AppImage"
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifactactions/upload-artifact@v7
               with:
                   path: ${{ steps.artifacts.outputs.appimage }}
                   name: ${{ steps.artifacts.outputs.appimage }}
                   if-no-files-found: error
 
             - name: "Upload AppImage zsync"
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifactactions/upload-artifact@v7
               with:
                   path: ${{ steps.artifacts.outputs.zsync }}
                   name: ${{ steps.artifacts.outputs.zsync }}
@@ -300,12 +300,12 @@ jobs:
             github.ref == 'refs/heads/main' &&
             github.repository == 'LibreSplit/LibreSplit'
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@v7
               with:
                   fetch-depth: 0
 
             - name: Download Artifacts
-              uses: actions/download-artifact@v7
+              uses: actions/download-artifact@v8
 
             - name: Get commit info
               run: |

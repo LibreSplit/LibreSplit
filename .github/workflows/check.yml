@@ -6,7 +6,7 @@ jobs:
 
         steps:
             - name: Checkout repository
-              uses: actions/checkout@v4
+              uses: actions/checkout@v7
 
             - name: Format files
               run: |
@@ -27,7 +27,7 @@ jobs:
 
         steps:
             - name: Checkout repository
-              uses: actions/checkout@v4
+              uses: actions/checkout@v7
 
             - name: Install and cache dependencies
               uses: awalsh128/cache-apt-pkgs-action@latest
