@@ -143,6 +143,36 @@ jobs:
                   chmod +x AppDir/usr/bin/libresplit
                   chmod +x AppDir/usr/bin/libresplit-ctl
 
+                  gtk_module_dir="${GTK_PREFIX}/lib/gtk-4.0"
+                  if [[ ! -d "${gtk_module_dir}" ]]; then
+                    echo "::error::GTK module directory not found: ${gtk_module_dir}"
+                    exit 1
+                  fi
+
+                  for module in \
+                    libmedia-gstreamer.so \
+                    libprintbackend-cpdb.so \
+                    libprintbackend-file.so; do
+                    module_path="$(find "${gtk_module_dir}" -type f -name "${module}" -print -quit)"
+                    if [[ -z "${module_path}" ]]; then
+                      echo "::error::Required GTK module not found: ${module}"
+                      exit 1
+                    fi
+                  done
+
+                  mkdir -p AppDir/usr/lib/gtk-4.0
+                  cp -a "${gtk_module_dir}/." AppDir/usr/lib/gtk-4.0/
+
+                  gtk_schema_dir="${GTK_PREFIX}/share/glib-2.0/schemas"
+                  if [[ ! -d "${gtk_schema_dir}" ]]; then
+                    echo "::error::GTK schemas not found: ${gtk_schema_dir}"
+                    exit 1
+                  fi
+
+                  mkdir -p AppDir/usr/share/glib-2.0/schemas
+                  cp -a "${gtk_schema_dir}/." AppDir/usr/share/glib-2.0/schemas/
+                  glib-compile-schemas AppDir/usr/share/glib-2.0/schemas
+
             - name: "Download linuxdeploy"
               env:
                   ARCH: ${{ matrix.arch }}
@@ -177,6 +207,30 @@ jobs:
                     echo "::error::The AppImage does not contain GTK 4"
                     exit 1
                   fi
+
+                  for module in \
+                    libmedia-gstreamer.so \
+                    libprintbackend-cpdb.so \
+                    libprintbackend-file.so; do
+                    module_path="$(find AppDir/usr/lib/gtk-4.0 -type f -name "${module}" -print -quit)"
+                    if [[ -z "${module_path}" ]]; then
+                      echo "::error::The AppImage does not contain ${module}"
+                      exit 1
+                    fi
+
+                    module_dependencies="$(LD_LIBRARY_PATH="${PWD}/AppDir/usr/lib" ldd "${module_path}")"
+                    if grep -q 'not found' <<< "${module_dependencies}"; then
+                      echo "::error::The AppImage contains an unresolved GTK module: ${module}"
+                      echo "${module_dependencies}"
+                      exit 1
+                    fi
+
+                    if grep -Fq "${GTK_PREFIX}/" <<< "${module_dependencies}"; then
+                      echo "::error::The AppImage GTK module still resolves through the build prefix: ${module}"
+                      echo "${module_dependencies}"
+                      exit 1
+                    fi
+                  done
 
                   if [[ "${APPIMAGE_NAME}.zsync" != "${ZSYNC_NAME}" ]]; then
                     mv "${APPIMAGE_NAME}.zsync" "${ZSYNC_NAME}"

@@ -28,6 +28,8 @@ runs:
               set -euo pipefail
               sudo apt-get update
               sudo env DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends \
+                  adwaita-icon-theme \
+                  cpdb-backend-cups \
                   gir1.2-cairo-1.0-dev \
                   gir1.2-gdkpixbuf-2.0-dev \
                   gir1.2-gio-2.0-dev \
@@ -35,14 +37,15 @@ runs:
                   gir1.2-pango-1.0-dev \
                   gir1.2-pangocairo-1.0-dev \
                   gir1.2-xlib-2.0-dev \
+                  hicolor-icon-theme \
+                  iso-codes \
                   libcairo2-dev \
-                  libcolord2 \
                   libcpdb2t64 \
                   libcpdb-frontend2t64 \
-                  libegl1-mesa-dev \
-                  libepoxy-dev \
-                  libfontconfig-dev \
+                  libegl1 \
+                  libepoxy0 \
                   libgdk-pixbuf-2.0-dev \
+                  libgles2 \
                   libglib2.0-dev \
                   libgraphene-1.0-dev \
                   libgstreamer-gl1.0-0 \
@@ -50,22 +53,20 @@ runs:
                   libgstreamer-plugins-base1.0-0 \
                   libgstreamer1.0-0 \
                   libpango1.0-dev \
-                  libpolkit-gobject-1-0 \
                   librsvg2-common \
                   libvulkan-dev \
                   libwayland-dev \
                   libx11-dev \
-                  libxcomposite-dev \
-                  libxcursor-dev \
-                  libxdamage-dev \
-                  libxext-dev \
-                  libxfixes-dev \
-                  libxi-dev \
-                  libxinerama-dev \
-                  libxkbcommon-dev \
-                  libxrandr-dev \
+                  libxcursor1 \
+                  libxdamage1 \
+                  libxext6 \
+                  libxfixes3 \
+                  libxi6 \
+                  libxinerama1 \
+                  libxkbcommon0 \
+                  libxrandr2 \
                   pkg-config \
-                  wayland-protocols
+                  shared-mime-info
 
         - name: Install GTK build dependencies
           if: steps.gtk-cache.outputs.cache-hit != 'true'
@@ -84,6 +85,9 @@ runs:
                   libcpdb-dev \
                   libcpdb-frontend-dev \
                   libdrm-dev \
+                  libegl1-mesa-dev \
+                  libepoxy-dev \
+                  libfontconfig-dev \
                   libfribidi-dev \
                   libgstreamer-plugins-bad1.0-dev \
                   libgstreamer-plugins-base1.0-dev \
@@ -95,11 +99,21 @@ runs:
                   librsvg2-dev \
                   libsysprof-capture-4-dev \
                   libtiff-dev \
+                  libxcomposite-dev \
+                  libxcursor-dev \
+                  libxdamage-dev \
+                  libxext-dev \
+                  libxfixes-dev \
+                  libxi-dev \
+                  libxinerama-dev \
+                  libxkbcommon-dev \
                   libxkbfile-dev \
+                  libxrandr-dev \
                   libxml2-utils \
                   meson \
                   ninja-build \
                   sassc \
+                  wayland-protocols \
                   xz-utils
 
               pkg-config --atleast-version=1.36 wayland-protocols
@@ -126,10 +140,15 @@ runs:
               printf '%s  %s\n' "${GTK_SHA256}" "${archive}" | sha256sum --check --strict
               tar --extract --file "${archive}" --directory "${RUNNER_TEMP}"
 
+              export DEB_LDFLAGS_MAINT_APPEND="-Wl,-z,defs -Wl,-O1"
+              export CFLAGS="$(dpkg-buildflags --get CFLAGS)"
+              export CPPFLAGS="$(dpkg-buildflags --get CPPFLAGS)"
+              export LDFLAGS="$(dpkg-buildflags --get LDFLAGS)"
+
               meson setup "${build_dir}" "${source_dir}" \
                   --prefix "${prefix}" \
                   --libdir lib \
-                  --buildtype release \
+                  --buildtype plain \
                   --wrap-mode nofallback \
                   -Dstrip=true \
                   -Dauto_features=enabled \
