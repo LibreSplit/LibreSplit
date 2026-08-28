@@ -5,6 +5,17 @@
 #define NET_WM_STATE_REMOVE 0
 #define NET_WM_STATE_ADD 1
 
+/**
+ * Returns whether or not the current display is x11
+ *
+ * @return bool
+ */
+bool is_x11_display()
+{
+    GdkDisplay* display = gdk_display_get_default();
+    return display != NULL && GDK_IS_X11_DISPLAY(display);
+}
+
 static void change_wm_state(GdkDisplay* display, Window window, const char* state, gboolean add)
 {
     XClientMessageEvent event = { 0 };

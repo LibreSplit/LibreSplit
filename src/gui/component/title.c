@@ -24,6 +24,7 @@ extern LSComponentOps ls_title_operations; // defined at the end of the file
 LSComponent* ls_component_title_new(void)
 {
     LSTitle* self;
+    GtkWidget* counts;
 
     self = malloc(sizeof(LSTitle));
     if (!self) {
@@ -31,7 +32,8 @@ LSComponent* ls_component_title_new(void)
     }
     self->base.ops = &ls_title_operations;
 
-    self->header = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+    self->header = gtk_center_box_new();
+    gtk_center_box_set_shrink_center_last(GTK_CENTER_BOX(self->header), FALSE);
     add_class(self->header, "header");
 
     self->title = gtk_label_new(NULL);
@@ -39,19 +41,23 @@ LSComponent* ls_component_title_new(void)
     gtk_label_set_justify(GTK_LABEL(self->title), GTK_JUSTIFY_CENTER);
     gtk_label_set_wrap(GTK_LABEL(self->title), TRUE);
     gtk_widget_set_hexpand(self->title, TRUE);
-    gtk_box_append(GTK_BOX(self->header), self->title);
+    gtk_center_box_set_center_widget(GTK_CENTER_BOX(self->header), self->title);
+
+    counts = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
 
     self->attempt_count = gtk_label_new(NULL);
     add_class(self->attempt_count, "attempt-count");
     gtk_widget_set_margin_start(self->attempt_count, 8);
     gtk_widget_set_valign(self->attempt_count, GTK_ALIGN_START);
-    gtk_box_append(GTK_BOX(self->header), self->attempt_count);
+    gtk_box_append(GTK_BOX(counts), self->attempt_count);
 
     self->finished_count = gtk_label_new(NULL);
     add_class(self->finished_count, "finished_count");
     gtk_widget_set_margin_start(self->finished_count, 8);
     gtk_widget_set_valign(self->finished_count, GTK_ALIGN_START);
-    gtk_box_append(GTK_BOX(self->header), self->finished_count);
+    gtk_box_append(GTK_BOX(counts), self->finished_count);
+
+    gtk_center_box_set_end_widget(GTK_CENTER_BOX(self->header), counts);
 
     return (LSComponent*)self;
 }
