@@ -24,6 +24,7 @@ typedef struct LSSplits {
     GtkWidget** split_deltas;
     GtkWidget** split_times;
     GtkCssProvider* icons_css_provider;
+    gulong scroll_changed_handler;
 } LSSplits;
 extern LSComponentOps ls_splits_operations;
 
@@ -77,6 +78,7 @@ LSComponent* ls_component_splits_new(void)
     gtk_viewport_set_child(GTK_VIEWPORT(self->split_viewport), self->splits);
 
     self->icons_css_provider = NULL;
+    self->scroll_changed_handler = 0;
 
     self->split_last = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     add_class(self->split_last, "split-last");
@@ -95,6 +97,8 @@ LSComponent* ls_component_splits_new(void)
  */
 static void splits_delete(LSComponent* self)
 {
+    LSSplits* splits = (LSSplits*)self;
+    g_clear_signal_handler(&splits->scroll_changed_handler, splits->split_adjust);
     free(self);
 }
 
@@ -109,18 +113,31 @@ static GtkWidget* splits_widget(LSComponent* self)
     return ((LSSplits*)self)->container;
 }
 
+#define SCROLL_TOLERANCE 0.5
+
+static void scroll_to_bottom(GtkAdjustment* adjustment, gpointer data)
+{
+    LSSplits* self = data;
+    double lower = gtk_adjustment_get_lower(adjustment);
+    double upper = gtk_adjustment_get_upper(adjustment);
+    double page_size = gtk_adjustment_get_page_size(adjustment);
+
+    g_clear_signal_handler(&self->scroll_changed_handler, adjustment);
+    gtk_adjustment_set_value(adjustment, MAX(lower, upper - page_size));
+}
+
 static void splits_trailer(LSComponent* self_)
 {
     LSSplits* self = (LSSplits*)self_;
-    int height, split_h, last = self->split_count - 1;
+    int last = self->split_count - 1;
     double curr_scroll = gtk_adjustment_get_value(self->split_adjust);
-    double scroll_max = gtk_adjustment_get_upper(self->split_adjust);
+    double lower = gtk_adjustment_get_lower(self->split_adjust);
+    double upper = gtk_adjustment_get_upper(self->split_adjust);
     double page_size = gtk_adjustment_get_page_size(self->split_adjust);
+    double scroll_end = MAX(lower, upper - page_size);
     g_object_ref(self->split_rows[last]);
-    split_h = gtk_widget_get_height(self->split_titles[last]);
-    height = gtk_widget_get_height(self->splits);
     if (gtk_widget_get_parent(self->split_rows[last]) == self->splits) {
-        if (curr_scroll + page_size < scroll_max) {
+        if (curr_scroll < scroll_end - SCROLL_TOLERANCE) {
             // move last split to split_last
             gtk_box_remove(GTK_BOX(self->splits),
                 self->split_rows[last]);
@@ -129,16 +146,19 @@ static void splits_trailer(LSComponent* self_)
             gtk_widget_set_visible(self->split_last, TRUE);
         }
     } else {
-        if (curr_scroll + page_size == scroll_max) {
+        if (curr_scroll >= scroll_end - SCROLL_TOLERANCE) {
             // move last split to split box
+            g_clear_signal_handler(&self->scroll_changed_handler,
+                self->split_adjust);
+            self->scroll_changed_handler = g_signal_connect(
+                self->split_adjust,
+                "changed",
+                G_CALLBACK(scroll_to_bottom),
+                self);
             gtk_box_remove(GTK_BOX(self->split_last),
                 self->split_rows[last]);
             gtk_box_append(GTK_BOX(self->splits),
                 self->split_rows[last]);
-            gtk_adjustment_set_upper(self->split_adjust,
-                scroll_max + height);
-            gtk_adjustment_set_value(self->split_adjust,
-                curr_scroll + split_h);
             gtk_widget_set_visible(self->split_last, FALSE);
         }
     }
@@ -288,6 +308,7 @@ static void splits_clear_game(LSComponent* self_)
 {
     LSSplits* self = (LSSplits*)self_;
     int i;
+    g_clear_signal_handler(&self->scroll_changed_handler, self->split_adjust);
     gtk_widget_set_visible(self->splits, FALSE);
     gtk_widget_set_visible(self->split_last, FALSE);
     for (i = self->split_count - 1; i >= 0; --i) {

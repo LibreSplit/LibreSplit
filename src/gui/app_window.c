@@ -52,11 +52,17 @@ void toggle_decorations(LSAppWindow* win)
 
 void toggle_win_on_top(LSAppWindow* win)
 {
+    gboolean active = !win->opts.win_on_top;
     LOG_DEBUG("Toggling 'Always on Top' window flag");
-    x11_set_keep_above(GTK_WINDOW(win), !win->opts.win_on_top);
-    win->opts.win_on_top = !win->opts.win_on_top;
+    x11_set_keep_above(GTK_WINDOW(win), active);
+    win->opts.win_on_top = active;
     cfg.libresplit.start_on_top.value.b = win->opts.win_on_top;
     config_save();
+
+    GAction* action = g_action_map_lookup_action(G_ACTION_MAP(win), "always-on-top");
+    if (action != NULL) {
+        g_simple_action_set_state(G_SIMPLE_ACTION(action), g_variant_new_boolean(active));
+    }
 }
 
 /**
@@ -413,19 +419,14 @@ static void ls_app_window_init(LSAppWindow* win)
         G_CALLBACK(ls_app_window_map), win);
 
     // As a crash workaround, only enable global hotkeys if not on Wayland
-    const bool is_wayland = getenv("WAYLAND_DISPLAY");
     const bool force_global_hotkeys = getenv("LIBRESPLIT_FORCE_GLOBAL_HOTKEYS");
-
-    const bool enable_global_hotkeys = win->opts.global_hotkeys && (force_global_hotkeys || !is_wayland);
-
-    if (enable_global_hotkeys) {
+    if (win->opts.global_hotkeys && (is_x11_display() || force_global_hotkeys)) {
         LOG_DEBUG("Global Hotkeys Enabled, binding hotkeys globally...");
         bind_global_hotkeys(cfg, win);
     } else {
         LOG_DEBUG("Global Hotkeys Disabled, binding hotkeys only to the main window...");
         GtkEventController* key_controller = gtk_event_controller_key_new();
-        g_signal_connect(key_controller, "key-pressed",
-            G_CALLBACK(ls_app_window_keypress), win);
+        g_signal_connect(key_controller, "key-pressed", G_CALLBACK(ls_app_window_keypress), win);
         gtk_widget_add_controller(GTK_WIDGET(win), key_controller);
     }
 

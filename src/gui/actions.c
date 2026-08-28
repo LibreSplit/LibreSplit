@@ -360,7 +360,7 @@ void menu_toggle_win_on_top(GSimpleAction* action, GVariant* value, gpointer app
     } else {
         win = ls_app_window_new(LS_APP(app));
     }
-    x11_set_keep_above(GTK_WINDOW(win), !win->opts.win_on_top);
+    x11_set_keep_above(GTK_WINDOW(win), active);
     win->opts.win_on_top = active;
     g_simple_action_set_state(action, value);
 }

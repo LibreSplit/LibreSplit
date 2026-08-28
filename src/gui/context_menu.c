@@ -31,6 +31,20 @@ static const GActionEntry context_menu_actions[] = {
 };
 
 /**
+ * Syncs the context-menu toggles with application state
+ *
+ * @param win The application window that owns the actions
+ */
+static void sync_context_menu_state(LSAppWindow* win)
+{
+    GAction* action = g_action_map_lookup_action(G_ACTION_MAP(win), "enable-auto-splitter");
+    g_simple_action_set_state(G_SIMPLE_ACTION(action), g_variant_new_boolean(atomic_load(&auto_splitter_enabled)));
+
+    action = g_action_map_lookup_action(G_ACTION_MAP(win), "always-on-top");
+    g_simple_action_set_state(G_SIMPLE_ACTION(action), g_variant_new_boolean(win->opts.win_on_top));
+}
+
+/**
  * Determines which window edge the pointer is hovering over
  *
  * @param widget The widget referenced by the coordinates
@@ -136,14 +150,6 @@ static void create_context_menu(LSAppWindow* win, gpointer app)
         G_N_ELEMENTS(context_menu_actions),
         app);
 
-    GAction* action = g_action_map_lookup_action(G_ACTION_MAP(win),
-        "enable-auto-splitter");
-    g_simple_action_set_state(G_SIMPLE_ACTION(action),
-        g_variant_new_boolean(atomic_load(&auto_splitter_enabled)));
-    action = g_action_map_lookup_action(G_ACTION_MAP(win), "always-on-top");
-    g_simple_action_set_state(G_SIMPLE_ACTION(action),
-        g_variant_new_boolean(win->opts.win_on_top));
-
     g_menu_append(section, "Open Splits", "win.open-splits");
     g_menu_append(section, "Save Splits", "win.save-splits");
     g_menu_append_section(menu, NULL, G_MENU_MODEL(section));
@@ -195,6 +201,8 @@ void button_right_click(GtkGestureClick* gesture, double x, double y, gpointer a
     if (win->context_menu == NULL) {
         create_context_menu(win, app);
     }
+
+    sync_context_menu_state(win);
 
     GdkRectangle pointing_to = {
         .x = (int)x,
