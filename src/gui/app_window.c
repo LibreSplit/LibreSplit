@@ -71,28 +71,6 @@ static void ls_app_window_map(GtkWidget* widget, gpointer data)
     x11_set_keep_above(GTK_WINDOW(widget), win->opts.win_on_top);
 }
 
-static void resize_window(LSAppWindow* win,
-    int window_width,
-    int window_height)
-{
-    LOG_DEBUG("Resizing window");
-    GList* l;
-    for (l = win->components; l != NULL; l = l->next) {
-        LSComponent* component = l->data;
-        if (component->ops->resize) {
-            component->ops->resize(component,
-                window_width - 2 * WINDOW_PAD,
-                window_height);
-        }
-    }
-}
-
-static void ls_app_window_size_allocate(GtkWidget* widget, int width, int height, int baseline)
-{
-    GTK_WIDGET_CLASS(ls_app_window_parent_class)->size_allocate(widget, width, height, baseline);
-    resize_window(LS_APP_WINDOW(widget), width, height);
-}
-
 LSAppWindow* ls_app_window_new(LSApp* app)
 {
     LOG_DEBUG("Creating a new LibreSplit window");
@@ -231,7 +209,6 @@ static void ls_app_class_init(LSAppClass* class)
 
 static void ls_app_window_class_init(LSAppWindowClass* class)
 {
-    GTK_WIDGET_CLASS(class)->size_allocate = ls_app_window_size_allocate;
 }
 
 /**
