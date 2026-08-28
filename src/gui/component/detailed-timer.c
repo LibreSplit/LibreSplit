@@ -40,12 +40,9 @@ LSComponent* ls_component_detailed_timer_new(void)
     add_class(self->detailed_timer, "timer-container");
 
     self->detailed_info = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+    gtk_widget_set_valign(self->detailed_info, GTK_ALIGN_END);
     gtk_box_append(GTK_BOX(self->detailed_timer), self->detailed_info);
     add_class(self->detailed_info, "detailed-timer");
-
-    spacer = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-    gtk_widget_set_vexpand(spacer, TRUE);
-    gtk_box_append(GTK_BOX(self->detailed_info), spacer);
 
     self->segment_best = gtk_label_new(NULL);
     add_class(self->segment_best, "segment-best");
