@@ -24,17 +24,52 @@ runs:
                   ca-certificates \
                   curl \
                   gettext \
+                  gir1.2-cairo-1.0-dev \
+                  gir1.2-gdkpixbuf-2.0-dev \
+                  gir1.2-gio-2.0-dev \
+                  gir1.2-graphene-1.0-dev \
+                  gir1.2-pango-1.0-dev \
+                  gir1.2-pangocairo-1.0-dev \
+                  gir1.2-xlib-2.0-dev \
                   gobject-introspection \
                   glslc \
+                  libcairo2-dev \
                   libcolord-dev \
                   libcpdb-dev \
                   libcpdb-frontend-dev \
                   libdrm-dev \
+                  libegl1-mesa-dev \
+                  libepoxy-dev \
+                  libfontconfig-dev \
+                  libfribidi-dev \
+                  libgdk-pixbuf-2.0-dev \
+                  libglib2.0-dev \
+                  libgraphene-1.0-dev \
+                  libgstreamer-plugins-bad1.0-dev \
                   libgstreamer-plugins-base1.0-dev \
                   libgstreamer1.0-dev \
-                  libgtk-4-dev \
+                  libharfbuzz-dev \
+                  libjpeg-dev \
+                  libpango1.0-dev \
+                  libpng-dev \
+                  libpolkit-gobject-1-dev \
+                  librsvg2-dev \
                   libsysprof-capture-4-dev \
+                  libtiff-dev \
                   libvulkan-dev \
+                  libwayland-dev \
+                  libx11-dev \
+                  libxcomposite-dev \
+                  libxcursor-dev \
+                  libxdamage-dev \
+                  libxext-dev \
+                  libxfixes-dev \
+                  libxi-dev \
+                  libxinerama-dev \
+                  libxkbcommon-dev \
+                  libxkbfile-dev \
+                  libxml2-utils \
+                  libxrandr-dev \
                   meson \
                   ninja-build \
                   pkg-config \
