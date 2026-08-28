@@ -56,7 +56,7 @@ Alternatively, you can use the settings Dialog by right clicking the LibreSplit 
 
 ## Wayland Workaround
 
-To work around Wayland not allowing global hotkeys it's possible to use compatability modes.  
+To work around Wayland not allowing global hotkeys it's possible to use compatibility modes.  
 On KDE this involves going to Settings -> Legacy X11 App Support -> Listening for keystrokes: Always allowed  
 This is the least secure setting, but allows LibreSplit to see your inputs.  
 Then in the environment variables you need to set `GDK_BACKEND=x11 LIBRESPLIT_FORCE_GLOBAL_HOTKEYS=1`
