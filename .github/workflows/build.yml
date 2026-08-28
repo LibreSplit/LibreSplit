@@ -26,9 +26,9 @@ jobs:
             matrix:
                 include:
                     - arch: x86_64
-                      runner: ubuntu-24.04
+                      runner: ubuntu-26.04
                     - arch: aarch64
-                      runner: ubuntu-24.04-arm
+                      runner: ubuntu-26.04-arm
         permissions:
             contents: read
         steps:
@@ -203,9 +203,9 @@ jobs:
             matrix:
                 include:
                     - architecture: x86_64
-                      runner: ubuntu-24.04
+                      runner: ubuntu-26.04
                     - architecture: aarch64
-                      runner: ubuntu-24.04-arm
+                      runner: ubuntu-26.04-arm
         env:
             RPM_RELEASE: ${{ inputs.rpm_release }}
             SOURCE_SHA: ${{ inputs.source_sha }}
