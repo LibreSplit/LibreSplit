@@ -21,7 +21,7 @@ jobs:
     build:
         name: Build (${{matrix.arch}})
         runs-on: ${{ matrix.runner }}
-        container: registry.fedoraproject.org/fedora:44
+        container: ubuntu:24.10
         strategy:
             fail-fast: false
             matrix:
@@ -33,29 +33,21 @@ jobs:
         permissions:
             contents: read
         steps:
-            - name: "Install Fedora dependencies"
-              run: >-
-                  dnf install --assumeyes
-                  ca-certificates
-                  desktop-file-utils
-                  gcc
-                  git-core
-                  gtk4-devel
-                  jansson-devel
-                  libX11-devel
-                  luajit-devel
-                  meson
-                  openssl-devel
-                  patchelf
-                  wget
-                  zip
-                  zsync
-
             - name: "Checkout"
               uses: actions/checkout@v7
               with:
                   fetch-depth: 0
                   ref: ${{ inputs.source_sha }}
+
+            - name: "Install and cache C dependencies"
+              uses: awalsh128/cache-apt-pkgs-action@latest
+              with:
+                  packages: >
+                      meson
+                      libx11-dev
+                      libjansson-dev
+                      libluajit-5.1-dev
+                  version: 1.0
 
             - name: "Set release version"
               if: inputs.version != ''
@@ -121,6 +113,11 @@ jobs:
                   name: ${{ steps.artifacts.outputs.standalone }}
                   path: ${{ steps.artifacts.outputs.standalone }}.zip
 
+            - name: "Install AppImage dependencies"
+              run: |
+                  sudo apt -y update
+                  sudo apt -y install desktop-file-utils libluajit-5.1-dev zsync
+
             - name: "Prepare AppDir from release artifact"
               run: |
                   rm -rf AppDir
@@ -175,7 +172,7 @@ jobs:
                       awk '$1 == "libgtk-4.so.1" { print $3; exit }'
                   )"
                   if [[ -z "${resolved_gtk}" || ! -f "${resolved_gtk}" ]]; then
-                    echo "::error::LibreSplit did not resolve Fedora's GTK 4 library"
+                    echo "::error::LibreSplit did not resolve the GTK 4 library"
                     exit 1
                   fi
 
