@@ -164,6 +164,7 @@ jobs:
             - name: "Create AppImage"
               env:
                   APPIMAGE_EXTRACT_AND_RUN: 1
+                  NO_STRIP: 1
                   APPIMAGE_NAME: ${{ steps.artifacts.outputs.appimage }}
                   ARCH: ${{ matrix.arch }}
                   UPDATE_CHANNEL: ${{ steps.artifacts.outputs.update_channel }}
