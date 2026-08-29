@@ -24,24 +24,24 @@ jobs:
 
     linter-check:
         runs-on: ubuntu-24.04
+        container: registry.fedoraproject.org/fedora:44
 
         steps:
+            - name: Install Fedora dependencies
+              run: >-
+                  dnf install --assumeyes
+                  cppcheck
+                  gcc
+                  git-core
+                  gtk4-devel
+                  jansson-devel
+                  libX11-devel
+                  luajit-devel
+                  meson
+                  openssl-devel
+
             - name: Checkout repository
               uses: actions/checkout@v7
-
-            - name: Install and cache dependencies
-              uses: awalsh128/cache-apt-pkgs-action@latest
-              with:
-                  packages: >
-                    meson
-                    libx11-dev
-                    libjansson-dev
-                    libluajit-5.1-dev
-                    cppcheck
-                  version: 1.0
-
-            - name: Build GTK 4
-              uses: ./.github/actions/build-gtk
 
             - name: Set up project
               run: meson setup build -Dbuildtype=debug
