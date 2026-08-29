@@ -1,7 +1,6 @@
 #include "gui/app_window.h"
 #include "gui/dialogs.h"
 #include "gui/timer.h"
-#include "keybinds/keybinds_callbacks.h"
 #include "lasr/auto-splitter.h"
 #include "logging.h"
 #include "server.h"
@@ -108,7 +107,7 @@ int main(int argc, char* argv[])
 {
     // Check if app is running as root.
     if (geteuid() == 0 && !bypass_root_protection()) {
-        gtk_init(&argc, &argv);
+        gtk_init();
         display_root_warning_dialog();
         return 1;
     }

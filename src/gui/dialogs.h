@@ -1,7 +1,11 @@
 #pragma once
 
 #include <glib.h>
+#include <gtk/gtk.h>
 #include <stdbool.h>
+
+/** TODO: Remove temp helpers */
+gint run_dialog(GtkDialog* dialog);
 
 gboolean display_non_capable_mem_read_dialog(gpointer data);
 

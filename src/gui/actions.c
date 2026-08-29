@@ -1,6 +1,7 @@
 #include "src/gui/actions.h"
 #include "gio/gio.h"
 #include "src/gui/app_window.h"
+#include "src/gui/backends/x11.h"
 #include "src/gui/dialogs.h"
 #include "src/gui/game.h"
 #include "src/gui/timer.h"
@@ -89,8 +90,8 @@ void open_activated(GSimpleAction* action,
             GTK_MESSAGE_INFO,
             GTK_BUTTONS_OK,
             "The timer is currently running, please stop the run before changing splits.");
-        gtk_dialog_run(GTK_DIALOG(warning));
-        gtk_widget_destroy(warning);
+        run_dialog(GTK_DIALOG(warning));
+        gtk_window_destroy(GTK_WINDOW(warning));
         return;
     }
     dialog = gtk_file_chooser_dialog_new(
@@ -116,17 +117,20 @@ void open_activated(GSimpleAction* action,
     }
 
     // We couldn't recover any previous split, open the file dialog
-    gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(dialog),
-        splits_path);
+    GFile* folder = g_file_new_for_path(splits_path);
+    gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(dialog), folder, NULL);
+    g_object_unref(folder);
 
-    res = gtk_dialog_run(GTK_DIALOG(dialog));
+    res = run_dialog(GTK_DIALOG(dialog));
     if (res == GTK_RESPONSE_ACCEPT) {
         GtkFileChooser* chooser = GTK_FILE_CHOOSER(dialog);
         char last_folder[PATH_MAX];
-        char* filename = gtk_file_chooser_get_filename(chooser);
-        const char* current_folder = gtk_file_chooser_get_current_folder(chooser);
-        if (current_folder) {
-            strncpy(last_folder, current_folder, sizeof(last_folder) - 1);
+        GFile* file = gtk_file_chooser_get_file(chooser);
+        char* filename = file ? g_file_get_path(file) : NULL;
+        GFile* current_folder = gtk_file_chooser_get_current_folder(chooser);
+        char* current_folder_path = current_folder ? g_file_get_path(current_folder) : NULL;
+        if (current_folder_path) {
+            strncpy(last_folder, current_folder_path, sizeof(last_folder) - 1);
             last_folder[sizeof(last_folder) - 1] = '\0';
             CFG_SET_STR(cfg.history.last_split_folder.value.s, last_folder);
         }
@@ -135,11 +139,18 @@ void open_activated(GSimpleAction* action,
             CFG_SET_STR(cfg.history.split_file.value.s, filename);
             g_free(filename);
         }
+        if (file) {
+            g_object_unref(file);
+        }
+        g_free(current_folder_path);
+        if (current_folder) {
+            g_object_unref(current_folder);
+        }
     }
     if (!win->game || !win->timer) {
-        gtk_widget_show_all(win->welcome_box->box);
+        gtk_widget_set_visible(win->welcome_box->box, TRUE);
     }
-    gtk_widget_destroy(dialog);
+    gtk_window_destroy(GTK_WINDOW(dialog));
     config_save();
 }
 
@@ -168,7 +179,7 @@ void save_activated(GSimpleAction* action,
     }
     if (win->game && win->timer) {
         int width, height;
-        gtk_window_get_size(GTK_WINDOW(win), &width, &height);
+        gtk_window_get_default_size(GTK_WINDOW(win), &width, &height);
         win->game->width = width;
         win->game->height = height;
         bool saving = true;
@@ -180,11 +191,11 @@ void save_activated(GSimpleAction* action,
                     GTK_MESSAGE_QUESTION,
                     GTK_BUTTONS_YES_NO,
                     "This run seems to be worse than the saved one. Continue?");
-                gint response = gtk_dialog_run(GTK_DIALOG(confirm));
+                gint response = run_dialog(GTK_DIALOG(confirm));
                 if (response == GTK_RESPONSE_NO) {
                     saving = false;
                 }
-                gtk_widget_destroy(confirm);
+                gtk_window_destroy(GTK_WINDOW(confirm));
             }
         }
         if (saving) {
@@ -311,34 +322,36 @@ void quit_activated(GSimpleAction* action,
     if (win->welcome_box) {
         welcome_box_destroy(win->welcome_box);
     }
-    gtk_widget_destroy(GTK_WIDGET(win));
+    gtk_window_destroy(GTK_WINDOW(win));
     g_application_quit(G_APPLICATION(app));
 }
 
 /**
  * Callback to toggle the Auto Splitter on and off.
  *
- * @param menu_item Pointer to the menu item that triggered this callback.
+ * @param action Pointer to the action that triggered this callback.
+ * @param value The requested action state.
  * @param user_data Usually NULL
  */
-void toggle_auto_splitter(GtkCheckMenuItem* menu_item, gpointer user_data)
+void toggle_auto_splitter(GSimpleAction* action, GVariant* value, gpointer user_data)
 {
-    gboolean active = gtk_check_menu_item_get_active(menu_item);
+    gboolean active = g_variant_get_boolean(value);
     atomic_store(&auto_splitter_enabled, active);
     cfg.libresplit.auto_splitter_enabled.value.b = active;
     config_save();
+    g_simple_action_set_state(action, value);
 }
 
 /**
  * Callback to toggle the EWMH "Always on top" hint.
  *
- * @param menu_item Pointer to the menu item that triggered this callback.
+ * @param action Pointer to the action that triggered this callback.
+ * @param value The requested action state.
  * @param app Usually NULL
  */
-void menu_toggle_win_on_top(GtkCheckMenuItem* menu_item,
-    gpointer app)
+void menu_toggle_win_on_top(GSimpleAction* action, GVariant* value, gpointer app)
 {
-    gboolean active = gtk_check_menu_item_get_active(menu_item);
+    gboolean active = g_variant_get_boolean(value);
     GList* windows;
     LSAppWindow* win;
     windows = gtk_application_get_windows(GTK_APPLICATION(app));
@@ -347,8 +360,9 @@ void menu_toggle_win_on_top(GtkCheckMenuItem* menu_item,
     } else {
         win = ls_app_window_new(LS_APP(app));
     }
-    gtk_window_set_keep_above(GTK_WINDOW(win), !win->opts.win_on_top);
+    x11_set_keep_above(GTK_WINDOW(win), active);
     win->opts.win_on_top = active;
+    g_simple_action_set_state(action, value);
 }
 
 /**
@@ -390,8 +404,8 @@ void open_auto_splitter(GSimpleAction* action,
             GTK_MESSAGE_INFO,
             GTK_BUTTONS_OK,
             "The timer is currently running, please stop the run before changing auto splitter.");
-        gtk_dialog_run(GTK_DIALOG(warning));
-        gtk_widget_destroy(warning);
+        run_dialog(GTK_DIALOG(warning));
+        gtk_window_destroy(GTK_WINDOW(warning));
         return;
     }
     dialog = gtk_file_chooser_dialog_new(
@@ -414,17 +428,20 @@ void open_auto_splitter(GSimpleAction* action,
             mkdir(auto_splitters_path, 0700);
         }
     }
-    gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(dialog),
-        auto_splitters_path);
+    GFile* folder = g_file_new_for_path(auto_splitters_path);
+    gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(dialog), folder, NULL);
+    g_object_unref(folder);
 
-    res = gtk_dialog_run(GTK_DIALOG(dialog));
+    res = run_dialog(GTK_DIALOG(dialog));
     if (res == GTK_RESPONSE_ACCEPT) {
         GtkFileChooser* chooser = GTK_FILE_CHOOSER(dialog);
-        char* filename = gtk_file_chooser_get_filename(chooser);
+        GFile* file = gtk_file_chooser_get_file(chooser);
+        char* filename = file ? g_file_get_path(file) : NULL;
         char last_folder[PATH_MAX];
-        const char* current_folder = gtk_file_chooser_get_current_folder(chooser);
-        if (current_folder) {
-            strncpy(last_folder, current_folder, sizeof(last_folder) - 1);
+        GFile* current_folder = gtk_file_chooser_get_current_folder(chooser);
+        char* current_folder_path = current_folder ? g_file_get_path(current_folder) : NULL;
+        if (current_folder_path) {
+            strncpy(last_folder, current_folder_path, sizeof(last_folder) - 1);
             last_folder[sizeof(last_folder) - 1] = '\0';
             CFG_SET_STR(cfg.history.last_auto_splitter_folder.value.s, last_folder);
         }
@@ -433,10 +450,17 @@ void open_auto_splitter(GSimpleAction* action,
             strcpy(auto_splitter_file, filename);
             g_free(filename);
         }
+        if (file) {
+            g_object_unref(file);
+        }
+        g_free(current_folder_path);
+        if (current_folder) {
+            g_object_unref(current_folder);
+        }
         config_save();
 
         // Restart auto-splitter if it was running
         restart_auto_splitter();
     }
-    gtk_widget_destroy(dialog);
+    gtk_window_destroy(GTK_WINDOW(dialog));
 }

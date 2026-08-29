@@ -14,7 +14,7 @@ Also each split JSON file can apply their own themes by specifying a `theme` key
 2. Place the stylesheet under the `~/.config/libresplit/themes/<name>/<name>.css`directory where `name` is the name of your theme. If you have your `XDG_CONFIG_HOME` env var pointing somewhere else, you may need to change the directory accordingly.
 3. Theme variants should follow the pattern `<name>-<variant>.css`.
 
-See the [GtkCssProvider documentation](https://docs.gtk.org/gtk3/css-properties.html) for a list of supported CSS properties. Note that you can also modify the default font-family.
+See the [GTK 4 CSS properties documentation](https://docs.gtk.org/gtk4/css-properties.html) for a list of supported CSS properties. Note that you can also modify the default font-family.
 
 | LibreSplit CSS classes        | Explanation Where needed                                                                                                                                 |
 | ----------------------------- | -----------------------------------------------                                                                                                          |
@@ -119,6 +119,6 @@ Yes! But you'll need to first erase all your desktop theme's (and LibreSplit's) 
 
 **WARNING:** If you use this rule without setting any others, LibreSplit won't look like a GTK (or an application) at all, and will be next to unusable.
 
-With the help of GTK's [CSS Overview](https://docs.gtk.org/gtk3/css-overview.html) you'll be able to customize everything, including Context Menus, The Help and Settings screens (to an extent).
+With the help of GTK's [CSS Overview](https://docs.gtk.org/gtk4/css-overview.html) you'll be able to customize everything, including Context Menus, The Help and Settings screens (to an extent).
 
 This is very advanced wizardry, so be careful!

@@ -17,8 +17,8 @@ void ls_app_window_clear_game(LSAppWindow* win)
     LOG_DEBUG("Clearing Game...");
     GList* l;
 
-    gtk_widget_hide(win->box);
-    gtk_widget_show_all(win->welcome_box->box);
+    gtk_widget_set_visible(win->box, FALSE);
+    gtk_widget_set_visible(win->welcome_box->box, TRUE);
 
     for (l = win->components; l != NULL; l = l->next) {
         LSComponent* component = l->data;
@@ -48,7 +48,7 @@ void ls_app_window_show_game(LSAppWindow* win)
             win->game->width,
             win->game->height);
         // Then automatically resize the window to the preferences
-        gtk_window_resize(GTK_WINDOW(win),
+        gtk_window_set_default_size(GTK_WINDOW(win),
             win->game->width,
             win->game->height);
         // User will still be able to resize the window up, but not down
@@ -66,8 +66,8 @@ void ls_app_window_show_game(LSAppWindow* win)
         }
     }
 
-    gtk_widget_show(win->box);
-    gtk_widget_hide(win->welcome_box->box);
+    gtk_widget_set_visible(win->box, TRUE);
+    gtk_widget_set_visible(win->welcome_box->box, FALSE);
 }
 
 gpointer save_game_thread(gpointer data)

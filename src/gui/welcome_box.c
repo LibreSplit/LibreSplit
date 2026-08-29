@@ -17,25 +17,21 @@ LSWelcomeBox* welcome_box_new(GtkWidget* container)
     gtk_widget_set_margin_start(self->box, 8);
     gtk_widget_set_margin_end(self->box, 8);
     gtk_widget_set_vexpand(self->box, TRUE);
-    GtkIconTheme* theme = gtk_icon_theme_get_default();
-    GError* err = NULL;
-    GdkPixbuf* pixbuf = gtk_icon_theme_load_icon(theme, "libresplit", 200, 0, &err);
-    if (!pixbuf) {
-        g_printerr("Icon load failed: %s\n", err ? err->message : "unknown error");
-        if (err)
-            g_error_free(err);
+    GtkIconTheme* theme = gtk_icon_theme_get_for_display(gtk_widget_get_display(container));
+    if (!gtk_icon_theme_has_icon(theme, "libresplit")) {
+        g_printerr("Icon load failed: icon not found\n");
     } else {
-        self->img = gtk_image_new_from_pixbuf(pixbuf);
-        g_object_unref(pixbuf);
+        self->img = gtk_image_new_from_icon_name("libresplit");
+        gtk_image_set_pixel_size(GTK_IMAGE(self->img), 200);
         gtk_widget_set_halign(self->img, GTK_ALIGN_CENTER);
         gtk_widget_set_valign(self->img, GTK_ALIGN_CENTER);
         gtk_widget_set_size_request(self->img, 100, 100);
-        gtk_container_add(GTK_CONTAINER(self->box), self->img);
+        gtk_box_append(GTK_BOX(self->box), self->img);
     }
 
     self->welcome_lbl = gtk_label_new("Welcome to LibreSplit!\nNo split is currently loaded.\nRight click this window to open a split JSON file!");
-    gtk_container_add(GTK_CONTAINER(self->box), self->welcome_lbl);
-    gtk_container_add(GTK_CONTAINER(container), self->box);
+    gtk_box_append(GTK_BOX(self->box), self->welcome_lbl);
+    gtk_box_append(GTK_BOX(container), self->box);
     return self;
 }
 

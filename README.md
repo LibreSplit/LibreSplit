@@ -11,8 +11,8 @@
 <a href="https://github.com/LibreSplit/LibreSplit/stargazers">
 <img src="https://img.shields.io/github/stars/LibreSplit/LibreSplit?style=for-the-badge&logo=GitHub"</img>
 </a>
-<a href="https://docs.gtk.org/gtk3/getting_started.html">
-<img src="https://img.shields.io/static/v1?label=Made%20with&message=GTK%203.0&color=725d9c&style=for-the-badge&logo=GTK&logoColor=white"/>
+<a href="https://docs.gtk.org/gtk4/getting_started.html">
+<img src="https://img.shields.io/static/v1?label=Made%20with&message=GTK%204&color=725d9c&style=for-the-badge&logo=GTK&logoColor=white"/>
 </a>
 <a href="https://github.com/LibreSplit/LibreSplit/blob/main/LICENSE">
 <img src="https://img.shields.io/github/license/LibreSplit/LibreSplit?label=license&style=for-the-badge&logo=GNU&logoColor=white&color=b85353"/>
@@ -86,7 +86,7 @@ LibreSplit requires the following dependencies on your system to compile:
 
 - `git`
 - `meson`
-- `libgtk+-3.0`
+- `libgtk4`
 - `x11`
 - `libjansson` (for reading JSON split files)
 - `luajit` (for the Lua Auto Splitter Runtime)
@@ -102,7 +102,7 @@ Install the required dependencies:
 - Fedora/RHEL Based Systems
 
     ```sh
-    sudo dnf install binutils gcc git gtk3-devel jansson-devel libX11-devel luajit-devel meson openssl-devel
+    sudo dnf install binutils gcc git gtk4-devel jansson-devel libX11-devel luajit-devel meson openssl-devel
     ```
 
     For optional dependencies:
@@ -115,14 +115,14 @@ Install the required dependencies:
 
   ```sh
   sudo apt update
-  sudo apt install build-essential libgtk-3-dev libjansson-dev meson libluajit-5.1-dev libssl-dev
+  sudo apt install build-essential libgtk-4-dev libjansson-dev meson libluajit-5.1-dev libssl-dev
   ```
 
 - Arch-based systems
 
   ```sh
   sudo pacman -Sy
-  sudo pacman -S gtk3 jansson luajit git meson openssl
+  sudo pacman -S gtk4 jansson luajit git meson openssl
   ```
 
 Clone the project:
@@ -157,6 +157,29 @@ All 3 directories will start empty, so you may want to download the [resource re
 A file dialog will then appear, asking you to select a Split JSON file (see [Split files](#split-files)).
 
 Initially the window is undecorated. You can toggle window decorations by pressing the `Right Control` key.
+
+### Always on Top
+
+LibreSplit supports Always on Top in X11 sessions via an application setting. This can be toggled on or off in the
+right click context menu. This setting only works on X11 sessions.
+
+On Wayland, always on top can usually be configured in your compositor. If you notice that the "Always on Top" setting
+does not appear, you are on Wayland. An example on KDE specifically for configuring your compositor to always keep LibreSplit
+on top is provided below.
+
+To configure LibreSplit as always on top on KDE:
+- Open: System Settings -> Apps & Windows -> Window Management -> Window Rules
+- Here you can create a new window rule for LibreSplit.
+- Give it any Description you'd like such as "LibreSplit Always on Top"
+- Set "Window class (application)" to "Exact match" and "libresplit"
+- Set "Match whole window class" to "No"
+- Set the "Window types" dropdown to "All selected"
+- Now click "Add Property..."
+  - Scroll and look for "Arrangement & Access"
+  - Under this you should see "Keep above other windows" select that
+- Close the "Add Property..." panel
+- Set Keep above other windows to Force and Yes
+- Click Apply
 
 ### Default Keybinds
 
@@ -263,7 +286,6 @@ For more information, check the [Themes documentation](docs/themes.md).
   .split-icon {
     min-width: 24px;
     min-height: 24px;
-    background-size: 24px;
   }
   ```
 

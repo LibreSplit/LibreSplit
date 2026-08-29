@@ -33,20 +33,17 @@ LSComponent* ls_component_best_sum_new(void)
     self->container = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
     add_class(self->container, "footer"); /* hack */
     add_class(self->container, "sum-of-bests-container");
-    gtk_widget_show(self->container);
 
     label = gtk_label_new(SUM_OF_BEST_SEGMENTS);
     add_class(label, "sum-of-bests-label");
     gtk_widget_set_halign(label, GTK_ALIGN_START);
     gtk_widget_set_hexpand(label, TRUE);
-    gtk_container_add(GTK_CONTAINER(self->container), label);
-    gtk_widget_show(label);
+    gtk_box_append(GTK_BOX(self->container), label);
 
     self->sum_of_bests = gtk_label_new(NULL);
     add_class(self->sum_of_bests, "sum-of-bests");
     gtk_widget_set_halign(self->sum_of_bests, GTK_ALIGN_END);
-    gtk_container_add(GTK_CONTAINER(self->container), self->sum_of_bests);
-    gtk_widget_show(self->sum_of_bests);
+    gtk_box_append(GTK_BOX(self->container), self->sum_of_bests);
 
     return (LSComponent*)self;
 }

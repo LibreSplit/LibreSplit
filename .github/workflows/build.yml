@@ -26,17 +26,28 @@ jobs:
             matrix:
                 include:
                     - arch: x86_64
-                      runner: ubuntu-24.04
+                      runner: ubuntu-26.04
                     - arch: aarch64
-                      runner: ubuntu-24.04-arm
+                      runner: ubuntu-26.04-arm
         permissions:
             contents: read
         steps:
             - name: "Checkout"
-              uses: actions/checkout@v4
+              uses: actions/checkout@v7
               with:
                   fetch-depth: 0
                   ref: ${{ inputs.source_sha }}
+
+            - name: "Install and cache C dependencies"
+              uses: awalsh128/cache-apt-pkgs-action@latest
+              with:
+                  packages: >
+                      meson
+                      libgtk-4-dev
+                      libx11-dev
+                      libjansson-dev
+                      libluajit-5.1-dev
+                  version: 1.0
 
             - name: "Set release version"
               if: inputs.version != ''
@@ -46,17 +57,6 @@ jobs:
                   # Replace pre-release version with semantic versioning
                   sed -i "s/version: 'pre-release'/version: '${VERSION}'/" meson.build
                   grep -Fq "version: '${VERSION}'" meson.build
-
-            - name: "Install and cache C dependencies"
-              uses: awalsh128/cache-apt-pkgs-action@latest
-              with:
-                  packages: >
-                      meson
-                      libgtk-3-dev
-                      libx11-dev
-                      libjansson-dev
-                      libluajit-5.1-dev
-                  version: 1.0
 
             - name: "Configure"
               run: meson setup build -Dbuildtype=release -Dprefix=/usr
@@ -108,7 +108,7 @@ jobs:
 
             - name: "Upload artifacts"
               if: matrix.arch == 'x86_64'
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v7
               with:
                   name: ${{ steps.artifacts.outputs.standalone }}
                   path: ${{ steps.artifacts.outputs.standalone }}.zip
@@ -141,6 +141,14 @@ jobs:
                   chmod +x AppDir/usr/bin/libresplit
                   chmod +x AppDir/usr/bin/libresplit-ctl
 
+                  mkdir -p AppDir/usr/share/glib-2.0/schemas
+                  cp -a \
+                    /usr/share/glib-2.0/schemas/org.gtk.gtk4.*.xml \
+                    AppDir/usr/share/glib-2.0/schemas/
+                  glib-compile-schemas AppDir/usr/share/glib-2.0/schemas
+
+                  cp -a /usr/share/gtk-4.0 AppDir/usr/share/
+
             - name: "Download linuxdeploy"
               env:
                   ARCH: ${{ matrix.arch }}
@@ -158,9 +166,24 @@ jobs:
                   UPDATE_CHANNEL: ${{ steps.artifacts.outputs.update_channel }}
                   ZSYNC_NAME: ${{ steps.artifacts.outputs.zsync }}
               run: |
+                  resolved_gtk="$(
+                    ldd AppDir/usr/bin/libresplit |
+                      awk '$1 == "libgtk-4.so.1" { print $3; exit }'
+                  )"
+                  if [[ -z "${resolved_gtk}" || ! -f "${resolved_gtk}" ]]; then
+                    echo "::error::LibreSplit did not resolve the GTK 4 library"
+                    exit 1
+                  fi
+
                   LDAI_OUTPUT="${APPIMAGE_NAME}" \
                   LDAI_UPDATE_INFORMATION="gh-releases-zsync|${{ github.repository_owner }}|LibreSplit|${UPDATE_CHANNEL}|LibreSplit-*-${ARCH}.AppImage.zsync" \
                   "./linuxdeploy-${ARCH}.AppImage" --appdir AppDir --desktop-file AppDir/libresplit.desktop --icon-file AppDir/libresplit.png --output appimage
+
+                  if ! find AppDir -type f -name 'libgtk-4.so.1*' -print -quit | grep -q .; then
+                    echo "::error::The AppImage does not contain GTK 4"
+                    exit 1
+                  fi
+
                   if [[ "${APPIMAGE_NAME}.zsync" != "${ZSYNC_NAME}" ]]; then
                     mv "${APPIMAGE_NAME}.zsync" "${ZSYNC_NAME}"
                   fi
@@ -178,14 +201,14 @@ jobs:
                 done
 
             - name: "Upload AppImage"
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v7
               with:
                   path: ${{ steps.artifacts.outputs.appimage }}
                   name: ${{ steps.artifacts.outputs.appimage }}
                   if-no-files-found: error
 
             - name: "Upload AppImage zsync"
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v7
               with:
                   path: ${{ steps.artifacts.outputs.zsync }}
                   name: ${{ steps.artifacts.outputs.zsync }}
@@ -288,7 +311,7 @@ jobs:
     create-nightly-release:
         name: "Upload nightly release"
         needs: [build]
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04
         permissions:
             contents: write
         concurrency:
@@ -300,12 +323,12 @@ jobs:
             github.ref == 'refs/heads/main' &&
             github.repository == 'LibreSplit/LibreSplit'
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@v7
               with:
                   fetch-depth: 0
 
             - name: Download Artifacts
-              uses: actions/download-artifact@v7
+              uses: actions/download-artifact@v8
 
             - name: Get commit info
               run: |

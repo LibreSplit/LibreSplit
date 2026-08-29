@@ -1,5 +1,6 @@
 #include "app_window.h"
 #include "src/gui/actions.h"
+#include "src/gui/backends/x11.h"
 #include "src/gui/component/components.h"
 #include "src/gui/context_menu.h"
 #include "src/gui/dialogs.h"
@@ -13,10 +14,6 @@
 #include "src/settings/settings.h"
 #include "src/settings/utils.h"
 #include "src/timer.h"
-
-#ifdef GDK_WINDOWING_WAYLAND
-#include <gdk/gdkwayland.h>
-#endif
 
 #include <glib-object.h>
 #include <stdatomic.h>
@@ -42,31 +39,6 @@ G_DEFINE_TYPE(LSAppWindow, ls_app_window, GTK_TYPE_APPLICATION_WINDOW)
 void set_window_decorations(LSAppWindow* win)
 {
     gtk_window_set_decorated(GTK_WINDOW(win), win->opts.decorated);
-
-#ifdef GDK_WINDOWING_WAYLAND
-    GdkWindow* window = gtk_widget_get_window(GTK_WIDGET(win));
-    if (window && GDK_IS_WAYLAND_WINDOW(window)) {
-        if (win->opts.decorated) {
-            gdk_wayland_window_announce_ssd(window);
-        } else {
-            gdk_wayland_window_announce_csd(window);
-        }
-    }
-#endif
-}
-
-/**
- * Called when the main application window is about to be drawn.
- * Useful on Wayland where decoration calls require the GdkWindow
- * to actually exist, meaning our earlier call on application start
- * to set the initial user's decoration settings might not work.
- *
- * @param widget The application's main widget
- * @param data unused
- */
-static void ls_app_window_realize(GtkWidget* widget, gpointer data)
-{
-    set_window_decorations(LS_APP_WINDOW(widget));
 }
 
 void toggle_decorations(LSAppWindow* win)
@@ -80,37 +52,29 @@ void toggle_decorations(LSAppWindow* win)
 
 void toggle_win_on_top(LSAppWindow* win)
 {
+    gboolean active = !win->opts.win_on_top;
     LOG_DEBUG("Toggling 'Always on Top' window flag");
-    gtk_window_set_keep_above(GTK_WINDOW(win), !win->opts.win_on_top);
-    win->opts.win_on_top = !win->opts.win_on_top;
+    x11_set_keep_above(GTK_WINDOW(win), active);
+    win->opts.win_on_top = active;
     cfg.libresplit.start_on_top.value.b = win->opts.win_on_top;
     config_save();
-}
 
-static void resize_window(LSAppWindow* win,
-    int window_width,
-    int window_height)
-{
-    LOG_DEBUG("Resizing window");
-    GList* l;
-    for (l = win->components; l != NULL; l = l->next) {
-        LSComponent* component = l->data;
-        if (component->ops->resize) {
-            component->ops->resize(component,
-                window_width - 2 * WINDOW_PAD,
-                window_height);
-        }
+    GAction* action = g_action_map_lookup_action(G_ACTION_MAP(win), "always-on-top");
+    if (action != NULL) {
+        g_simple_action_set_state(G_SIMPLE_ACTION(action), g_variant_new_boolean(active));
     }
 }
 
-gboolean ls_app_window_resize(GtkWidget* widget,
-    GdkEvent* event,
-    gpointer data)
+/**
+ * Applies always-on-top state once the window is mapped.
+ *
+ * @param widget The mapped LibreSplit window
+ * @param data Pointer to the LibreSplit window state
+ */
+static void ls_app_window_map(GtkWidget* widget, gpointer data)
 {
-    LOG_DEBUG("Configure signal received: size, position of stacking of the window changed...");
-    LSAppWindow* win = (LSAppWindow*)widget;
-    resize_window(win, event->configure.width, event->configure.height);
-    return FALSE;
+    LSAppWindow* win = LS_APP_WINDOW(data);
+    x11_set_keep_above(GTK_WINDOW(widget), win->opts.win_on_top);
 }
 
 LSAppWindow* ls_app_window_new(LSApp* app)
@@ -118,7 +82,6 @@ LSAppWindow* ls_app_window_new(LSApp* app)
     LOG_DEBUG("Creating a new LibreSplit window");
     LSAppWindow* win;
     win = g_object_new(LS_APP_WINDOW_TYPE, "application", app, NULL);
-    gtk_window_set_type_hint(GTK_WINDOW(win), GDK_WINDOW_TYPE_HINT_DIALOG);
     return win;
 }
 
@@ -148,10 +111,10 @@ void ls_app_window_open(LSAppWindow* win, const char* file)
                 "JSON parse error: %s\n%s",
                 error_msg,
                 file);
-            gtk_dialog_run(GTK_DIALOG(error_popup));
+            run_dialog(GTK_DIALOG(error_popup));
 
             free(error_msg);
-            gtk_widget_destroy(error_popup);
+            gtk_window_destroy(GTK_WINDOW(error_popup));
         }
     } else if (ls_timer_create(&win->timer, win->game)) {
         win->timer = 0;
@@ -205,7 +168,13 @@ void ls_app_activate(GApplication* app)
         }
     }
     atomic_store(&auto_splitter_enabled, cfg.libresplit.auto_splitter_enabled.value.b);
-    g_signal_connect(win, "button-press-event", G_CALLBACK(handle_button_pressed), app);
+
+    GtkGesture* click = gtk_gesture_click_new();
+    gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(click), 0);
+    gtk_event_controller_set_propagation_phase(GTK_EVENT_CONTROLLER(click),
+        GTK_PHASE_CAPTURE);
+    g_signal_connect(click, "pressed", G_CALLBACK(handle_button_pressed), app);
+    gtk_widget_add_controller(GTK_WIDGET(win), GTK_EVENT_CONTROLLER(click));
 }
 
 void ls_app_open(GApplication* app,
@@ -251,12 +220,12 @@ static void ls_app_window_class_init(LSAppWindowClass* class)
 /**
  * Triggered when LibreSplit receives a notification to close.
  *
- * @param widget The pointer to the LibreSplit window, as a widget.
+ * @param window The LibreSplit window being closed.
  * @param data Usually NULL.
  */
-gboolean ls_app_window_delete(GtkWidget* widget, GdkEvent* event, gpointer data)
+gboolean ls_app_window_delete(GtkWindow* window, gpointer data)
 {
-    LSAppWindow* win = (LSAppWindow*)widget;
+    LSAppWindow* win = LS_APP_WINDOW(window);
 
     // Warn if the reset will lose a gold split, and allow the user to cancel the reset if they want to keep it
     if (win->timer && win->timer->running && (ls_timer_has_gold_split(win->timer) || ls_timer_has_rainbow_split(win->timer))) {
@@ -294,6 +263,10 @@ void ls_app_window_destroy(GtkWidget* widget, gpointer data)
     atomic_store(&auto_splitter_enabled, 0);
     atomic_store(&exit_requested, 1);
     LOG_DEBUG("Exit request sent to threads");
+    if (win->context_menu) {
+        gtk_widget_unparent(win->context_menu);
+        win->context_menu = NULL;
+    }
     // Close any other open application windows (settings, dialogs, etc.)
     GApplication* app = g_application_get_default();
     if (app) {
@@ -302,7 +275,7 @@ void ls_app_window_destroy(GtkWidget* widget, gpointer data)
         for (GList* l = snapshot; l != NULL; l = l->next) {
             GtkWidget* w = GTK_WIDGET(l->data);
             if (w != GTK_WIDGET(win)) {
-                gtk_widget_destroy(w);
+                gtk_window_destroy(GTK_WINDOW(w));
             }
         }
         g_list_free(snapshot);
@@ -321,12 +294,8 @@ gboolean ls_app_window_step(gpointer data)
     LSAppWindow* win = data;
     static int set_cursor;
     if (win->opts.hide_cursor && !set_cursor) {
-        GdkWindow* gdk_window = gtk_widget_get_window(GTK_WIDGET(win));
-        if (gdk_window) {
-            GdkCursor* cursor = gdk_cursor_new_for_display(win->display, GDK_BLANK_CURSOR);
-            gdk_window_set_cursor(gdk_window, cursor);
-            set_cursor = 1;
-        }
+        gtk_widget_set_cursor_from_name(GTK_WIDGET(win), "none");
+        set_cursor = 1;
     }
 
     if (win->timer) {
@@ -393,10 +362,7 @@ gboolean ls_app_window_draw(gpointer data)
             }
         }
     } else {
-        GdkRectangle rect;
-        gtk_widget_get_allocation(GTK_WIDGET(win), &rect);
-        gdk_window_invalidate_rect(gtk_widget_get_window(GTK_WIDGET(win)),
-            &rect, FALSE);
+        gtk_widget_queue_draw(GTK_WIDGET(win));
     }
     return TRUE;
 }
@@ -430,7 +396,6 @@ static void ls_app_window_init(LSAppWindow* win)
     win->keybinds.skip_split = parse_keybind(cfg.keybinds.skip_split.value.s);
     win->keybinds.toggle_decorations = parse_keybind(cfg.keybinds.toggle_decorations.value.s);
     win->keybinds.toggle_win_on_top = parse_keybind(cfg.keybinds.toggle_win_on_top.value.s);
-    gtk_window_set_keep_above(GTK_WINDOW(win), win->opts.win_on_top);
     set_window_decorations(win);
 
     // Load theme
@@ -445,32 +410,24 @@ static void ls_app_window_init(LSAppWindow* win)
     win->game = 0;
     win->timer = 0;
 
-    gtk_widget_add_events(GTK_WIDGET(win), GDK_POINTER_MOTION_MASK);
     LOG_DEBUG("Connecting window signals...")
-    g_signal_connect(win, "delete-event",
+    g_signal_connect(win, "close-request",
         G_CALLBACK(ls_app_window_delete), NULL);
     g_signal_connect(win, "destroy",
         G_CALLBACK(ls_app_window_destroy), NULL);
-    g_signal_connect(win, "configure-event",
-        G_CALLBACK(ls_app_window_resize), win);
-    g_signal_connect(win, "motion-notify-event",
-        G_CALLBACK(handle_pointer_motion), NULL);
-    g_signal_connect(win, "realize",
-        G_CALLBACK(ls_app_window_realize), NULL);
+    g_signal_connect(win, "map",
+        G_CALLBACK(ls_app_window_map), win);
 
     // As a crash workaround, only enable global hotkeys if not on Wayland
-    const bool is_wayland = getenv("WAYLAND_DISPLAY");
     const bool force_global_hotkeys = getenv("LIBRESPLIT_FORCE_GLOBAL_HOTKEYS");
-
-    const bool enable_global_hotkeys = win->opts.global_hotkeys && (force_global_hotkeys || !is_wayland);
-
-    if (enable_global_hotkeys) {
+    if (win->opts.global_hotkeys && (is_x11_display() || force_global_hotkeys)) {
         LOG_DEBUG("Global Hotkeys Enabled, binding hotkeys globally...");
         bind_global_hotkeys(cfg, win);
     } else {
         LOG_DEBUG("Global Hotkeys Disabled, binding hotkeys only to the main window...");
-        g_signal_connect(win, "key_press_event",
-            G_CALLBACK(ls_app_window_keypress), win);
+        GtkEventController* key_controller = gtk_event_controller_key_new();
+        g_signal_connect(key_controller, "key-pressed", G_CALLBACK(ls_app_window_keypress), win);
+        gtk_widget_add_controller(GTK_WIDGET(win), key_controller);
     }
 
     LOG_DEBUG("Creating the main window...");
@@ -478,8 +435,15 @@ static void ls_app_window_init(LSAppWindow* win)
     gtk_widget_set_margin_top(win->container, WINDOW_PAD);
     gtk_widget_set_margin_bottom(win->container, WINDOW_PAD);
     gtk_widget_set_vexpand(win->container, TRUE);
-    gtk_container_add(GTK_CONTAINER(win), win->container);
-    gtk_widget_show(win->container);
+    gtk_window_set_child(GTK_WINDOW(win), win->container);
+
+    GtkEventController* motion_controller = gtk_event_controller_motion_new();
+    gtk_event_controller_set_propagation_phase(motion_controller, GTK_PHASE_CAPTURE);
+    g_signal_connect(motion_controller, "motion",
+        G_CALLBACK(handle_pointer_motion), win);
+    g_signal_connect(motion_controller, "leave",
+        G_CALLBACK(handle_pointer_leave), win);
+    gtk_widget_add_controller(GTK_WIDGET(win), motion_controller);
 
     LOG_DEBUG("Creating the welcome box...");
     win->welcome_box = welcome_box_new(win->container);
@@ -489,7 +453,7 @@ static void ls_app_window_init(LSAppWindow* win)
     gtk_widget_set_margin_top(win->box, 0);
     gtk_widget_set_margin_bottom(win->box, 0);
     gtk_widget_set_vexpand(win->box, TRUE);
-    gtk_container_add(GTK_CONTAINER(win->container), win->box);
+    gtk_box_append(GTK_BOX(win->container), win->box);
 
     // Create all available components (TODO: change this in the future)
     LOG_DEBUG("Creating components...");
@@ -501,7 +465,7 @@ static void ls_app_window_init(LSAppWindow* win)
             if (widget) {
                 gtk_widget_set_margin_start(widget, WINDOW_PAD);
                 gtk_widget_set_margin_end(widget, WINDOW_PAD);
-                gtk_container_add(GTK_CONTAINER(win->box),
+                gtk_box_append(GTK_BOX(win->box),
                     component->ops->widget(component));
             }
             win->components = g_list_append(win->components, component);
@@ -515,8 +479,7 @@ static void ls_app_window_init(LSAppWindow* win)
     add_class(win->footer, "footer");
     gtk_widget_set_margin_start(win->footer, WINDOW_PAD);
     gtk_widget_set_margin_end(win->footer, WINDOW_PAD);
-    gtk_container_add(GTK_CONTAINER(win->box), win->footer);
-    gtk_widget_show(win->footer);
+    gtk_box_append(GTK_BOX(win->box), win->footer);
 
     LOG_DEBUG("Setting up timers for updating and drawing the window...");
     // Update the internal state every millisecond

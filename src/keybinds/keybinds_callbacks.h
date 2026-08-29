@@ -9,7 +9,11 @@ extern void timer_unsplit(LSAppWindow* win);
 extern void toggle_decorations(LSAppWindow* win);
 extern void toggle_win_on_top(LSAppWindow* win);
 
-gboolean ls_app_window_keypress(GtkWidget* widget, GdkEvent* event, gpointer data);
+gboolean ls_app_window_keypress(GtkEventControllerKey* controller,
+    guint keyval,
+    guint keycode,
+    GdkModifierType state,
+    gpointer data);
 
 void keybind_start_split(GtkWidget* widget, LSAppWindow* win);
 
