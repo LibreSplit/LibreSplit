@@ -21,15 +21,14 @@ jobs:
     build:
         name: Build (${{matrix.arch}})
         runs-on: ${{ matrix.runner }}
-        container: ubuntu:24.10
         strategy:
             fail-fast: false
             matrix:
                 include:
                     - arch: x86_64
-                      runner: ubuntu-24.04
+                      runner: ubuntu-26.04
                     - arch: aarch64
-                      runner: ubuntu-24.04-arm
+                      runner: ubuntu-26.04-arm
         permissions:
             contents: read
         steps:
