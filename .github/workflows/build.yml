@@ -43,6 +43,7 @@ jobs:
               with:
                   packages: >
                       meson
+                      libgtk-4-dev
                       libx11-dev
                       libjansson-dev
                       libluajit-5.1-dev
