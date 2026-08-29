@@ -22,6 +22,8 @@
 
 extern atomic_bool exit_requested; /*!< Set to 1 when LibreSplit is exiting */
 
+static void ls_app_window_size_allocate(GtkWidget* widget, int width, int height, int baseline);
+
 static void ls_app_init(LSApp* app)
 {
 }
@@ -215,6 +217,17 @@ static void ls_app_class_init(LSAppClass* class)
 
 static void ls_app_window_class_init(LSAppWindowClass* class)
 {
+    GTK_WIDGET_CLASS(class)->size_allocate = ls_app_window_size_allocate;
+}
+
+static void ls_app_window_size_allocate(GtkWidget* widget, int width, int height, int baseline)
+{
+    // This is the GtkApplicationWindow size allocate, not our appwindow
+    GTK_WIDGET_CLASS(ls_app_window_parent_class)->size_allocate(widget, width, height, baseline);
+    LSAppWindow* win = LS_APP_WINDOW(widget);
+    if (win->context_menu != NULL) {
+        gtk_popover_present(GTK_POPOVER(win->context_menu));
+    }
 }
 
 /**
@@ -432,6 +445,7 @@ static void ls_app_window_init(LSAppWindow* win)
 
     LOG_DEBUG("Creating the main window...");
     win->container = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+    add_class(win->container, "libresplit-content");
     gtk_widget_set_margin_top(win->container, WINDOW_PAD);
     gtk_widget_set_margin_bottom(win->container, WINDOW_PAD);
     gtk_widget_set_vexpand(win->container, TRUE);
