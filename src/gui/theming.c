@@ -13,7 +13,7 @@ static inline size_t fallback_css_data_len(void)
     return (size_t)((uintptr_t)_binary____src_fallback_css_end - (uintptr_t)_binary____src_fallback_css_start);
 }
 
-static const char reset_rules[] = ".window.main-window{all:unset;}\n"
+static const char reset_rules[] = ".window.main-window{ all: unset; }\n"
                                   ".window.main-window .libresplit-content,\n"
                                   ".window.main-window .libresplit-content * { all: unset; }";
 
