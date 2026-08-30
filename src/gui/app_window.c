@@ -22,8 +22,6 @@
 
 extern atomic_bool exit_requested; /*!< Set to 1 when LibreSplit is exiting */
 
-static void ls_app_window_size_allocate(GtkWidget* widget, int width, int height, int baseline);
-
 static void ls_app_init(LSApp* app)
 {
 }
@@ -215,11 +213,17 @@ static void ls_app_class_init(LSAppClass* class)
     G_APPLICATION_CLASS(class)->open = ls_app_open;
 }
 
-static void ls_app_window_class_init(LSAppWindowClass* class)
-{
-    GTK_WIDGET_CLASS(class)->size_allocate = ls_app_window_size_allocate;
-}
-
+/**
+ * @brief Keeps the context menu sized and positioned correctly during application layout.
+ *
+ * When a manual popover's parent is allocated, the popover must update its allocation as well.
+ * This chains the window's normal allocation with the context menu if it exists.
+ *
+ * @param widget The application window
+ * @param width The window's allocated width
+ * @param height The window's allocated height
+ * @param baseline The window's allocated baseline (-1 if there is none)
+ */
 static void ls_app_window_size_allocate(GtkWidget* widget, int width, int height, int baseline)
 {
     // This is the GtkApplicationWindow size allocate, not our appwindow
@@ -228,6 +232,11 @@ static void ls_app_window_size_allocate(GtkWidget* widget, int width, int height
     if (win->context_menu != NULL) {
         gtk_popover_present(GTK_POPOVER(win->context_menu));
     }
+}
+
+static void ls_app_window_class_init(LSAppWindowClass* class)
+{
+    GTK_WIDGET_CLASS(class)->size_allocate = ls_app_window_size_allocate;
 }
 
 /**
