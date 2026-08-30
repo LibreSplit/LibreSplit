@@ -12,7 +12,7 @@ You can use splits located in [the resource repository](https://github.com/Libre
 | `attempt_count`     | int                | Number of attempts                                  |
 | `comparison_method` | int                | Method of comparison between real_time or game_time |
 | `start_delay`       | string (timestamp) | Non-negative delay until timer starts               |
-| `world_record`      | string             | Best known time                                     |
+| `world_record`      | time               | Best known [time](#time-object)                     |
 | `splits`            | array              | Array of [split objects](#split-object)             |
 | `theme`             | string             | Window theme                                        |
 | `theme_variant`     | string             | Window theme variant                                |
