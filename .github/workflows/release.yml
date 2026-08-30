@@ -1,0 +1,210 @@
+name: Release LibreSplit
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: LibreSplit version MAJOR.MINOR.PATCH
+        required: true
+        type: string
+      commit:
+        description: Full commit hash from main (defaults to current main)
+        required: false
+        type: string
+
+permissions: {}
+
+env:
+  RPM_RELEASE: "1"
+
+jobs:
+  prepare:
+    name: Prepare release
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      release_id: ${{ steps.draft.outputs.id }}
+      rpm_release: ${{ steps.inputs.outputs.rpm_release }}
+      source_sha: ${{ steps.inputs.outputs.source_sha }}
+      version: ${{ steps.inputs.outputs.version }}
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: main
+
+      - name: Resolve release inputs
+        id: inputs
+        env:
+          COMMIT_INPUT: ${{ inputs.commit }}
+          VERSION_INPUT: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          version="$(
+            printf '%s' "${VERSION_INPUT}" |
+              sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
+          )"
+          requested_sha="$(
+            printf '%s' "${COMMIT_INPUT}" |
+              sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
+          )"
+
+          if [[ ! "${version}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Version must be MAJOR.MINOR.PATCH." >&2
+            exit 1
+          fi
+
+          if [[ -z "${requested_sha}" ]]; then
+            source_sha="$(git rev-parse origin/main)"
+          else
+            if [[ ! "${requested_sha}" =~ ^[0-9a-fA-F]{40}$ ]]; then
+              echo "Commit must be a full commit hash from main." >&2
+              exit 1
+            fi
+
+            source_sha="$(
+              git rev-parse --verify --end-of-options "${requested_sha}^{commit}"
+            )"
+
+            if ! git merge-base --is-ancestor "${source_sha}" origin/main; then
+              echo "Commit must belong to the current main branch." >&2
+              exit 1
+            fi
+          fi
+
+          echo "rpm_release=${RPM_RELEASE}" >> "${GITHUB_OUTPUT}"
+          echo "source_sha=${source_sha}" >> "${GITHUB_OUTPUT}"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
+      - name: Create release token
+        id: release-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: LibreSplit
+          repositories: LibreSplit
+          permission-contents: write
+          permission-workflows: write
+
+      - name: Reject existing release
+        env:
+          GH_TOKEN: ${{ steps.release-token.outputs.token }}
+          TAG: v${{ steps.inputs.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          existing_release_ids="$(
+            gh api \
+              --paginate \
+              -H "X-GitHub-Api-Version: 2026-03-10" \
+              "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
+              --jq ".[] | select(.tag_name == \"${TAG}\") | .id"
+          )"
+
+          if [[ -n "${existing_release_ids}" ]]; then
+            echo "${TAG} already exists." >&2
+            exit 1
+          fi
+
+      - name: Create draft release
+        id: draft
+        uses: softprops/action-gh-release@v3
+        with:
+          token: ${{ steps.release-token.outputs.token }}
+          tag_name: v${{ steps.inputs.outputs.version }}
+          target_commitish: ${{ steps.inputs.outputs.source_sha }}
+          name: LibreSplit ${{ steps.inputs.outputs.version }}
+          draft: true
+          prerelease: false
+          generate_release_notes: true
+
+  build:
+    name: Build release
+    needs: prepare
+    permissions:
+      contents: write
+    uses: ./.github/workflows/build.yml
+    with:
+      rpm_release: ${{ needs.prepare.outputs.rpm_release }}
+      source_sha: ${{ needs.prepare.outputs.source_sha }}
+      version: ${{ needs.prepare.outputs.version }}
+
+  publish:
+    name: Publish release
+    needs: [prepare, build]
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - name: Download release artifacts
+        uses: actions/download-artifact@v7
+
+      - name: Create release token
+        id: release-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: LibreSplit
+          repositories: LibreSplit
+          permission-contents: write
+          permission-workflows: write
+
+      - name: Upload release artifacts
+        uses: softprops/action-gh-release@v3
+        with:
+          token: ${{ steps.release-token.outputs.token }}
+          tag_name: v${{ needs.prepare.outputs.version }}
+          draft: true
+          fail_on_unmatched_files: true
+          files: |
+            LibreSplit-${{ needs.prepare.outputs.version }}-standalone-x86_64/LibreSplit-${{ needs.prepare.outputs.version }}-standalone-x86_64.zip
+            LibreSplit-${{ needs.prepare.outputs.version }}-x86_64.AppImage/LibreSplit-${{ needs.prepare.outputs.version }}-x86_64.AppImage
+            LibreSplit-${{ needs.prepare.outputs.version }}-x86_64.AppImage.zsync/LibreSplit-${{ needs.prepare.outputs.version }}-x86_64.AppImage.zsync
+            LibreSplit-${{ needs.prepare.outputs.version }}-aarch64.AppImage/LibreSplit-${{ needs.prepare.outputs.version }}-aarch64.AppImage
+            LibreSplit-${{ needs.prepare.outputs.version }}-aarch64.AppImage.zsync/LibreSplit-${{ needs.prepare.outputs.version }}-aarch64.AppImage.zsync
+
+      - name: Create publication token
+        id: publication-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: LibreSplit
+          repositories: rpm.libresplit.org
+          permission-actions: write
+
+      - name: Publish RPM repository
+        env:
+          GH_TOKEN: ${{ steps.publication-token.outputs.token }}
+          ORIGIN_RUN_ID: ${{ github.run_id }}
+          RELEASE_ID: ${{ needs.prepare.outputs.release_id }}
+          RPM_RELEASE: ${{ needs.prepare.outputs.rpm_release }}
+          SOURCE_SHA: ${{ needs.prepare.outputs.source_sha }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          downstream_run_id="$(
+            gh api \
+              --method POST \
+              -H "X-GitHub-Api-Version: 2026-03-10" \
+              repos/LibreSplit/rpm.libresplit.org/actions/workflows/publish.yml/dispatches \
+              -F return_run_details=true \
+              -f ref=main \
+              -f "inputs[release_id]=${RELEASE_ID}" \
+              -f "inputs[version]=${VERSION}" \
+              -f "inputs[rpm_release]=${RPM_RELEASE}" \
+              -f "inputs[source_sha]=${SOURCE_SHA}" \
+              -f "inputs[origin_run_id]=${ORIGIN_RUN_ID}" \
+              --jq .workflow_run_id
+          )"
+
+          gh run watch \
+            "${downstream_run_id}" \
+            --exit-status \
+            --repo LibreSplit/rpm.libresplit.org

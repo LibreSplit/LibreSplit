@@ -1,6 +1,7 @@
 #include "src/gui/actions.h"
 #include "gio/gio.h"
 #include "src/gui/app_window.h"
+#include "src/gui/dialogs.h"
 #include "src/gui/game.h"
 #include "src/gui/timer.h"
 #include "src/lasr/auto-splitter.h"
@@ -13,7 +14,7 @@
 
 /**
  * Compares the current timer and the saved one to see
- * if the current one is better
+ * if the current one is better for the game's comparison method.
  *
  * Ported from paoloose/urn @7456bfe
  *
@@ -25,22 +26,29 @@
 bool ls_is_timer_better(ls_game* game, ls_timer* timer)
 {
     int i;
+    long long timer_split_time = LLONG_MAX;
+    long long game_split_time = LLONG_MAX;
+
     // Find the latest split with a time
     for (i = game->split_count - 1; i >= 0; i--) {
-        if (timer->split_times[i] != 0ll || game->split_times[i] != 0ll) {
+        timer_split_time = ls_time_get_by_method(timer->split_times[i], game->comparison_method);
+        game_split_time = ls_time_get_by_method(game->split_times[i], game->comparison_method);
+        if (timer_split_time != 0ll || game_split_time != 0ll) {
             break;
         }
     }
+
     if (i < 0) {
         return true;
     }
-    if (timer->split_times[i] == 0ll) {
+    if (timer_split_time == 0ll) {
         return false;
     }
-    if (game->split_times[i] == 0ll) {
+    if (game_split_time == 0ll) {
         return true;
     }
-    return timer->split_times[i] <= game->split_times[i];
+
+    return timer_split_time <= game_split_time;
 }
 
 /**
@@ -287,6 +295,19 @@ void quit_activated(GSimpleAction* action,
     } else {
         win = ls_app_window_new(LS_APP(app));
     }
+
+    // Warn if the reset will lose a gold split, and allow the user to cancel the reset if they want to keep it
+    if (win->timer && win->timer->running && (ls_timer_has_gold_split(win->timer) || ls_timer_has_rainbow_split(win->timer))) {
+        bool user_reset = true;
+        if (cfg.libresplit.ask_on_gold.value.b) {
+            user_reset = display_confirm_reset_dialog();
+        }
+
+        if (!user_reset) {
+            return;
+        }
+    }
+
     if (win->welcome_box) {
         welcome_box_destroy(win->welcome_box);
     }

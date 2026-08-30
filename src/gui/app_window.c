@@ -2,6 +2,7 @@
 #include "src/gui/actions.h"
 #include "src/gui/component/components.h"
 #include "src/gui/context_menu.h"
+#include "src/gui/dialogs.h"
 #include "src/gui/game.h"
 #include "src/gui/theming.h"
 #include "src/gui/timer.h"
@@ -12,6 +13,11 @@
 #include "src/settings/settings.h"
 #include "src/settings/utils.h"
 #include "src/timer.h"
+
+#ifdef GDK_WINDOWING_WAYLAND
+#include <gdk/gdkwayland.h>
+#endif
+
 #include <glib-object.h>
 #include <stdatomic.h>
 #include <stdio.h>
@@ -28,15 +34,52 @@ G_DEFINE_TYPE(LSApp, ls_app, GTK_TYPE_APPLICATION)
 G_DEFINE_TYPE(LSAppWindow, ls_app_window, GTK_TYPE_APPLICATION_WINDOW)
 
 /**
- * Shows/hides the title bar and window decorations.
+ * Sets whether or not the window should be decorated
+ * based on the user's preferences.
  *
- * @param win The LibreSplit Window pointer.
+ * @param win The current main app window
+ */
+void set_window_decorations(LSAppWindow* win)
+{
+    gtk_window_set_decorated(GTK_WINDOW(win), win->opts.decorated);
+
+#ifdef GDK_WINDOWING_WAYLAND
+    GdkWindow* window = gtk_widget_get_window(GTK_WIDGET(win));
+    if (window && GDK_IS_WAYLAND_WINDOW(window)) {
+        if (win->opts.decorated) {
+            gdk_wayland_window_announce_ssd(window);
+        } else {
+            gdk_wayland_window_announce_csd(window);
+        }
+    }
+#endif
+}
+
+/**
+ * Called when the main application window is about to be drawn.
+ * Useful on Wayland where decoration calls require the GdkWindow
+ * to actually exist, meaning our earlier call on application start
+ * to set the initial user's decoration settings might not work.
+ *
+ * @param widget The application's main widget
+ * @param data unused
+ */
+static void ls_app_window_realize(GtkWidget* widget, gpointer data)
+{
+    set_window_decorations(LS_APP_WINDOW(widget));
+}
+
+/**
+ * Toggles window decorations on and off, inverting the internal
+ * window state
+ *
+ * @param win The LibreSplit window pointer
  */
 void toggle_decorations(LSAppWindow* win)
 {
     LOG_DEBUG("Toggling window decorations");
-    gtk_window_set_decorated(GTK_WINDOW(win), !win->opts.decorated);
     win->opts.decorated = !win->opts.decorated;
+    set_window_decorations(win);
     cfg.libresplit.start_decorated.value.b = win->opts.decorated;
     config_save();
 }
@@ -189,7 +232,7 @@ void ls_app_activate(GApplication* app)
         }
     }
     atomic_store(&auto_splitter_enabled, cfg.libresplit.auto_splitter_enabled.value.b);
-    g_signal_connect(win, "button_press_event", G_CALLBACK(button_right_click), app);
+    g_signal_connect(win, "button-press-event", G_CALLBACK(handle_button_pressed), app);
 }
 
 void ls_app_open(GApplication* app,
@@ -230,6 +273,31 @@ static void ls_app_class_init(LSAppClass* class)
 
 static void ls_app_window_class_init(LSAppWindowClass* class)
 {
+}
+
+/**
+ * Triggered when LibreSplit receives a notification to close.
+ *
+ * @param widget The pointer to the LibreSplit window, as a widget.
+ * @param data Usually NULL.
+ */
+gboolean ls_app_window_delete(GtkWidget* widget, GdkEvent* event, gpointer data)
+{
+    LSAppWindow* win = (LSAppWindow*)widget;
+
+    // Warn if the reset will lose a gold split, and allow the user to cancel the reset if they want to keep it
+    if (win->timer && win->timer->running && (ls_timer_has_gold_split(win->timer) || ls_timer_has_rainbow_split(win->timer))) {
+        bool user_reset = true;
+        if (cfg.libresplit.ask_on_gold.value.b) {
+            user_reset = display_confirm_reset_dialog();
+        }
+
+        if (!user_reset) {
+            return TRUE;
+        }
+    }
+
+    return FALSE;
 }
 
 /**
@@ -370,6 +438,7 @@ static void ls_app_window_init(LSAppWindow* win)
     win->display = gdk_display_get_default();
     win->style = NULL;
     win->context_menu = NULL;
+    win->resize_cursor_hover = false;
 
     // make data path
     win->data_path[0] = '\0';
@@ -388,8 +457,8 @@ static void ls_app_window_init(LSAppWindow* win)
     win->keybinds.skip_split = parse_keybind(cfg.keybinds.skip_split.value.s);
     win->keybinds.toggle_decorations = parse_keybind(cfg.keybinds.toggle_decorations.value.s);
     win->keybinds.toggle_win_on_top = parse_keybind(cfg.keybinds.toggle_win_on_top.value.s);
-    gtk_window_set_decorated(GTK_WINDOW(win), win->opts.decorated);
     gtk_window_set_keep_above(GTK_WINDOW(win), win->opts.win_on_top);
+    set_window_decorations(win);
 
     // Load theme
     LOG_DEBUG("Loading Theme...");
@@ -403,11 +472,18 @@ static void ls_app_window_init(LSAppWindow* win)
     win->game = 0;
     win->timer = 0;
 
+    gtk_widget_add_events(GTK_WIDGET(win), GDK_POINTER_MOTION_MASK);
     LOG_DEBUG("Connecting window signals...")
+    g_signal_connect(win, "delete-event",
+        G_CALLBACK(ls_app_window_delete), NULL);
     g_signal_connect(win, "destroy",
         G_CALLBACK(ls_app_window_destroy), NULL);
     g_signal_connect(win, "configure-event",
         G_CALLBACK(ls_app_window_resize), win);
+    g_signal_connect(win, "motion-notify-event",
+        G_CALLBACK(handle_pointer_motion), NULL);
+    g_signal_connect(win, "realize",
+        G_CALLBACK(ls_app_window_realize), NULL);
 
     // As a crash workaround, only enable global hotkeys if not on Wayland
     const bool is_wayland = getenv("WAYLAND_DISPLAY");
