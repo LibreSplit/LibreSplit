@@ -188,7 +188,7 @@ void ls_app_open(GApplication* app,
 {
     LOG_DEBUG("Starting LibreSplit App");
     int i;
-    LSAppWindow* win = ls_get_main_app_window(LS_APP(app));
+    LSAppWindow* win = ls_get_main_app_window(GTK_APPLICATION(app));
     if (!win) {
         win = ls_app_window_new(LS_APP(app));
     }
@@ -380,9 +380,9 @@ gboolean ls_app_window_draw(gpointer data)
     return TRUE;
 }
 
-LSAppWindow* ls_get_main_app_window(LSApp* app)
+LSAppWindow* ls_get_main_app_window(GtkApplication* app)
 {
-    for (GList* node = gtk_application_get_windows(GTK_APPLICATION(app)); node != NULL; node = node->next) {
+    for (GList* node = gtk_application_get_windows(app); node != NULL; node = node->next) {
         if (LS_IS_APP_WINDOW(node->data)) {
             return LS_APP_WINDOW(node->data);
         }

@@ -32,7 +32,7 @@ void handle_ctl_command(CTLCommand command)
         return;
     }
 
-    LSAppWindow* win = ls_get_main_app_window(g_app);
+    LSAppWindow* win = ls_get_main_app_window(GTK_APPLICATION(g_app));
     if (!win) {
         LOG_INFO("No window available to handle commands");
         return;
