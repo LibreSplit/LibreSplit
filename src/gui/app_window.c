@@ -380,6 +380,15 @@ gboolean ls_app_window_draw(gpointer data)
     return TRUE;
 }
 
+/**
+ * @brief A helper function to get the main LibreSplit AppWindow.
+ * gtk_application_get_windows returns a list of windows ordered by the most
+ * recently focused window. Therefore the first result is not gauranteed to be
+ * the main window.
+ *
+ * @param app The application
+ * @return LSAppWindow* The main application window or NULL if none exists
+ */
 LSAppWindow* ls_get_main_app_window(GtkApplication* app)
 {
     for (GList* node = gtk_application_get_windows(app); node != NULL; node = node->next) {
