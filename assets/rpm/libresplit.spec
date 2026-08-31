@@ -65,7 +65,7 @@ appstreamcli validate --no-net \
 %{_bindir}/libresplit-ctl
 %{_datadir}/applications/org.libresplit.LibreSplit.desktop
 %{_datadir}/icons/hicolor/*/apps/libresplit.png
-${_datadir}/icons/hicolor/scalable/apps/libresplit.svg
+%{_datadir}/icons/hicolor/scalable/apps/libresplit.svg
 %{_metainfodir}/org.libresplit.LibreSplit.metainfo.xml
 %config(noreplace) %{_sysconfdir}/yum.repos.d/libresplit.repo
 
