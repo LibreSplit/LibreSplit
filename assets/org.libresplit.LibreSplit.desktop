@@ -2,5 +2,6 @@
 Name=LibreSplit
 Exec=libresplit
 Icon=libresplit
+StartupWMClass=libresplit
 Type=Application
 Categories=GTK;GNOME;Utility;

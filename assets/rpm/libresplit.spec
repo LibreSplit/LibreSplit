@@ -54,7 +54,7 @@ install -Dpm 0644 %{SOURCE1} \
 
 %check
 desktop-file-validate \
-    %{buildroot}%{_datadir}/applications/libresplit.desktop
+    %{buildroot}%{_datadir}/applications/org.libresplit.LibreSplit.desktop
 appstreamcli validate --no-net \
     %{buildroot}%{_metainfodir}/org.libresplit.LibreSplit.metainfo.xml
 
@@ -63,8 +63,9 @@ appstreamcli validate --no-net \
 %doc %{_docdir}/%{name}/README.md
 %{_bindir}/libresplit
 %{_bindir}/libresplit-ctl
-%{_datadir}/applications/libresplit.desktop
+%{_datadir}/applications/org.libresplit.LibreSplit.desktop
 %{_datadir}/icons/hicolor/*/apps/libresplit.png
+${_datadir}/icons/hicolor/scalable/apps/libresplit.svg
 %{_metainfodir}/org.libresplit.LibreSplit.metainfo.xml
 %config(noreplace) %{_sysconfdir}/yum.repos.d/libresplit.repo
 
