@@ -209,7 +209,8 @@ static void dialog_complete(LSDialogRequest* request, int response)
 static void dialog_button_clicked(GtkButton* button, gpointer user_data)
 {
     LSDialogRequest* request = user_data;
-    int response = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(button), "ls-dialog-response"));
+    gpointer button_data = g_object_get_data(G_OBJECT(button), "ls-dialog-response");
+    int response = GPOINTER_TO_INT(button_data);
     dialog_complete(request, response);
 }
 
@@ -349,10 +350,10 @@ static gboolean dialog_present(gpointer user_data)
  * @param message A message header for the dialog shown above the main message body
  * @param detail The main message to show in the dialog
  * @param icon An optional icon to present in the dialog.
- * @param options Options to display in the dialog. Each icon represents an action the user can take with an optional callback.
+ * @param options Options to display in the dialog. Each option represents an action the user can take with an optional callback.
  * @param options_count The number of options in the options array. Use G_N_ELEMENTS.
  * @param user_data Optional user_data to pass to callbacks.
- * @param user_data_destroy Any memory free method to call on user_data after callback.
+ * @param user_data_destroy Any memory free method to call on user_data during resource destruction for the dialog.
  * @return gboolean Whether or not the request was valid and successfully queue'd for presentation
  */
 gboolean ls_dialog_open(GtkWindow* parent,

@@ -28,7 +28,7 @@ typedef void (*LSDialogCallback)(gpointer user_data);
 typedef enum {
     LS_DIALOG_ICON_NAME, /**< Icon from a standard theme icon name */
     LS_DIALOG_ICON_FILE, /**< Icon from a file path */
-    LS_DIALOG_ICON_RESOURCE, /**< Icon from a resource buffer */
+    LS_DIALOG_ICON_RESOURCE, /**< Icon from a resource path */
     LS_DIALOG_ICON_GICON, /**< Icon from a GIcon pointer */
     LS_DIALOG_ICON_PAINTABLE, /**< Icon from a GdkPaintable pointer */
     LS_DIALOG_ICON_INVALID, /**< Not a valid icon type, this must always be last and is for type checking the enum value */
