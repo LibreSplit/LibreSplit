@@ -1,6 +1,7 @@
 #include "process.h"
 
 #include "../utils.h"
+#include "lua.h"
 
 #include <stdatomic.h>
 #include <stdio.h>
@@ -62,6 +63,11 @@ void stock_process_id(const char* pid_command)
  * Finds the ID of the process indicated by the Lua Auto Splitter.
  *
  * @param L The Lua State.
+ * @param 1 The name of process to find.
+ * @param 2 (optional) Using full commandline grepping, pgrep -f.
+ * @param 3 (optional) Sorting PID.
+ *
+ * Note: [AL] [2026-5-3] The sorting isn't documented or explained the use case. I'll leave it as it was before.
  *
  * @return Always zero.
  */
@@ -70,7 +76,14 @@ int find_process_id(lua_State* L)
     printf("\033[2J\033[1;1H"); // Clear the console
 
     process.name = lua_tostring(L, 1);
-    const char* sort = lua_tostring(L, 2);
+
+    int useCmdLine = 0;
+
+    if (lua_isboolean(L, 2)) {
+        useCmdLine = lua_toboolean(L, 2);
+    }
+
+    const char* sort = lua_tostring(L, 3);
     char sortCmd[16] = "";
 
     if (!sort) {
@@ -84,36 +97,49 @@ int find_process_id(lua_State* L)
 
     if (strcmp(sort, "first") == 0) {
         sortCmd[0] = '\0'; // No sorting
-    }
-    if (strcmp(sort, "last") == 0) {
+    } else if (strcmp(sort, "last") == 0) {
         strcpy(sortCmd, " | sort -r"); // Reverse the sorting to get latest PID
     }
 
     char command[256];
-    snprintf(command, sizeof(command), "pgrep \"%.*s\"%s", (int)strnlen(process.name, sizeof(command) - strlen(sortCmd) - 1), process.name, sortCmd);
-
+    if (useCmdLine) {
+        snprintf(command, sizeof(command), "pgrep -f \"%.*s\"%s", (int)strnlen(process.name, sizeof(command) - strlen(sortCmd) - 1), process.name, sortCmd);
+    } else {
+        snprintf(command, sizeof(command), "pgrep \"%.*s\"%s", (int)strnlen(process.name, sizeof(command) - strlen(sortCmd) - 1), process.name, sortCmd);
+    }
     stock_process_id(command);
 
     return 0;
 }
 
 /**
- * Finds the ID of the process indicated by the Lua Auto Splitter using full commandline grepping.
- *
- *  NOTE: [Penaz] [2026-04-25] This differs from find_process_id only by the -f argument. Consider
- *  ^ merging the command creation into a single function instead of duplicating code.
+ * Checks the ID of the process indicated by the Lua Auto Splitter is running without attaching to it.
+ * Used for making conditional statement when there is multiple game versions with different process ID.
  *
  * @param L The Lua State.
+ * @param 1 The name of process to find.
+ * @param 2 (optional) Using full commandline grepping, pgrep -f.
+ * @param 3 (optional) Sorting PID.
  *
- * @return Always zero.
+ * @return is 1, returning a boolean value. True if process ID was found and false the otherwise.
  */
-int find_cmdline_id(lua_State* L)
+int check_process_id(lua_State* L)
 {
     printf("\033[2J\033[1;1H"); // Clear the console
+                                //
+    const char* name = lua_tostring(L, 1);
 
-    process.name = lua_tostring(L, 1);
-    const char* sort = lua_tostring(L, 2);
+    int useCmdLine = 0;
+
+    if (lua_isboolean(L, 2)) {
+        useCmdLine = lua_toboolean(L, 2);
+    }
+
+    const char* sort = lua_tostring(L, 3);
     char sortCmd[16] = "";
+
+    char pid_output[PATH_MAX + 100];
+    pid_output[0] = '\0';
 
     if (!sort) {
         sort = "first";
@@ -125,16 +151,23 @@ int find_cmdline_id(lua_State* L)
     }
 
     if (strcmp(sort, "first") == 0) {
-        sortCmd[0] = '\0'; // No sorting
-    }
-    if (strcmp(sort, "last") == 0) {
-        strcpy(sortCmd, " | sort -r"); // Reverse the sorting to get latest PID
+        sortCmd[0] = '\0';
+    } else if (strcmp(sort, "last") == 0) {
+        strcpy(sortCmd, " | sort -r");
     }
 
     char command[256];
-    snprintf(command, sizeof(command), "pgrep -f \"%.*s\"%s", (int)strnlen(process.name, sizeof(command) - strlen(sortCmd) - 1), process.name, sortCmd);
+    if (useCmdLine) {
+        snprintf(command, sizeof(command), "pgrep -f \"%.*s\"%s", (int)strnlen(name, sizeof(command) - strlen(sortCmd) - 1), name, sortCmd);
+    } else {
+        snprintf(command, sizeof(command), "pgrep \"%.*s\"%s", (int)strnlen(name, sizeof(command) - strlen(sortCmd) - 1), name, sortCmd);
+    }
 
-    stock_process_id(command);
+    if (atomic_load(&auto_splitter_enabled)) {
+        execute_command(command, pid_output);
+    }
+    unsigned long pid = strtoul(pid_output, NULL, 10);
 
-    return 0;
+    lua_pushboolean(L, pid != 0);
+    return 1;
 }
