@@ -343,7 +343,11 @@ static gboolean dialog_present(gpointer user_data)
  * @brief Queues a new dialog to be created by the main GTK Thread.
  * All of the data passed in must be valid at the time of calling.
  * We then copy all of the data to persistent memory to pass the dialog request
- * along to the GTK queue.
+ * along to the GTK queue. user_data is not copied, this is expected to be a pointer
+ * to in memory-data, not a shallow stack reference. user_data_destroy is supplied
+ * for freeing user_data once the dialog is destroyed if necessary.
+ *
+ * If this function returns FALSE, the caller is responsible for freeing user_data.
  *
  * @param parent The parent window that owns the dialog
  * @param title The title displayed on the dialog's titlebar
@@ -351,7 +355,7 @@ static gboolean dialog_present(gpointer user_data)
  * @param detail The main message to show in the dialog
  * @param icon An optional icon to present in the dialog.
  * @param options Options to display in the dialog. Each option represents an action the user can take with an optional callback.
- * @param options_count The number of options in the options array. Use G_N_ELEMENTS.
+ * @param options_count The number of options in the options array. i.e. G_N_ELEMENTS for a local array.
  * @param user_data Optional user_data to pass to callbacks.
  * @param user_data_destroy Any memory free method to call on user_data during resource destruction for the dialog.
  * @return gboolean Whether or not the request was valid and successfully queue'd for presentation
