@@ -33,7 +33,6 @@ static void g_icon_free(LSDialogIcon* icon)
 
             case LS_DIALOG_ICON_GICON:
             case LS_DIALOG_ICON_PAINTABLE:
-            case LS_DIALOG_ICON_PIXBUF:
                 return g_object_unref(icon->source);
 
             default:
@@ -54,7 +53,6 @@ static gpointer g_icondup(gpointer source, LSDialogIconType type)
 
         case LS_DIALOG_ICON_GICON:
         case LS_DIALOG_ICON_PAINTABLE:
-        case LS_DIALOG_ICON_PIXBUF:
             return g_object_ref(source);
 
         default:
@@ -81,8 +79,6 @@ static GtkWidget* get_icon_widget_from_ls_icon(LSDialogIcon* icon)
             return gtk_image_new_from_gicon(icon->source);
         case LS_DIALOG_ICON_PAINTABLE:
             return gtk_image_new_from_paintable(icon->source);
-        case LS_DIALOG_ICON_PIXBUF:
-            return gtk_image_new_from_pixbuf(icon->source);
 
         default:
             LOG_WARNF("Unsupported or invalid type: %d", icon->type);

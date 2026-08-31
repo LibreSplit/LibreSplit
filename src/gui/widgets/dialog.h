@@ -21,7 +21,6 @@ typedef enum {
     LS_DIALOG_ICON_RESOURCE,
     LS_DIALOG_ICON_GICON,
     LS_DIALOG_ICON_PAINTABLE,
-    LS_DIALOG_ICON_PIXBUF,
 } LSDialogIconType;
 
 typedef struct {
