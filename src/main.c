@@ -66,7 +66,7 @@ void handle_ctl_command(CTLCommand command)
             break;
         case CTL_CMD_EXIT:
             LOG_DEBUG("Exit requested via Server Command");
-            exit(0);
+            gtk_window_close(GTK_WINDOW(win));
             break;
         default:
             LOG_INFOF("Unknown CTL command: %d", command);

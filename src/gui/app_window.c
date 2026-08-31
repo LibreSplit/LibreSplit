@@ -7,6 +7,7 @@
 #include "src/gui/game.h"
 #include "src/gui/theming.h"
 #include "src/gui/timer.h"
+#include "src/gui/widgets/dialog.h"
 #include "src/keybinds/delayed_callbacks.h"
 #include "src/keybinds/keybinds_callbacks.h"
 #include "src/lasr/auto-splitter.h"
@@ -84,6 +85,7 @@ LSAppWindow* ls_app_window_new(LSApp* app)
     LOG_DEBUG("Creating a new LibreSplit window");
     LSAppWindow* win;
     win = g_object_new(LS_APP_WINDOW_TYPE, "application", app, NULL);
+    ls_dialog_set_main_window(GTK_WINDOW(win));
     return win;
 }
 
@@ -265,6 +267,7 @@ void ls_app_window_destroy(GtkWidget* widget, gpointer data)
 {
     LOG_INFO("Exiting LibreSplit. GG!");
     LSAppWindow* win = (LSAppWindow*)widget;
+    ls_dialog_set_main_window(NULL);
     if (win->timer) {
         ls_timer_release(win->timer);
         win->timer = 0;
