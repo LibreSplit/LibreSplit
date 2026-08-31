@@ -27,8 +27,6 @@ static LSApp* g_app = NULL;
 // Function to handle CTL commands from the server thread
 void handle_ctl_command(CTLCommand command)
 {
-    GList* windows;
-
     if (!g_app) {
         LOG_INFO("No application instance available to handle commands");
         return;

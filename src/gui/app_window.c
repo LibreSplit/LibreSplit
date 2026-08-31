@@ -187,15 +187,12 @@ void ls_app_open(GApplication* app,
     const gchar* hint)
 {
     LOG_DEBUG("Starting LibreSplit App");
-    GList* windows;
-    LSAppWindow* win;
     int i;
-    windows = gtk_application_get_windows(GTK_APPLICATION(app));
-    if (windows) {
-        win = LS_APP_WINDOW(windows->data);
-    } else {
+    LSAppWindow* win = ls_get_main_app_window(GTK_APPLICATION(app));
+    if (!win) {
         win = ls_app_window_new(LS_APP(app));
     }
+
     for (i = 0; i < n_files; i++) {
         ls_app_window_open(win, g_file_get_path(files[i]));
     }

@@ -65,7 +65,6 @@ void open_activated(GSimpleAction* action,
     gpointer app)
 {
     char splits_path[PATH_MAX];
-    GList* windows;
     LSAppWindow* win;
     GtkWidget* dialog;
     GtkFileFilter* filter;
@@ -77,12 +76,11 @@ void open_activated(GSimpleAction* action,
         app = parameter;
     }
 
-    windows = gtk_application_get_windows(GTK_APPLICATION(app));
-    if (windows) {
-        win = LS_APP_WINDOW(windows->data);
-    } else {
+    win = ls_get_main_app_window(app);
+    if (!win) {
         win = ls_app_window_new(LS_APP(app));
     }
+
     if (win->timer && win->timer->running) {
         GtkWidget* warning = gtk_message_dialog_new(
             GTK_WINDOW(win),
@@ -165,18 +163,16 @@ void save_activated(GSimpleAction* action,
     GVariant* parameter,
     gpointer app)
 {
-    GList* windows;
     LSAppWindow* win;
     if (parameter != NULL) {
         app = parameter;
     }
 
-    windows = gtk_application_get_windows(GTK_APPLICATION(app));
-    if (windows) {
-        win = LS_APP_WINDOW(windows->data);
-    } else {
+    win = ls_get_main_app_window(GTK_APPLICATION(app));
+    if (!win) {
         win = ls_app_window_new(LS_APP(app));
     }
+
     if (win->game && win->timer) {
         int width, height;
         gtk_window_get_default_size(GTK_WINDOW(win), &width, &height);
@@ -216,19 +212,17 @@ void reload_activated(GSimpleAction* action,
     GVariant* parameter,
     gpointer app)
 {
-    GList* windows;
     LSAppWindow* win;
     char* path;
     if (parameter != NULL) {
         app = parameter;
     }
 
-    windows = gtk_application_get_windows(GTK_APPLICATION(app));
-    if (windows) {
-        win = LS_APP_WINDOW(windows->data);
-    } else {
+    win = ls_get_main_app_window(GTK_APPLICATION(app));
+    if (!win) {
         win = ls_app_window_new(LS_APP(app));
     }
+
     if (win->game) {
         path = strdup(win->game->path);
         if (!path) {
@@ -251,16 +245,13 @@ void close_activated(GSimpleAction* action,
     GVariant* parameter,
     gpointer app)
 {
-    GList* windows;
     LSAppWindow* win;
     if (parameter != NULL) {
         app = parameter;
     }
 
-    windows = gtk_application_get_windows(GTK_APPLICATION(app));
-    if (windows) {
-        win = LS_APP_WINDOW(windows->data);
-    } else {
+    win = gtk_application_get_windows(GTK_APPLICATION(app));
+    if (!win) {
         win = ls_app_window_new(LS_APP(app));
     }
 
@@ -292,7 +283,6 @@ void quit_activated(GSimpleAction* action,
     gpointer app)
 {
     LOG_INFO("Exiting LibreSplit. GG!");
-    GList* windows;
     LSAppWindow* win;
     if (parameter != NULL) {
         app = parameter;
@@ -300,10 +290,8 @@ void quit_activated(GSimpleAction* action,
 
     atomic_store(&exit_requested, 1);
     LOG_DEBUG("Exit request sent to threads");
-    windows = gtk_application_get_windows(GTK_APPLICATION(app));
-    if (windows) {
-        win = LS_APP_WINDOW(windows->data);
-    } else {
+    win = ls_get_main_app_window(GTK_APPLICATION(app));
+    if (!win) {
         win = ls_app_window_new(LS_APP(app));
     }
 
@@ -352,14 +340,11 @@ void toggle_auto_splitter(GSimpleAction* action, GVariant* value, gpointer user_
 void menu_toggle_win_on_top(GSimpleAction* action, GVariant* value, gpointer app)
 {
     gboolean active = g_variant_get_boolean(value);
-    GList* windows;
-    LSAppWindow* win;
-    windows = gtk_application_get_windows(GTK_APPLICATION(app));
-    if (windows) {
-        win = LS_APP_WINDOW(windows->data);
-    } else {
+    LSAppWindow* win = ls_get_main_app_window(GTK_APPLICATION(app));
+    if (!win) {
         win = ls_app_window_new(LS_APP(app));
     }
+
     x11_set_keep_above(GTK_WINDOW(win), active);
     win->opts.win_on_top = active;
     g_simple_action_set_state(action, value);
@@ -379,7 +364,6 @@ void open_auto_splitter(GSimpleAction* action,
     gpointer app)
 {
     char auto_splitters_path[PATH_MAX];
-    GList* windows;
     LSAppWindow* win;
     GtkWidget* dialog;
     GtkFileFilter* filter;
@@ -391,12 +375,11 @@ void open_auto_splitter(GSimpleAction* action,
         app = parameter;
     }
 
-    windows = gtk_application_get_windows(GTK_APPLICATION(app));
-    if (windows) {
-        win = LS_APP_WINDOW(windows->data);
-    } else {
+    win = ls_get_main_app_window(GTK_APPLICATION(app));
+    if (!win) {
         win = ls_app_window_new(LS_APP(app));
     }
+
     if (win->timer && win->timer->running) {
         GtkWidget* warning = gtk_message_dialog_new(
             GTK_WINDOW(win),
