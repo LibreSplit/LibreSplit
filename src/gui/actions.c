@@ -250,7 +250,7 @@ void close_activated(GSimpleAction* action,
         app = parameter;
     }
 
-    win = gtk_application_get_windows(GTK_APPLICATION(app));
+    win = ls_get_main_app_window(GTK_APPLICATION(app));
     if (!win) {
         win = ls_app_window_new(LS_APP(app));
     }
