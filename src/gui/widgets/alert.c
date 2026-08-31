@@ -74,5 +74,5 @@ void ls_alert(GtkWindow* parent, const char* title, const char* message, const c
         }
     };
 
-    ls_dialog_open(parent, title, message, detail, icon, options, NULL, NULL);
+    ls_dialog_open(parent, title, message, detail, icon, options, G_N_ELEMENTS(options), NULL, NULL);
 }

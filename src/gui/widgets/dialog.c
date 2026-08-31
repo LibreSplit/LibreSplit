@@ -350,6 +350,7 @@ static gboolean dialog_present(gpointer user_data)
  * @param detail The main message to show in the dialog
  * @param icon An optional icon to present in the dialog.
  * @param options Options to display in the dialog. Each icon represents an action the user can take with an optional callback.
+ * @param options_count The number of options in the options array. Use G_N_ELEMENTS.
  * @param user_data Optional user_data to pass to callbacks.
  * @param user_data_destroy Any memory free method to call on user_data after callback.
  * @return gboolean Whether or not the request was valid and successfully queue'd for presentation
@@ -360,6 +361,7 @@ gboolean ls_dialog_open(GtkWindow* parent,
     const char* detail,
     const LSDialogIcon* icon,
     const LSDialogOption* options,
+    gsize options_count,
     gpointer user_data,
     GDestroyNotify user_data_destroy)
 {
@@ -383,7 +385,6 @@ gboolean ls_dialog_open(GtkWindow* parent,
         return FALSE;
     }
 
-    gsize options_count = G_N_ELEMENTS(options);
     if (options_count <= 0 || options_count > MAX_BUTTONS) {
         LOG_ERR("Invalid ls_dialog_open usage: number of options exceeded limits");
         return FALSE;
