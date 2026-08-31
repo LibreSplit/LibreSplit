@@ -1,6 +1,13 @@
 #include "dialog.h"
 #include "src/logging.h"
 
+/**
+ * @brief The request object to construct when requesting a new dialog.
+ * This copies all of the caller's data into persistent memory and is responsible
+ * for storing messages, icons, options/callbacks, memory free operations etc.
+ *
+ * For internal use only.
+ */
 typedef struct {
     gatomicrefcount references;
     GWeakRef parent;
@@ -19,6 +26,13 @@ typedef struct {
     gboolean completed;
 } LSDialogRequest;
 
+/**
+ * @brief Ensures the icon supplied is valid for the source/type combination.
+ * A NULL LSDialogIcon is valid since this means no icon needs to be presented.
+ *
+ * @param icon The requested icon resource and type
+ * @return gboolean Whether or not the icon is valid
+ */
 static gboolean is_valid_icon(const LSDialogIcon* icon)
 {
     if (icon == NULL) {
@@ -56,6 +70,13 @@ static gboolean is_valid_icon(const LSDialogIcon* icon)
     return TRUE;
 }
 
+/**
+ * @brief Handles duplicating the icon resource in persistent memory, and assigning its appropriate free method
+ * for the icon once the dialog is destroyed.
+ *
+ * @param request The full dialog request
+ * @param icon The icon
+ */
 static void g_icondup(LSDialogRequest* request, const LSDialogIcon* icon)
 {
     switch (icon->type) {
@@ -78,6 +99,12 @@ static void g_icondup(LSDialogRequest* request, const LSDialogIcon* icon)
     }
 }
 
+/**
+ * @brief Build a new GtkWidget appropriate for the icon type
+ *
+ * @param icon
+ * @return GtkWidget*
+ */
 static GtkWidget* get_icon_widget(LSDialogIcon* icon)
 {
     if (icon == NULL || icon->source == NULL) {
@@ -213,6 +240,14 @@ static GtkWidget* dialog_label_new(const char* text)
     return label;
 }
 
+/**
+ * @brief Builds the actual dialog once GTK is ready to run the dialog function on the main thread.
+ * It is required for all of the GUI elements to be constructed in the main thread, therefore all of this work
+ * must happen once GTK calls `dialog_present` and never in `ls_dialog_open`
+ *
+ * @param user_data The LSDialogRequest
+ * @return gboolean Whether or not this method needs to remain in the GTK queue for continued calling - always false/G_SOURCE_REMOVE
+ */
 static gboolean dialog_present(gpointer user_data)
 {
     LSDialogRequest* request = user_data;
@@ -304,26 +339,27 @@ static gboolean dialog_present(gpointer user_data)
 }
 
 /**
- * @brief Queues a new dialog to be created by the main GTK Thread
+ * @brief Queues a new dialog to be created by the main GTK Thread.
+ * All of the data passed in must be valid at the time of calling.
+ * We then copy all of the data to persistent memory to pass the dialog request
+ * along to the GTK queue.
  *
- * @param parent
- * @param title
- * @param message
- * @param detail
- * @param options
- * @param icon
- * @param options_count
- * @param user_data
- * @param user_data_destroy
- * @return gboolean
+ * @param parent The parent window that owns the dialog
+ * @param title The title displayed on the dialog's titlebar
+ * @param message A message header for the dialog shown above the main message body
+ * @param detail The main message to show in the dialog
+ * @param icon An optional icon to present in the dialog.
+ * @param options Options to display in the dialog. Each icon represents an action the user can take with an optional callback.
+ * @param user_data Optional user_data to pass to callbacks.
+ * @param user_data_destroy Any memory free method to call on user_data after callback.
+ * @return gboolean Whether or not the request was valid and successfully queue'd for presentation
  */
 gboolean ls_dialog_open(GtkWindow* parent,
     const char* title,
     const char* message,
     const char* detail,
-    const LSDialogOption* options,
     const LSDialogIcon* icon,
-    gsize options_count,
+    const LSDialogOption* options,
     gpointer user_data,
     GDestroyNotify user_data_destroy)
 {
@@ -347,8 +383,9 @@ gboolean ls_dialog_open(GtkWindow* parent,
         return FALSE;
     }
 
+    gsize options_count = G_N_ELEMENTS(options);
     if (options_count <= 0 || options_count > MAX_BUTTONS) {
-        LOG_ERR("Invalid ls_dialog_open usage: options_count exceeded limits");
+        LOG_ERR("Invalid ls_dialog_open usage: number of options exceeded limits");
         return FALSE;
     }
 

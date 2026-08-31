@@ -50,9 +50,8 @@ gboolean ls_dialog_open(GtkWindow* parent,
     const char* title,
     const char* message,
     const char* detail,
-    const LSDialogOption* options,
     const LSDialogIcon* icon,
-    gsize options_count,
+    const LSDialogOption* options,
     gpointer user_data,
     GDestroyNotify user_data_destroy);
 
