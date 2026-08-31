@@ -34,12 +34,16 @@ static gboolean is_valid_icon(const LSDialogIcon* icon) {
         return FALSE;
     }
 
-    if (icon->type == LS_DIALOG_ICON_GICON && !G_IS_ICON(icon->source)) {
-        LOG_ERR("Invalid GIcon icon source was not a GIcon");
-        return FALSE;
-    } else if (icon->type == LS_DIALOG_ICON_PAINTABLE && !GDK_IS_PAINTABLE(icon->source)) {
-        LOG_ERR("Invalid GdkPaintable icon source was not a GdkPaintaible");
-        return FALSE;
+    if (icon->type == LS_DIALOG_ICON_GICON) {
+        if (!G_IS_ICON(icon->source)) {
+            LOG_ERR("Invalid GIcon icon source was not a GIcon");
+            return FALSE;
+        }
+    } else if (icon->type == LS_DIALOG_ICON_PAINTABLE) {
+        if (!GDK_IS_PAINTABLE(icon->source)) {
+            LOG_ERR("Invalid GdkPaintable icon source was not a GdkPaintaible");
+            return FALSE;
+        }
     } else {
         const char* resource = icon->source;
         if (resource[0] == '\0') {
@@ -316,8 +320,8 @@ gboolean ls_dialog_open(GtkWindow* parent,
     gpointer user_data,
     GDestroyNotify user_data_destroy)
 {
-    if (parent == NULL) {
-        LOG_ERR("Invalid ls_dialog_open usage: parent was null");
+    if (parent == NULL || !GTK_IS_WINDOW(parent)) {
+        LOG_ERR("Invalid ls_dialog_open usage: parent was null or not a valid GTK Window");
         return FALSE;
     }
 
@@ -377,6 +381,7 @@ gboolean ls_dialog_open(GtkWindow* parent,
     request->message = g_strdup(message);
     request->detail = g_strdup(detail);
     request->icon = NULL;
+    request->icon_free = NULL;
     request->options = g_new(LSDialogOption, options_count);
     request->options_count = options_count;
     request->user_data = user_data;
