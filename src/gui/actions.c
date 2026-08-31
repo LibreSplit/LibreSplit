@@ -76,7 +76,7 @@ void open_activated(GSimpleAction* action,
         app = parameter;
     }
 
-    win = ls_get_main_app_window(app);
+    win = ls_get_main_app_window(LS_APP(app));
     if (!win) {
         win = ls_app_window_new(LS_APP(app));
     }
@@ -168,7 +168,7 @@ void save_activated(GSimpleAction* action,
         app = parameter;
     }
 
-    win = ls_get_main_app_window(GTK_APPLICATION(app));
+    win = ls_get_main_app_window(LS_APP(app));
     if (!win) {
         win = ls_app_window_new(LS_APP(app));
     }
@@ -218,7 +218,7 @@ void reload_activated(GSimpleAction* action,
         app = parameter;
     }
 
-    win = ls_get_main_app_window(GTK_APPLICATION(app));
+    win = ls_get_main_app_window(LS_APP(app));
     if (!win) {
         win = ls_app_window_new(LS_APP(app));
     }
@@ -290,7 +290,7 @@ void quit_activated(GSimpleAction* action,
 
     atomic_store(&exit_requested, 1);
     LOG_DEBUG("Exit request sent to threads");
-    win = ls_get_main_app_window(GTK_APPLICATION(app));
+    win = ls_get_main_app_window(LS_APP(app));
     if (!win) {
         win = ls_app_window_new(LS_APP(app));
     }
@@ -340,7 +340,7 @@ void toggle_auto_splitter(GSimpleAction* action, GVariant* value, gpointer user_
 void menu_toggle_win_on_top(GSimpleAction* action, GVariant* value, gpointer app)
 {
     gboolean active = g_variant_get_boolean(value);
-    LSAppWindow* win = ls_get_main_app_window(GTK_APPLICATION(app));
+    LSAppWindow* win = ls_get_main_app_window(LS_APP(app));
     if (!win) {
         win = ls_app_window_new(LS_APP(app));
     }
@@ -375,7 +375,7 @@ void open_auto_splitter(GSimpleAction* action,
         app = parameter;
     }
 
-    win = ls_get_main_app_window(GTK_APPLICATION(app));
+    win = ls_get_main_app_window(LS_APP(app));
     if (!win) {
         win = ls_app_window_new(LS_APP(app));
     }

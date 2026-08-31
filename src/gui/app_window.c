@@ -188,7 +188,7 @@ void ls_app_open(GApplication* app,
 {
     LOG_DEBUG("Starting LibreSplit App");
     int i;
-    LSAppWindow* win = ls_get_main_app_window(GTK_APPLICATION(app));
+    LSAppWindow* win = ls_get_main_app_window(LS_APP(app));
     if (!win) {
         win = ls_app_window_new(LS_APP(app));
     }
