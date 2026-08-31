@@ -102,7 +102,7 @@ static void g_icondup(LSDialogRequest* request, const LSDialogIcon* icon)
 /**
  * @brief Build a new GtkWidget appropriate for the icon type
  *
- * @param icon
+ * @param icon The LSDialogIcon
  * @return GtkWidget*
  */
 static GtkWidget* get_icon_widget(LSDialogIcon* icon)
