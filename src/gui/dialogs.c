@@ -100,9 +100,10 @@ bool display_root_warning_dialog(void)
 }
 
 /**
- * Shows a confirmation dialog in case a gold split is detected.
+ * Displays a dialog asking for confirmation for a reset when
+ * there is a gold split involved.
  *
- * @return True if the "Yes" button in the dialog is pressed.
+ * @return True or false, depending on whether on how the user answered the dialog
  */
 bool display_confirm_reset_dialog(void)
 {
