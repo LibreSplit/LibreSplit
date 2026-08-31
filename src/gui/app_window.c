@@ -385,7 +385,7 @@ gboolean ls_app_window_draw(gpointer data)
 
 LSAppWindow* ls_get_main_app_window(LSApp* app)
 {
-    for (GList* node = gtk_application_get_windows(app); node != NULL; node = node->next) {
+    for (GList* node = gtk_application_get_windows(GTK_APPLICATION(app)); node != NULL; node = node->next) {
         if (LS_IS_APP_WINDOW(node->data)) {
             return LS_APP_WINDOW(node->data);
         }
