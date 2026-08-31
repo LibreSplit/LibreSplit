@@ -5,6 +5,7 @@
 #include "components.h"
 
 LSComponent* ls_component_title_new(void);
+LSComponent* ls_component_lua_title_new(void);
 LSComponent* ls_component_splits_new(void);
 LSComponent* ls_component_timer_new(void);
 LSComponent* ls_component_detailed_timer_new(void);
@@ -15,6 +16,7 @@ LSComponent* ls_component_wr_new(void);
 
 LSComponentAvailable ls_components[] = {
     { "title", ls_component_title_new },
+    // { "lua_title", ls_component_lua_title_new },
     { "splits", ls_component_splits_new },
     // { "timer", ls_component_timer_new },
     { "detailed-timer", ls_component_detailed_timer_new },
