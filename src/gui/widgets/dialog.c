@@ -9,6 +9,7 @@ typedef struct {
     char* message;
     char* detail;
     LSDialogIcon* icon;
+    void (*icon_free)(gpointer source);
     LSDialogOption* options;
     gsize options_count;
     gpointer user_data;
@@ -18,29 +19,36 @@ typedef struct {
     gboolean completed;
 } LSDialogRequest;
 
-static void g_icon_free(LSDialogIcon* icon)
-{
+static gboolean is_valid_icon(const LSDialogIcon* icon) {
     if (icon == NULL) {
-        return;
+        return TRUE;
     }
 
-    if (icon->source != NULL) {
-        switch (icon->type) {
-            case LS_DIALOG_ICON_NAME:
-            case LS_DIALOG_ICON_FILE:
-            case LS_DIALOG_ICON_RESOURCE:
-                g_free(icon->source);
+    if (icon->type < 0 || icon->type >= LS_DIALOG_ICON_INVALID) {
+        LOG_ERRF("Invalid icon type supplied: %d", icon->type);
+        return FALSE;
+    }
 
-            case LS_DIALOG_ICON_GICON:
-            case LS_DIALOG_ICON_PAINTABLE:
-                g_object_unref(icon->source);
+    if (icon->source == NULL) {
+        LOG_ERR("Invalid icon source was NULL");
+        return FALSE;
+    }
 
-            default:
-                LOG_WARNF("Unsupported or invalid type: %d", icon->type);
+    if (icon->type == LS_DIALOG_ICON_GICON && !G_IS_ICON(icon->source)) {
+        LOG_ERR("Invalid GIcon icon source was not a GIcon");
+        return FALSE;
+    } else if (icon->type == LS_DIALOG_ICON_PAINTABLE && !GDK_IS_PAINTABLE(icon->source)) {
+        LOG_ERR("Invalid GdkPaintable icon source was not a GdkPaintaible");
+        return FALSE;
+    } else {
+        const char* resource = icon->source;
+        if (resource[0] == '\0') {
+            LOG_ERR("Invalid string icon source was empty");
+            return FALSE;
         }
     }
 
-    g_free(icon);
+    return TRUE;
 }
 
 static gpointer g_icondup(gpointer source, LSDialogIconType type)
@@ -62,24 +70,36 @@ static gpointer g_icondup(gpointer source, LSDialogIconType type)
     return NULL;
 }
 
-static GtkWidget* get_icon_widget_from_ls_icon(LSDialogIcon* icon)
+static GtkWidget* get_icon_widget(LSDialogRequest* request)
 {
+    LSDialogIcon* icon = request->icon;
     if (icon == NULL || icon->source == NULL) {
         return NULL;
     }
 
     switch (icon->type) {
-        case LS_DIALOG_ICON_NAME:
+        case LS_DIALOG_ICON_NAME: {
+            request->icon_free = g_free;
             return gtk_image_new_from_icon_name(icon->source);
-        case LS_DIALOG_ICON_FILE:
+        }
+        case LS_DIALOG_ICON_FILE: {
+            request->icon_free = g_free;
             return gtk_image_new_from_file(icon->source);
-        case LS_DIALOG_ICON_RESOURCE:
+        }
+        case LS_DIALOG_ICON_RESOURCE: {
+            request->icon_free = g_free;
             return gtk_image_new_from_resource(icon->source);
-        case LS_DIALOG_ICON_GICON:
+        }
+        case LS_DIALOG_ICON_GICON: {
+            request->icon_free = g_object_unref;
             return gtk_image_new_from_gicon(icon->source);
-        case LS_DIALOG_ICON_PAINTABLE:
+        }
+        case LS_DIALOG_ICON_PAINTABLE: {
+            request->icon_free = g_object_unref;
             return gtk_image_new_from_paintable(icon->source);
+        }
 
+        // For completeness but only a valid icon should have made it to this point after `is_valid_icon`
         default:
             LOG_WARNF("Unsupported or invalid type: %d", icon->type);
     }
@@ -101,8 +121,16 @@ static void dialog_request_free(LSDialogRequest* request)
     g_free(request->title);
     g_free(request->message);
     g_free(request->detail);
-    g_icon_free(request->icon);
     g_weak_ref_clear(&request->parent);
+
+    if (request->icon) {
+        if (request->icon_free) {
+            request->icon_free(request->icon->source);
+        }
+
+        g_free(request->icon);
+    }
+
     g_free(request);
 }
 
@@ -137,7 +165,7 @@ static void dialog_complete(LSDialogRequest* request, int response)
     request->completed = true;
 
     LSDialogCallback callback = NULL;
-    if (response >= 0 && response < request->options_count) {
+    if (response >= 0 && response < (int)request->options_count) {
         callback = request->options[response].callback;
     }
 
@@ -221,7 +249,7 @@ static gboolean dialog_present(gpointer user_data)
     GtkWidget* body = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 16);
     gtk_box_append(GTK_BOX(content), body);
 
-    GtkWidget* icon = get_icon_widget_from_ls_icon(request->icon);
+    GtkWidget* icon = get_icon_widget(request);
     if (icon != NULL) {
         gtk_image_set_icon_size(GTK_IMAGE(icon), GTK_ICON_SIZE_LARGE);
         gtk_widget_set_valign(icon, GTK_ALIGN_START);
@@ -310,6 +338,10 @@ gboolean ls_dialog_open(GtkWindow* parent,
 
     if (options_count <= 0 || options_count > MAX_BUTTONS) {
         LOG_ERR("Invalid ls_dialog_open usage: options_count exceeded limits");
+        return FALSE;
+    }
+
+    if (!is_valid_icon(icon)) {
         return FALSE;
     }
 

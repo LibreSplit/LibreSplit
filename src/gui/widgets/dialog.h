@@ -15,12 +15,23 @@ G_BEGIN_DECLS
  */
 typedef void (*LSDialogCallback)(gpointer user_data);
 
+/**
+ * @brief Valid supported icon types.
+ * To add a new type, you must add a new entry to the enum, then add its implementation
+ * in the following functions of dialog.c:
+ *
+ * is_valid_icon - ensure that the supplied source is a valid source for the type.
+ * g_icondup - call the correct allocation method for duplicating the resource in persistent memory and return that pointer.
+ * get_icon_widget - add the correct resource destruction method to LSDialogRequest->icon_free for your source type
+ *                   then create a new GtkWidget for the icon that displays your icon and return the GtkWidget.
+ */
 typedef enum {
-    LS_DIALOG_ICON_NAME,
-    LS_DIALOG_ICON_FILE,
-    LS_DIALOG_ICON_RESOURCE,
-    LS_DIALOG_ICON_GICON,
-    LS_DIALOG_ICON_PAINTABLE,
+    LS_DIALOG_ICON_NAME, /**< Icon from a standard theme icon name */
+    LS_DIALOG_ICON_FILE, /**< Icon from a file path */
+    LS_DIALOG_ICON_RESOURCE, /**< Icon from a resource buffer */
+    LS_DIALOG_ICON_GICON, /**< Icon from a GIcon pointer */
+    LS_DIALOG_ICON_PAINTABLE, /**< Icon from a GdkPaintable pointer */
+    LS_DIALOG_ICON_INVALID, /**< Not a valid icon type, this must always be last and is for type checking the enum value */
 } LSDialogIconType;
 
 typedef struct {
