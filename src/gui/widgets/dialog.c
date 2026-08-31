@@ -29,11 +29,11 @@ static void g_icon_free(LSDialogIcon* icon)
             case LS_DIALOG_ICON_NAME:
             case LS_DIALOG_ICON_FILE:
             case LS_DIALOG_ICON_RESOURCE:
-                return g_free(icon->source);
+                g_free(icon->source);
 
             case LS_DIALOG_ICON_GICON:
             case LS_DIALOG_ICON_PAINTABLE:
-                return g_object_unref(icon->source);
+                g_object_unref(icon->source);
 
             default:
                 LOG_WARNF("Unsupported or invalid type: %d", icon->type);
