@@ -19,7 +19,8 @@ typedef struct {
     gboolean completed;
 } LSDialogRequest;
 
-static gboolean is_valid_icon(const LSDialogIcon* icon) {
+static gboolean is_valid_icon(const LSDialogIcon* icon)
+{
     if (icon == NULL) {
         return TRUE;
     }
@@ -82,26 +83,31 @@ static GtkWidget* get_icon_widget(LSDialogRequest* request)
     }
 
     switch (icon->type) {
-        case LS_DIALOG_ICON_NAME: {
-            request->icon_free = g_free;
-            return gtk_image_new_from_icon_name(icon->source);
-        }
-        case LS_DIALOG_ICON_FILE: {
-            request->icon_free = g_free;
-            return gtk_image_new_from_file(icon->source);
-        }
-        case LS_DIALOG_ICON_RESOURCE: {
-            request->icon_free = g_free;
-            return gtk_image_new_from_resource(icon->source);
-        }
-        case LS_DIALOG_ICON_GICON: {
-            request->icon_free = g_object_unref;
-            return gtk_image_new_from_gicon(icon->source);
-        }
-        case LS_DIALOG_ICON_PAINTABLE: {
-            request->icon_free = g_object_unref;
-            return gtk_image_new_from_paintable(icon->source);
-        }
+        case LS_DIALOG_ICON_NAME:
+            {
+                request->icon_free = g_free;
+                return gtk_image_new_from_icon_name(icon->source);
+            }
+        case LS_DIALOG_ICON_FILE:
+            {
+                request->icon_free = g_free;
+                return gtk_image_new_from_file(icon->source);
+            }
+        case LS_DIALOG_ICON_RESOURCE:
+            {
+                request->icon_free = g_free;
+                return gtk_image_new_from_resource(icon->source);
+            }
+        case LS_DIALOG_ICON_GICON:
+            {
+                request->icon_free = g_object_unref;
+                return gtk_image_new_from_gicon(icon->source);
+            }
+        case LS_DIALOG_ICON_PAINTABLE:
+            {
+                request->icon_free = g_object_unref;
+                return gtk_image_new_from_paintable(icon->source);
+            }
 
         // For completeness but only a valid icon should have made it to this point after `is_valid_icon`
         default:
