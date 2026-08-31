@@ -64,11 +64,13 @@ static void g_icondup(LSDialogRequest* request, const LSDialogIcon* icon)
         case LS_DIALOG_ICON_RESOURCE:
             request->icon->source = g_strdup(icon->source);
             request->icon_free = g_free;
+            break;
 
         case LS_DIALOG_ICON_GICON:
         case LS_DIALOG_ICON_PAINTABLE:
             request->icon->source = g_object_ref(icon->source);
             request->icon_free = g_object_unref;
+            break;
 
         // For completeness but only a valid icon should have made it to this point after `is_valid_icon`
         default:
