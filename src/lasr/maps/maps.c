@@ -1,6 +1,7 @@
 #include "maps.h"
 
 #include "src/lasr/utils.h"
+#include "src/logging.h"
 
 #include <fcntl.h>
 #include <linux/fs.h>
@@ -230,24 +231,30 @@ static size_t maps_getAll_legacy(void)
 {
     char path[22]; // 22 is the maximum length the path can be (strlen("/proc/4294967296/maps"))
 
-    snprintf(path, sizeof(path), "/proc/%d/maps", process.pid);
+    if (snprintf(path, sizeof(path), "/proc/%d/maps", process.pid) < 0) {
+        LOG_ERR("Failed to create maps path");
+        return 0;
+    }
 
     FILE* f = fopen(path, "r");
 
-    if (f) {
-        char current_line[PATH_MAX + 100];
-        maps_clearCache();
-        while (fgets(current_line, sizeof(current_line), f) != NULL) {
-            ProcessMap map;
-            if (maps_parseMapsLine(current_line, &map)) {
-                append_entry(map);
-            } else {
-                printf("Failed to parse maps line: %s\n", current_line);
-            }
-        }
-        fclose(f);
-        maps_cache = maps_flatten(&maps_cache_size);
+    if (!f) {
+        LOG_ERR("Failed to open maps file");
+        return 0;
     }
+
+    char current_line[PATH_MAX + 100];
+    maps_clearCache();
+    while (fgets(current_line, sizeof(current_line), f) != NULL) {
+        ProcessMap map;
+        if (maps_parseMapsLine(current_line, &map)) {
+            append_entry(map);
+        } else {
+            printf("Failed to parse maps line: %s\n", current_line);
+        }
+    }
+    fclose(f);
+    maps_cache = maps_flatten(&maps_cache_size);
     return maps_cache_size;
 }
 
