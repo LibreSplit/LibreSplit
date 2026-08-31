@@ -1,5 +1,6 @@
 #include "getBaseAddress.h"
 
+#include "../int64.h"
 #include "../maps/maps.h"
 #include "../utils.h"
 
@@ -32,7 +33,7 @@ int getBaseAddress(lua_State* L)
 
     ProcessMap map;
     if (maps_findMapByName(module_name, &map)) {
-        lua_pushinteger(L, (lua_Integer)map.start);
+        lua_pushuint64(L, map.start);
         return 1;
     }
     lua_pushnil(L);

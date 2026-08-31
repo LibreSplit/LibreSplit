@@ -1,4 +1,5 @@
 #include "sizeOf.h"
+#include "../int64.h"
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -63,6 +64,6 @@ int size_of(lua_State* L)
         lua_pushnil(L);
         return 1;
     }
-    lua_pushinteger(L, size_of_type);
+    lua_pushuint64(L, size_of_type);
     return 1;
 }

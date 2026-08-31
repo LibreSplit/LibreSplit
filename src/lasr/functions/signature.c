@@ -1,5 +1,6 @@
 #include "signature.h"
 
+#include "../int64.h"
 #include "../utils.h"
 
 #include <fcntl.h>
@@ -192,7 +193,7 @@ int perform_sig_scan(lua_State* L)
         return 1;
     }
 
-    if (!lua_isstring(L, 1) || !lua_isnumber(L, 2)) {
+    if (!lua_isstring(L, 1) || !LUA_ISADDRESS_PRINT(L, 2)) {
         log_error("Invalid argument types: expected (string, number)");
         lua_pushnil(L);
         return 1;
@@ -200,7 +201,7 @@ int perform_sig_scan(lua_State* L)
 
     pid_t p_pid = process.pid;
     const char* signature = lua_tostring(L, 1);
-    intptr_t offset = lua_tointeger(L, 2);
+    intptr_t offset = lua_toaddress(L, 2);
 
     // Validate signature string
     if (strlen(signature) == 0) {
@@ -258,7 +259,7 @@ int perform_sig_scan(lua_State* L)
                 free(pattern);
                 free(regions);
 
-                lua_pushnumber(L, result);
+                lua_pushsint64(L, result);
                 return 1;
             }
         }

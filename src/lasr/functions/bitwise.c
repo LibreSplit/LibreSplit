@@ -1,4 +1,5 @@
 #include "bitwise.h"
+#include "src/lasr/int64.h"
 
 #include <stdio.h>
 
@@ -15,18 +16,21 @@ int b_and(lua_State* L)
         return 0;
     }
 
-    if (!lua_isnumber(L, 1) || !lua_isnumber(L, 2)) {
+    if (!LUA_ISADDRESS_PRINT(L, 1) || !LUA_ISADDRESS_PRINT(L, 2)) {
         // Arguments are not numbers
         printf("[b_and] Both arguments must be integers");
         return 0;
     }
 
-    lua_Integer a = lua_tointeger(L, 1);
-    lua_Integer b = lua_tointeger(L, 2);
+    uint64_t a = lua_toaddress(L, 1);
+    uint64_t b = lua_toaddress(L, 2);
 
-    lua_Integer result = a & b;
+    uint64_t result = a & b;
 
-    lua_pushinteger(L, result);
+    if (lua_isnumber(L, 1) && lua_isnumber(L, 2) && result <= LUA_FLOAT_ADDRESS_MAX)
+        lua_pushinteger(L, result);
+    else
+        lua_pushuint64(L, result);
     return 1;
 }
 
@@ -43,18 +47,20 @@ int b_or(lua_State* L)
         return 0;
     }
 
-    if (!lua_isnumber(L, 1) || !lua_isnumber(L, 2)) {
+    if (!LUA_ISADDRESS_PRINT(L, 1) || !LUA_ISADDRESS_PRINT(L, 2)) {
         // Arguments are not numbers
-        printf("[b_or] Both arguments must be integers");
         return 0;
     }
 
-    lua_Integer a = lua_tointeger(L, 1);
-    lua_Integer b = lua_tointeger(L, 2);
+    uint64_t a = lua_toaddress(L, 1);
+    uint64_t b = lua_toaddress(L, 2);
 
-    lua_Integer result = a | b;
+    uint64_t result = a | b;
 
-    lua_pushinteger(L, result);
+    if (lua_isnumber(L, 1) && lua_isnumber(L, 2) && result <= LUA_FLOAT_ADDRESS_MAX)
+        lua_pushinteger(L, result);
+    else
+        lua_pushuint64(L, result);
     return 1;
 }
 
@@ -71,18 +77,20 @@ int b_xor(lua_State* L)
         return 0;
     }
 
-    if (!lua_isnumber(L, 1) || !lua_isnumber(L, 2)) {
+    if (!LUA_ISADDRESS_PRINT(L, 1) || !LUA_ISADDRESS_PRINT(L, 2)) {
         // Arguments are not numbers
-        printf("[b_xor] Both arguments must be integers");
         return 0;
     }
 
-    lua_Integer a = lua_tointeger(L, 1);
-    lua_Integer b = lua_tointeger(L, 2);
+    uint64_t a = lua_toaddress(L, 1);
+    uint64_t b = lua_toaddress(L, 2);
 
-    lua_Integer result = a ^ b;
+    uint64_t result = a ^ b;
 
-    lua_pushinteger(L, result);
+    if (lua_isnumber(L, 1) && lua_isnumber(L, 2) && result <= LUA_FLOAT_ADDRESS_MAX)
+        lua_pushinteger(L, result);
+    else
+        lua_pushuint64(L, result);
     return 1;
 }
 
@@ -99,17 +107,19 @@ int b_not(lua_State* L)
         return 0;
     }
 
-    if (!lua_isnumber(L, 1)) {
+    if (!LUA_ISADDRESS_PRINT(L, 1)) {
         // Argument is not number
-        printf("[b_not] The argument must be an integer");
         return 0;
     }
 
-    lua_Integer a = lua_tointeger(L, 1);
+    uint64_t a = lua_toaddress(L, 1);
 
-    lua_Integer result = ~a;
+    uint64_t result = ~a;
 
-    lua_pushinteger(L, result);
+    if (lua_isnumber(L, 1) && result <= LUA_FLOAT_ADDRESS_MAX)
+        lua_pushinteger(L, result);
+    else
+        lua_pushuint64(L, result);
     return 1;
 }
 
@@ -126,18 +136,20 @@ int b_lshift(lua_State* L)
         return 0;
     }
 
-    if (!lua_isnumber(L, 1) || !lua_isnumber(L, 2)) {
+    if (!LUA_ISADDRESS_PRINT(L, 1) || !LUA_ISADDRESS_PRINT(L, 2)) {
         // Arguments are not numbers
-        printf("[b_lshift] Both arguments must be integers");
         return 0;
     }
 
-    lua_Integer a = lua_tointeger(L, 1);
-    lua_Integer b = lua_tointeger(L, 2);
+    uint64_t a = lua_toaddress(L, 1);
+    uint64_t b = lua_toaddress(L, 2);
 
-    lua_Integer result = a << b;
+    uint64_t result = a << b;
 
-    lua_pushinteger(L, result);
+    if (lua_isnumber(L, 1) && lua_isnumber(L, 2) && result <= LUA_FLOAT_ADDRESS_MAX)
+        lua_pushinteger(L, result);
+    else
+        lua_pushuint64(L, result);
     return 1;
 }
 
@@ -154,17 +166,19 @@ int b_rshift(lua_State* L)
         return 0;
     }
 
-    if (!lua_isnumber(L, 1) || !lua_isnumber(L, 2)) {
+    if (!LUA_ISADDRESS_PRINT(L, 2) || !LUA_ISADDRESS_PRINT(L, 1)) {
         // Arguments are not numbers
-        printf("[b_rshift] Both arguments must be integers");
         return 0;
     }
 
-    lua_Integer a = lua_tointeger(L, 1);
-    lua_Integer b = lua_tointeger(L, 2);
+    uint64_t a = lua_toaddress(L, 1);
+    uint64_t b = lua_toaddress(L, 2);
 
-    lua_Integer result = a >> b;
+    uint64_t result = a >> b;
 
-    lua_pushinteger(L, result);
+    if (lua_isnumber(L, 1) && lua_isnumber(L, 2) && result <= LUA_FLOAT_ADDRESS_MAX)
+        lua_pushinteger(L, result);
+    else
+        lua_pushuint64(L, result);
     return 1;
 }
