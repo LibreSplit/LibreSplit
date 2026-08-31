@@ -383,6 +383,17 @@ gboolean ls_app_window_draw(gpointer data)
     return TRUE;
 }
 
+LSAppWindow* ls_get_main_app_window(LSApp* app)
+{
+    for (GList* node = gtk_application_get_windows(app); node != NULL; node = node->next) {
+        if (LS_IS_APP_WINDOW(node->data)) {
+            return LS_APP_WINDOW(node->data);
+        }
+    }
+
+    return NULL;
+}
+
 static void ls_app_window_init(LSAppWindow* win)
 {
     LOG_DEBUG("Initializing LibreSplit Window");

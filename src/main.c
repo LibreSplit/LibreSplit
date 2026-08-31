@@ -28,17 +28,14 @@ static LSApp* g_app = NULL;
 void handle_ctl_command(CTLCommand command)
 {
     GList* windows;
-    LSAppWindow* win;
 
     if (!g_app) {
         LOG_INFO("No application instance available to handle commands");
         return;
     }
 
-    windows = gtk_application_get_windows(GTK_APPLICATION(g_app));
-    if (windows) {
-        win = LS_APP_WINDOW(windows->data);
-    } else {
+    LSAppWindow* win = ls_get_main_app_window(g_app);
+    if (!win) {
         LOG_INFO("No window available to handle commands");
         return;
     }
