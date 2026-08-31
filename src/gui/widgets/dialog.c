@@ -18,7 +18,8 @@ typedef struct {
     gboolean completed;
 } LSDialogRequest;
 
-static void g_icon_free(LSDialogIcon* icon) {
+static void g_icon_free(LSDialogIcon* icon)
+{
     if (icon == NULL) {
         return;
     }
