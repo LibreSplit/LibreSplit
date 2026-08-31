@@ -1,11 +1,9 @@
 #include "dialog.h"
 #include "src/logging.h"
 
-static GWeakRef main_window;
-static gsize main_window_initialized;
-
 typedef struct {
     gatomicrefcount references;
+    GWeakRef parent;
     GtkWindow* window;
     char* title;
     char* message;
@@ -107,6 +105,7 @@ static void dialog_request_free(LSDialogRequest* request)
     g_free(request->message);
     g_free(request->detail);
     g_icon_free(request->icon);
+    g_weak_ref_clear(&request->parent);
     g_free(request);
 }
 
@@ -192,35 +191,10 @@ static GtkWidget* dialog_label_new(const char* text)
     return label;
 }
 
-static void dialog_main_window_init()
-{
-    if (g_once_init_enter(&main_window_initialized)) {
-        g_weak_ref_init(&main_window, NULL);
-        g_once_init_leave(&main_window_initialized, 1);
-    }
-}
-
-void ls_dialog_set_main_window(GtkWindow* window)
-{
-    if (window != NULL && !GTK_IS_WINDOW(window)) {
-        LOG_ERR("Invalid ls_dialog_set_main_window usage: window must be a valid GtkWindow pointer or NULL")
-        return;
-    }
-
-    dialog_main_window_init();
-    g_weak_ref_set(&main_window, window);
-}
-
-static GtkWindow* dialog_main_window_get()
-{
-    dialog_main_window_init();
-    return g_weak_ref_get(&main_window);
-}
-
 static gboolean dialog_present(gpointer user_data)
 {
     LSDialogRequest* request = user_data;
-    GtkWindow* parent = dialog_main_window_get();
+    GtkWindow* parent = GTK_WINDOW(g_weak_ref_get(&request->parent));
     if (parent == NULL || gtk_widget_in_destruction(GTK_WIDGET(parent))) {
         g_clear_object(&parent);
         return G_SOURCE_REMOVE;
@@ -307,7 +281,8 @@ static gboolean dialog_present(gpointer user_data)
     return G_SOURCE_REMOVE;
 }
 
-gboolean ls_dialog_open(const char* title,
+gboolean ls_dialog_open(GtkWindow* parent,
+    const char* title,
     const char* message,
     const char* detail,
     const LSDialogOption* options,
@@ -316,6 +291,11 @@ gboolean ls_dialog_open(const char* title,
     gpointer user_data,
     GDestroyNotify user_data_destroy)
 {
+    if (parent == NULL) {
+        LOG_ERR("Invalid ls_dialog_open usage: parent was null");
+        return FALSE;
+    }
+
     if (title == NULL) {
         LOG_ERR("Invalid ls_dialog_open usage: title was null");
         return FALSE;
@@ -363,6 +343,7 @@ gboolean ls_dialog_open(const char* title,
 
     LSDialogRequest* request = g_new(LSDialogRequest, 1);
     g_atomic_ref_count_init(&request->references);
+    g_weak_ref_init(&request->parent, G_OBJECT(parent));
     request->title = g_strdup(title);
     request->message = g_strdup(message);
     request->detail = g_strdup(detail);

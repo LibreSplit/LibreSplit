@@ -1,6 +1,7 @@
 #include "settings_dialog.h"
 #include "app_window.h"
 #include "src/logging.h"
+#include "src/gui/widgets/alert.h"
 #include "src/settings/definitions.h"
 #include "src/settings/settings.h"
 
@@ -265,6 +266,7 @@ static void build_settings_dialog(GtkApplication* app, gpointer data)
     gtk_box_append(GTK_BOX(main_box), save_btn);
     gtk_box_append(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(window))), main_box);
     gtk_window_present(GTK_WINDOW(window));
+    ls_alert_open(GTK_WINDOW(window), "Settings Alert", "Settings", "Welcome to our nifty settings thing!\n" "This alert is totally not annoying and completely unnecessary at all! c:");
 }
 
 void show_settings_dialog(GSimpleAction* action, GVariant* parameter, gpointer app)

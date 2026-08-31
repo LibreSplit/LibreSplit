@@ -36,9 +36,8 @@ typedef struct {
     gboolean is_default; /**< Whether or not this option is the default focus */
 } LSDialogOption;
 
-void ls_dialog_set_main_window(GtkWindow* window);
-
-gboolean ls_dialog_open(const char* title,
+gboolean ls_dialog_open(GtkWindow* parent,
+    const char* title,
     const char* message,
     const char* detail,
     const LSDialogOption* options,
