@@ -10,6 +10,7 @@ typedef struct {
     char* title;
     char* message;
     char* detail;
+    LSDialogIcon* icon;
     LSDialogOption* options;
     gsize options_count;
     gpointer user_data;
@@ -18,6 +19,78 @@ typedef struct {
     int cancel_button;
     gboolean completed;
 } LSDialogRequest;
+
+static void g_icon_free(LSDialogIcon* icon) {
+    if (icon == NULL) {
+        return;
+    }
+
+    if (icon->source != NULL) {
+        switch (icon->type) {
+            case LS_DIALOG_ICON_NAME:
+            case LS_DIALOG_ICON_FILE:
+            case LS_DIALOG_ICON_RESOURCE:
+                return g_free(icon->source);
+
+            case LS_DIALOG_ICON_GICON:
+            case LS_DIALOG_ICON_PAINTABLE:
+            case LS_DIALOG_ICON_PIXBUF:
+                return g_object_unref(icon->source);
+
+            default:
+                LOG_WARNF("Unsupported or invalid type: %d", icon->type);
+        }
+    }
+
+    g_free(icon);
+}
+
+static gpointer g_icondup(gpointer source, LSDialogIconType type)
+{
+    switch (type) {
+        case LS_DIALOG_ICON_NAME:
+        case LS_DIALOG_ICON_FILE:
+        case LS_DIALOG_ICON_RESOURCE:
+            return g_strdup(source);
+
+        case LS_DIALOG_ICON_GICON:
+        case LS_DIALOG_ICON_PAINTABLE:
+        case LS_DIALOG_ICON_PIXBUF:
+            return g_object_ref(source);
+
+        default:
+            LOG_WARNF("Unsupported or invalid type: %d", type);
+    }
+
+    return NULL;
+}
+
+static GtkWidget* get_icon_widget_from_ls_icon(LSDialogIcon* icon)
+{
+    if (icon == NULL || icon->source == NULL) {
+        return NULL;
+    }
+
+    switch (icon->type) {
+        case LS_DIALOG_ICON_NAME:
+            return gtk_image_new_from_icon_name(icon->source);
+        case LS_DIALOG_ICON_FILE:
+            return gtk_image_new_from_file(icon->source);
+        case LS_DIALOG_ICON_RESOURCE:
+            return gtk_image_new_from_resource(icon->source);
+        case LS_DIALOG_ICON_GICON:
+            return gtk_image_new_from_gicon(icon->source);
+        case LS_DIALOG_ICON_PAINTABLE:
+            return gtk_image_new_from_paintable(icon->source);
+        case LS_DIALOG_ICON_PIXBUF:
+            return gtk_image_new_from_pixbuf(icon->source);
+
+        default:
+            LOG_WARNF("Unsupported or invalid type: %d", icon->type);
+    }
+
+    return NULL;
+}
 
 static void dialog_request_free(LSDialogRequest* request)
 {
@@ -33,6 +106,7 @@ static void dialog_request_free(LSDialogRequest* request)
     g_free(request->title);
     g_free(request->message);
     g_free(request->detail);
+    g_icon_free(request->icon);
     g_free(request);
 }
 
@@ -173,12 +247,27 @@ static gboolean dialog_present(gpointer user_data)
     gtk_widget_set_size_request(content, 360, -1);
     gtk_window_set_child(window, content);
 
+    GtkWidget* body = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 16);
+    gtk_box_append(GTK_BOX(content), body);
+
+    GtkWidget* icon = get_icon_widget_from_ls_icon(request->icon);
+    if (icon != NULL) {
+        gtk_image_set_icon_size(GTK_IMAGE(icon), GTK_ICON_SIZE_LARGE);
+        gtk_widget_set_valign(icon, GTK_ALIGN_START);
+        gtk_box_append(GTK_BOX(body), icon);
+    }
+
+    GtkWidget* text = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
+    gtk_widget_set_hexpand(text, TRUE);
+    gtk_widget_set_valign(text, request->detail != NULL && request->detail[0] != '\0' ? GTK_ALIGN_START : GTK_ALIGN_CENTER);
+    gtk_box_append(GTK_BOX(body), text);
+
     GtkWidget* message_label = dialog_label_new(request->message);
     gtk_widget_add_css_class(message_label, "heading");
-    gtk_box_append(GTK_BOX(content), message_label);
+    gtk_box_append(GTK_BOX(text), message_label);
 
     if (request->detail != NULL) {
-        gtk_box_append(GTK_BOX(content), dialog_label_new(request->detail));
+        gtk_box_append(GTK_BOX(text), dialog_label_new(request->detail));
     }
 
     GtkWidget* actions = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
@@ -222,6 +311,7 @@ gboolean ls_dialog_open(const char* title,
     const char* message,
     const char* detail,
     const LSDialogOption* options,
+    const LSDialogIcon* icon,
     gsize options_count,
     gpointer user_data,
     GDestroyNotify user_data_destroy)
@@ -276,12 +366,19 @@ gboolean ls_dialog_open(const char* title,
     request->title = g_strdup(title);
     request->message = g_strdup(message);
     request->detail = g_strdup(detail);
+    request->icon = NULL;
     request->options = g_new(LSDialogOption, options_count);
     request->options_count = options_count;
     request->user_data = user_data;
     request->user_data_destroy = user_data_destroy;
     request->cancel_button = cancel_button;
     request->completed = FALSE;
+
+    if (icon != NULL) {
+        request->icon = g_new(LSDialogIcon, 1);
+        request->icon->source = g_icondup(icon->source, icon->type);
+        request->icon->type = icon->type;
+    }
 
     for (gsize i = 0; i < options_count; i++) {
         request->options[i] = options[i];

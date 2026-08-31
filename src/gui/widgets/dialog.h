@@ -15,6 +15,20 @@ G_BEGIN_DECLS
  */
 typedef void (*LSDialogCallback)(gpointer user_data);
 
+typedef enum {
+    LS_DIALOG_ICON_NAME,
+    LS_DIALOG_ICON_FILE,
+    LS_DIALOG_ICON_RESOURCE,
+    LS_DIALOG_ICON_GICON,
+    LS_DIALOG_ICON_PAINTABLE,
+    LS_DIALOG_ICON_PIXBUF,
+} LSDialogIconType;
+
+typedef struct {
+    gpointer source; /**< The source from which to load the icon image */
+    LSDialogIconType type; /**< The icon source type that will determine how it's loaded (i.e. from file) */
+} LSDialogIcon;
+
 typedef struct {
     const char* label; /**< button label text */
     LSDialogCallback callback; /**< Action to run on click, or NULL to do nothing/cancel */
@@ -28,6 +42,7 @@ gboolean ls_dialog_open(const char* title,
     const char* message,
     const char* detail,
     const LSDialogOption* options,
+    const LSDialogIcon* icon,
     gsize options_count,
     gpointer user_data,
     GDestroyNotify user_data_destroy);
