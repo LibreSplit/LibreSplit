@@ -1125,6 +1125,7 @@ int ls_timer_start(ls_timer* timer)
         timer->running = true;
         atomic_store(&run_running, true);
     }
+    lasr_event_requests |= TIMER_EVT_START;
     return timer->running;
 }
 
@@ -1200,7 +1201,7 @@ int ls_timer_split(ls_timer* timer)
             ls_run_save(timer, "FINISHED");
         }
     }
-
+    lasr_event_requests |= TIMER_EVT_SPLIT;
     return timer->curr_split;
 }
 
@@ -1230,6 +1231,7 @@ int ls_timer_skip(ls_timer* timer)
     timer->split_info[timer->curr_split] = 0;
     ls_time_clear(&timer->segment_times[timer->curr_split]);
     ls_time_clear(&timer->segment_deltas[timer->curr_split]);
+    lasr_event_requests |= TIMER_EVT_SKIP;
     return ++timer->curr_split;
 }
 
@@ -1258,6 +1260,7 @@ int ls_timer_unsplit(ls_timer* timer)
         timer->running = true;
         atomic_store(&run_running, true);
     }
+    lasr_event_requests |= TIMER_EVT_UNSPLIT;
     return timer->curr_split;
 }
 
@@ -1270,6 +1273,7 @@ void ls_timer_pause(ls_timer* timer)
 {
     LOG_DEBUG("Pausing timer...");
     timer->loading = 1;
+    lasr_event_requests |= TIMER_EVT_PAUSE;
 }
 
 /**
@@ -1281,6 +1285,7 @@ void ls_timer_unpause(ls_timer* timer)
 {
     LOG_DEBUG("Unpausing timer...");
     timer->loading = 0;
+    lasr_event_requests |= TIMER_EVT_UNPAUSE;
 }
 
 /**
@@ -1293,6 +1298,7 @@ void ls_timer_stop(ls_timer* timer)
     LOG_DEBUG("Stopping timer...");
     timer->running = false;
     atomic_store(&run_running, false);
+    lasr_event_requests |= TIMER_EVT_STOP;
 }
 
 /**
@@ -1325,6 +1331,7 @@ int ls_timer_reset(ls_timer* timer, ls_game* game)
     // Save best times/segments before resetting timer.
     ls_game_update_splits(game, timer);
     reset_timer(timer);
+    lasr_event_requests |= TIMER_EVT_RESET;
     return 1;
 }
 
@@ -1361,6 +1368,7 @@ int ls_timer_cancel(ls_timer* timer)
         }
     }
     reset_timer(timer);
+    lasr_event_requests |= TIMER_EVT_CANCEL;
     return 1;
 }
 
