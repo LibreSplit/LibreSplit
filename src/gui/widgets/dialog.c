@@ -56,58 +56,43 @@ static gboolean is_valid_icon(const LSDialogIcon* icon)
     return TRUE;
 }
 
-static gpointer g_icondup(gpointer source, LSDialogIconType type)
+static void g_icondup(LSDialogRequest* request, const LSDialogIcon* icon)
 {
-    switch (type) {
+    switch (icon->type) {
         case LS_DIALOG_ICON_NAME:
         case LS_DIALOG_ICON_FILE:
         case LS_DIALOG_ICON_RESOURCE:
-            return g_strdup(source);
+            request->icon->source = g_strdup(icon->source);
+            request->icon_free = g_free;
 
         case LS_DIALOG_ICON_GICON:
         case LS_DIALOG_ICON_PAINTABLE:
-            return g_object_ref(source);
+            request->icon->source = g_object_ref(icon->source);
+            request->icon_free = g_object_unref;
 
+        // For completeness but only a valid icon should have made it to this point after `is_valid_icon`
         default:
-            LOG_WARNF("Unsupported or invalid type: %d", type);
+            LOG_WARNF("Unsupported or invalid type: %d", icon->type);
     }
-
-    return NULL;
 }
 
-static GtkWidget* get_icon_widget(LSDialogRequest* request)
+static GtkWidget* get_icon_widget(LSDialogIcon* icon)
 {
-    LSDialogIcon* icon = request->icon;
     if (icon == NULL || icon->source == NULL) {
         return NULL;
     }
 
     switch (icon->type) {
         case LS_DIALOG_ICON_NAME:
-            {
-                request->icon_free = g_free;
-                return gtk_image_new_from_icon_name(icon->source);
-            }
+            return gtk_image_new_from_icon_name(icon->source);
         case LS_DIALOG_ICON_FILE:
-            {
-                request->icon_free = g_free;
-                return gtk_image_new_from_file(icon->source);
-            }
+            return gtk_image_new_from_file(icon->source);
         case LS_DIALOG_ICON_RESOURCE:
-            {
-                request->icon_free = g_free;
-                return gtk_image_new_from_resource(icon->source);
-            }
+            return gtk_image_new_from_resource(icon->source);
         case LS_DIALOG_ICON_GICON:
-            {
-                request->icon_free = g_object_unref;
-                return gtk_image_new_from_gicon(icon->source);
-            }
+            return gtk_image_new_from_gicon(icon->source);
         case LS_DIALOG_ICON_PAINTABLE:
-            {
-                request->icon_free = g_object_unref;
-                return gtk_image_new_from_paintable(icon->source);
-            }
+            return gtk_image_new_from_paintable(icon->source);
 
         // For completeness but only a valid icon should have made it to this point after `is_valid_icon`
         default:
@@ -259,7 +244,7 @@ static gboolean dialog_present(gpointer user_data)
     GtkWidget* body = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 16);
     gtk_box_append(GTK_BOX(content), body);
 
-    GtkWidget* icon = get_icon_widget(request);
+    GtkWidget* icon = get_icon_widget(request->icon);
     if (icon != NULL) {
         gtk_image_set_icon_size(GTK_IMAGE(icon), GTK_ICON_SIZE_LARGE);
         gtk_widget_set_valign(icon, GTK_ALIGN_START);
@@ -316,6 +301,20 @@ static gboolean dialog_present(gpointer user_data)
     return G_SOURCE_REMOVE;
 }
 
+/**
+ * @brief Queues a new dialog to be created by the main GTK Thread
+ *
+ * @param parent
+ * @param title
+ * @param message
+ * @param detail
+ * @param options
+ * @param icon
+ * @param options_count
+ * @param user_data
+ * @param user_data_destroy
+ * @return gboolean
+ */
 gboolean ls_dialog_open(GtkWindow* parent,
     const char* title,
     const char* message,
@@ -397,8 +396,8 @@ gboolean ls_dialog_open(GtkWindow* parent,
 
     if (icon != NULL) {
         request->icon = g_new(LSDialogIcon, 1);
-        request->icon->source = g_icondup(icon->source, icon->type);
         request->icon->type = icon->type;
+        g_icondup(request, icon);
     }
 
     for (gsize i = 0; i < options_count; i++) {
