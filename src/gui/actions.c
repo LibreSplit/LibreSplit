@@ -289,6 +289,22 @@ void close_activated(GSimpleAction* action,
 }
 
 /**
+ * @brief Perform the quit operation after agreeable checks.
+ *
+ * @param app pointer to the main application
+ */
+static void perform_quit(gpointer app)
+{
+    LSAppWindow* win = ls_get_main_app_window(GTK_APPLICATION(app));
+    if (win->welcome_box) {
+        welcome_box_destroy(win->welcome_box);
+    }
+
+    gtk_window_destroy(GTK_WINDOW(win));
+    g_application_quit(app);
+}
+
+/**
  * Exits LibreSplit.
  *
  * @param action Usually NULL
@@ -314,21 +330,13 @@ void quit_activated(GSimpleAction* action,
 
     // Warn if the reset will lose a gold split, and allow the user to cancel the reset if they want to keep it
     if (win->timer && win->timer->running && (ls_timer_has_gold_split(win->timer) || ls_timer_has_rainbow_split(win->timer))) {
-        bool user_reset = true;
         if (cfg.libresplit.ask_on_gold.value.b) {
-            user_reset = display_confirm_reset_dialog();
-        }
-
-        if (!user_reset) {
+            display_confirm_reset_dialog(perform_quit, NULL, NULL);
             return;
         }
     }
 
-    if (win->welcome_box) {
-        welcome_box_destroy(win->welcome_box);
-    }
-    gtk_window_destroy(GTK_WINDOW(win));
-    g_application_quit(G_APPLICATION(app));
+    perform_quit(app);
 }
 
 /**

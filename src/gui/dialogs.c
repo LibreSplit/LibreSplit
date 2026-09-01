@@ -1,5 +1,4 @@
 #include "src/gui/dialogs.h"
-#include "src/gui/widgets/dialog.h"
 #include "src/lasr/auto-splitter.h"
 #include "src/logging.h"
 #include <gio/gio.h>
@@ -185,7 +184,20 @@ int display_root_warning_dialog()
     return 1;
 }
 
-bool display_confirm_reset_dialog()
+/**
+ * @brief Displays a dialog to allow the user to choose whether or not a reset should happen.
+ * This allows the caller to pass the function that should be called when a reset is allowed
+ * by the user. The `perform_reset` callback must be supplied or the dialog will do nothing.
+ *
+ * Optionally you may also pass your own user_data and destruction function. When no user_data
+ * is supplied, the main GtkApplication is passed to the dialog (and therefore, perform_reset) as
+ * the user_data.
+ *
+ * @param perform_reset Function to run if user allows the reset.
+ * @param user_data Optional custom user data to pass to perform_reset; defaults to default GTK Application
+ * @param destroy_user_data Optional custom data destruction method for your custom user_data.
+ */
+void display_confirm_reset_dialog(LSDialogCallback perform_reset, gpointer user_data, LSDialogCallback destroy_user_data)
 {
     LOG_DEBUG("Detected gold/rainbow split, asking user for confirmation");
     GtkApplication* app = GTK_APPLICATION(g_application_get_default());
@@ -193,16 +205,35 @@ bool display_confirm_reset_dialog()
     if (app != NULL) {
         win = gtk_application_get_active_window(app);
     }
-    GtkWidget* dialog = gtk_message_dialog_new(
-        GTK_WINDOW(win),
-        GTK_DIALOG_MODAL,
-        GTK_MESSAGE_WARNING,
-        GTK_BUTTONS_YES_NO,
-        "This run contains a gold and/or rainbow split.\n\n"
-        "Are you sure you want to proceed?");
-    gtk_window_set_title(GTK_WINDOW(dialog), "Confirm Reset?");
 
-    gint response = run_dialog(GTK_DIALOG(dialog));
-    gtk_window_destroy(GTK_WINDOW(dialog));
-    return response == GTK_RESPONSE_YES;
+    const LSDialogOption options[] = {
+        {
+            .label = "_Yes",
+            .callback = perform_reset,
+            .is_cancel = FALSE,
+            .is_default = FALSE,
+        },
+        {
+            .label = "_No",
+            .callback = NULL,
+            .is_cancel = TRUE,
+            .is_default = TRUE,
+        }
+    };
+
+    const LSDialogIcon icon = {
+        .source = "dialog-warning",
+        .type = LS_DIALOG_ICON_NAME,
+    };
+
+    ls_dialog_open(
+        win,
+        "Confirm Reset?",
+        "This run contains a gold and/or rainbow split",
+        "Are you sure you want to proceed?",
+        &icon,
+        options,
+        G_N_ELEMENTS(options),
+        user_data != NULL ? user_data : app,
+        user_data != NULL ? destroy_user_data : NULL);
 }

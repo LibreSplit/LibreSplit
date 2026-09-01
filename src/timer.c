@@ -3,7 +3,6 @@
  * Implementation of the timer
  */
 #include "timer.h"
-#include "gui/dialogs.h"
 #include "logging.h"
 #include "settings/utils.h"
 
@@ -1313,7 +1312,9 @@ int ls_timer_reset(ls_timer* timer, ls_game* game)
     }
 
     if (timer->started && ls_time_lte_zero(ls_timer_get_time(timer, true))) {
-        return ls_timer_cancel(timer);
+        // There will be no time improvements via this path to preserve, so no need to warn the user
+        ls_timer_cancel(timer);
+        return 1;
     }
 
     if (timer->curr_split < timer->game->split_count) {
@@ -1330,29 +1331,18 @@ int ls_timer_reset(ls_timer* timer, ls_game* game)
 
 /**
  * Cancels the current run, ignoring attempt and resetting timer
+ * This function MUST ONLY be called when the timer is NOT running.
  *
  * @param timer The timer instance
- * @return Whether the cancel was successful, will fail if the timer is currently running
  */
-int ls_timer_cancel(ls_timer* timer)
+void ls_timer_cancel(ls_timer* timer)
 {
     LOG_DEBUG("Cancelling run...");
     // Disallow resets while running
     if (timer->running) {
-        LOG_DEBUG("Timer is running, cannot cancel run.")
-        return 0;
-    }
-
-    // Warn if the reset will lose a gold split, and allow the user to cancel the reset if they want to keep it
-    if (ls_timer_has_gold_split(timer) || ls_timer_has_rainbow_split(timer)) {
-        bool user_reset = true;
-        if (cfg.libresplit.ask_on_gold.value.b) {
-            user_reset = display_confirm_reset_dialog();
-        }
-
-        if (!user_reset) {
-            return 0;
-        }
+        // Sanity check, but this check MUST have happened before `ls_timer_cancel` is called.
+        LOG_DEBUG("Timer is running, cannot cancel run.");
+        return;
     }
 
     if (timer->started) {
@@ -1360,8 +1350,8 @@ int ls_timer_cancel(ls_timer* timer)
             --*timer->attempt_count;
         }
     }
+
     reset_timer(timer);
-    return 1;
 }
 
 /**
