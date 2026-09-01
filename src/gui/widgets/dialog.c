@@ -347,7 +347,10 @@ static gboolean dialog_present(gpointer user_data)
         gtk_widget_grab_focus(default_widget);
     }
 
-    g_object_unref(parent);
+    if (request->has_parent) {
+        g_object_unref(parent);
+    }
+
     return G_SOURCE_REMOVE;
 }
 
