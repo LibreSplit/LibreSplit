@@ -11,6 +11,7 @@
 typedef struct {
     gatomicrefcount references;
     GWeakRef parent;
+    gboolean has_parent;
     GtkWindow* window;
     char* title;
     char* message;
@@ -253,24 +254,35 @@ static gboolean dialog_present(gpointer user_data)
 {
     LSDialogRequest* request = user_data;
     GtkWindow* parent = GTK_WINDOW(g_weak_ref_get(&request->parent));
-    if (parent == NULL || gtk_widget_in_destruction(GTK_WIDGET(parent))) {
+    if (request->has_parent && (parent == NULL || gtk_widget_in_destruction(GTK_WIDGET(parent)))) {
         g_clear_object(&parent);
         return G_SOURCE_REMOVE;
     }
 
+    GtkApplication* application = NULL;
     GtkWindow* window = GTK_WINDOW(gtk_window_new());
     gtk_window_set_title(window, request->title);
     gtk_window_set_modal(window, TRUE);
     gtk_window_set_resizable(window, FALSE);
-    gtk_window_set_transient_for(window, parent);
-    gtk_window_set_destroy_with_parent(window, TRUE);
-    request->window = window;
 
-    GtkApplication* application = gtk_window_get_application(parent);
+    if (request->has_parent) {
+        gtk_window_set_transient_for(window, parent);
+        gtk_window_set_destroy_with_parent(window, TRUE);
+        application = gtk_window_get_application(parent);
+    }
+
+    if (application == NULL) {
+        GApplication* app = g_application_get_default();
+        if (GTK_IS_APPLICATION(app)) {
+            application = GTK_APPLICATION(app);
+        }
+    }
+
     if (application != NULL) {
         gtk_window_set_application(window, application);
     }
 
+    request->window = window;
     GtkWidget* content = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
     gtk_widget_set_margin_top(content, 18);
     gtk_widget_set_margin_bottom(content, 18);
@@ -349,7 +361,7 @@ static gboolean dialog_present(gpointer user_data)
  *
  * If this function returns FALSE, the caller is responsible for freeing user_data.
  *
- * @param parent The parent window that owns the dialog
+ * @param parent The parent window that owns the dialog - NULL for no parent
  * @param title The title displayed on the dialog's titlebar
  * @param message A message header for the dialog shown above the main message body
  * @param detail The main message to show in the dialog
@@ -370,8 +382,8 @@ gboolean ls_dialog_open(GtkWindow* parent,
     gpointer user_data,
     GDestroyNotify user_data_destroy)
 {
-    if (parent == NULL || !GTK_IS_WINDOW(parent)) {
-        LOG_ERR("Invalid ls_dialog_open usage: parent was null or not a valid GTK Window");
+    if (parent != NULL && !GTK_IS_WINDOW(parent)) {
+        LOG_ERR("Invalid ls_dialog_open usage: parent was not a valid GTK Window");
         return FALSE;
     }
 
@@ -426,7 +438,8 @@ gboolean ls_dialog_open(GtkWindow* parent,
 
     LSDialogRequest* request = g_new(LSDialogRequest, 1);
     g_atomic_ref_count_init(&request->references);
-    g_weak_ref_init(&request->parent, G_OBJECT(parent));
+    request->has_parent = parent != NULL;
+    g_weak_ref_init(&request->parent, parent != NULL ? G_OBJECT(parent) : NULL);
     request->title = g_strdup(title);
     request->message = g_strdup(message);
     request->detail = g_strdup(detail);
