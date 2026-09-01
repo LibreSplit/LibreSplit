@@ -73,7 +73,7 @@ bool handle_memory_error(uint32_t err)
 
             if (!shownDialog) {
                 shownDialog = true;
-                g_idle_add(display_non_capable_mem_read_dialog, NULL);
+                display_non_capable_mem_read_dialog();
             }
 
             break;

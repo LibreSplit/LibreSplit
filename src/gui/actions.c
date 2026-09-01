@@ -5,6 +5,8 @@
 #include "src/gui/dialogs.h"
 #include "src/gui/game.h"
 #include "src/gui/timer.h"
+#include "src/gui/widgets/alert.h"
+#include "src/gui/widgets/dialog.h"
 #include "src/lasr/auto-splitter.h"
 #include "src/lasr/utils.h"
 #include "src/logging.h"
@@ -82,16 +84,10 @@ void open_activated(GSimpleAction* action,
     }
 
     if (win->timer && win->timer->running) {
-        GtkWidget* warning = gtk_message_dialog_new(
-            GTK_WINDOW(win),
-            GTK_DIALOG_MODAL,
-            GTK_MESSAGE_INFO,
-            GTK_BUTTONS_OK,
-            "The timer is currently running, please stop the run before changing splits.");
-        run_dialog(GTK_DIALOG(warning));
-        gtk_window_destroy(GTK_WINDOW(warning));
+        ls_alert_info(GTK_WINDOW(win), "LibreSplit", "The timer is currently running, please stop the run before changing splits.", NULL);
         return;
     }
+
     dialog = gtk_file_chooser_dialog_new(
         "Open File", GTK_WINDOW(win), GTK_FILE_CHOOSER_ACTION_OPEN,
         "_Cancel", GTK_RESPONSE_CANCEL,
@@ -152,6 +148,13 @@ void open_activated(GSimpleAction* action,
     config_save();
 }
 
+static void perform_save_splits(gpointer window)
+{
+    LSAppWindow* win = LS_APP_WINDOW(window);
+    ls_game_update_splits(win->game, win->timer);
+    save_game(win->game);
+}
+
 /**
  * Saves the splits in the JSON Split file.
  *
@@ -178,25 +181,39 @@ void save_activated(GSimpleAction* action,
         gtk_window_get_default_size(GTK_WINDOW(win), &width, &height);
         win->game->width = width;
         win->game->height = height;
-        bool saving = true;
         if (cfg.libresplit.ask_on_worse.value.b) {
             if (!ls_is_timer_better(win->game, win->timer)) {
-                GtkWidget* confirm = gtk_message_dialog_new(
+                const LSDialogOption options[] = {
+                    {
+                        .label = "_Yes",
+                        .callback = perform_save_splits,
+                        .is_cancel = FALSE,
+                        .is_default = FALSE,
+                    },
+                    {
+                        .label = "_No",
+                        .callback = NULL,
+                        .is_cancel = TRUE,
+                        .is_default = TRUE,
+                    }
+                };
+
+                const LSDialogIcon icon = {
+                    .source = "dialog-question",
+                    .type = LS_DIALOG_ICON_NAME,
+                };
+
+                ls_dialog_open(
                     GTK_WINDOW(win),
-                    GTK_DIALOG_MODAL,
-                    GTK_MESSAGE_QUESTION,
-                    GTK_BUTTONS_YES_NO,
-                    "This run seems to be worse than the saved one. Continue?");
-                gint response = run_dialog(GTK_DIALOG(confirm));
-                if (response == GTK_RESPONSE_NO) {
-                    saving = false;
-                }
-                gtk_window_destroy(GTK_WINDOW(confirm));
+                    "LibreSplit",
+                    "This run seems to be worse than the saved one. Continue?",
+                    NULL,
+                    &icon,
+                    options,
+                    G_N_ELEMENTS(options),
+                    win,
+                    NULL);
             }
-        }
-        if (saving) {
-            ls_game_update_splits(win->game, win->timer);
-            save_game(win->game);
         }
     }
 }
@@ -381,16 +398,10 @@ void open_auto_splitter(GSimpleAction* action,
     }
 
     if (win->timer && win->timer->running) {
-        GtkWidget* warning = gtk_message_dialog_new(
-            GTK_WINDOW(win),
-            GTK_DIALOG_MODAL,
-            GTK_MESSAGE_INFO,
-            GTK_BUTTONS_OK,
-            "The timer is currently running, please stop the run before changing auto splitter.");
-        run_dialog(GTK_DIALOG(warning));
-        gtk_window_destroy(GTK_WINDOW(warning));
+        ls_alert_info(GTK_WINDOW(win), "LibreSplit", "The timer is currently running", "please stop the run before changing auto splitter.");
         return;
     }
+
     dialog = gtk_file_chooser_dialog_new(
         "Open File", GTK_WINDOW(win), GTK_FILE_CHOOSER_ACTION_OPEN,
         "_Cancel", GTK_RESPONSE_CANCEL,

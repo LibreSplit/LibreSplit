@@ -7,6 +7,7 @@
 #include "src/gui/game.h"
 #include "src/gui/theming.h"
 #include "src/gui/timer.h"
+#include "src/gui/widgets/alert.h"
 #include "src/keybinds/delayed_callbacks.h"
 #include "src/keybinds/keybinds_callbacks.h"
 #include "src/lasr/auto-splitter.h"
@@ -105,18 +106,11 @@ void ls_app_window_open(LSAppWindow* win, const char* file)
     if (ls_game_create(&win->game, file, &error_msg)) {
         win->game = 0;
         if (error_msg) {
-            error_popup = gtk_message_dialog_new(
-                GTK_WINDOW(win),
-                GTK_DIALOG_DESTROY_WITH_PARENT,
-                GTK_MESSAGE_INFO,
-                GTK_BUTTONS_OK,
-                "JSON parse error: %s\n%s",
-                error_msg,
-                file);
-            run_dialog(GTK_DIALOG(error_popup));
-
+            // max file size + reasonable error message length
+            char msg[384];
+            snprintf(msg, sizeof msg, "%s\n%s", "some-error", file);
+            ls_alert_error(GTK_WINDOW(win), "LibreSplit", "JSON parse error:", msg);
             free(error_msg);
-            gtk_window_destroy(GTK_WINDOW(error_popup));
         }
     } else if (ls_timer_create(&win->timer, win->game)) {
         win->timer = 0;
