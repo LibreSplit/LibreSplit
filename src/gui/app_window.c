@@ -8,7 +8,6 @@
 #include "src/gui/theming.h"
 #include "src/gui/timer.h"
 #include "src/gui/widgets/alert.h"
-#include "src/keybinds/delayed_callbacks.h"
 #include "src/keybinds/keybinds_callbacks.h"
 #include "src/lasr/auto-splitter.h"
 #include "src/logging.h"
@@ -355,7 +354,6 @@ gboolean ls_app_window_step(gpointer data)
             }
         }
     }
-    process_delayed_handlers(win);
 
     return TRUE;
 }

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "src/gui/welcome_box.h"
-#include "src/keybinds/delayed_handlers.h"
 #include "src/keybinds/keybinds.h"
 #include "src/opts.h"
 #include "src/timer.h"
@@ -54,7 +53,6 @@ typedef struct _LSAppWindow {
     GtkCssProvider* reset_style; /*!< The "reset rules" provider, will remove desktop theme rules */
     GtkCssProvider* style; /*!< Current style provider, there can be only one */
     LSKeybinds keybinds; /*!< The keybinds related to this application window */
-    DelayedHandlers delayed_handlers; /*!< Handlers due for the next window step */
     LSOpts opts; /*!< The window options */
 } LSAppWindow;
 
