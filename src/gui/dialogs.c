@@ -99,6 +99,12 @@ bool display_root_warning_dialog(void)
     return true;
 }
 
+/**
+ * Displays a dialog asking for confirmation for a reset when
+ * there is a gold split involved.
+ *
+ * @return True or false, depending on whether on how the user answered the dialog
+ */
 bool display_confirm_reset_dialog(void)
 {
     LOG_DEBUG("Detected gold/rainbow split, asking user for confirmation");

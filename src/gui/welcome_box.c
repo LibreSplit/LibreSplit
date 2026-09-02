@@ -3,6 +3,14 @@
 #include <gtk/gtk.h>
 #include <stdlib.h>
 
+/**
+ * Creates a welcome box to be shown on the main Window.
+ * This appears when no game is loaded.
+ *
+ * @param container The container to put the welcome box in.
+ *
+ * @return A pointer to the welcome box itself.
+ */
 LSWelcomeBox* welcome_box_new(GtkWidget* container)
 {
     LSWelcomeBox* self;
@@ -39,6 +47,11 @@ LSWelcomeBox* welcome_box_new(GtkWidget* container)
     return self;
 }
 
+/**
+ * Destructor for the welcome box.
+ *
+ * @param self The Welcome Box itself.
+ */
 void welcome_box_destroy(LSWelcomeBox* self)
 {
     free(self);

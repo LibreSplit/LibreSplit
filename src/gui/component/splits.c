@@ -168,10 +168,12 @@ typedef struct LSSplits {
     unsigned int split_count; /*!< The number of splits */
     GtkWidget* container; /*!< The container for the splits */
     SubsplitData subsplit_data; /*!< The data required to render subsplits for the run*/
+    /*! The GTKBox containing all the split rows (except the last one, most of the time.)
+     * The last split is added to this container when the scrollbox is scrolled all the way down. */
     GtkWidget* splits;
-    GtkWidget* split_last;
+    GtkWidget* split_last; /*!< The last split container (used in case the split list is longer than the available space) */
     GtkAdjustment* split_adjust;
-    GtkWidget* split_scroller;
+    GtkWidget* split_scroller; /*!< The scrollable window containing the split rows */
     GtkWidget* split_viewport;
     GtkWidget** split_rows;
     GtkWidget** split_titles;
