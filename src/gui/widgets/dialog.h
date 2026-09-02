@@ -5,6 +5,7 @@
 G_BEGIN_DECLS
 
 #define MAX_BUTTONS 100
+#define MAX_FILTERS 100
 
 /**
  * Callback for handling a dialog response select.

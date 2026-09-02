@@ -555,14 +555,17 @@ static void file_picker_request_free(LSFilePickerRequest* request)
     g_weak_ref_clear(&request->parent);
     g_free(request->title);
     g_free(request->path);
-    for (gsize i = 0; i < request->filters_count; i++) {
-        g_free(request->filters[i].name);
-        g_free(request->filters[i].pattern);
+
+    if (request->filters_count > 0) {
+        for (gsize i = 0; i < request->filters_count; i++) {
+            g_free(request->filters[i].name);
+            g_free(request->filters[i].pattern);
+        }
+
+        g_free(request->filters);
     }
 
-    g_free(request->filters);
     g_free(request);
-
     dialog_count_dec();
 }
 
@@ -635,25 +638,32 @@ static gboolean file_picker_present(gpointer user_data)
     gtk_file_dialog_set_title(dialog, request->title);
     gtk_file_dialog_set_modal(dialog, TRUE);
 
-    GtkFileFilter** allocated_filters = g_new0(GtkFileFilter*, request->filters_count);
-    GListStore* filters = g_list_store_new(GTK_TYPE_FILE_FILTER);
+    GtkFileFilter** allocated_filters = NULL;
+    GListStore* filters = NULL;
     GtkFileFilter* default_filter = NULL;
 
-    for (gsize i = 0; i < request->filters_count; i++) {
-        GtkFileFilter* filter = gtk_file_filter_new();
-        gtk_file_filter_set_name(filter, request->filters[i].name);
-        gtk_file_filter_add_pattern(filter, request->filters[i].pattern);
-        g_list_store_append(filters, filter);
-        allocated_filters[i] = filter;
+    if (request->filters_count > 0) {
+        allocated_filters = g_new0(GtkFileFilter*, request->filters_count);
+        filters = g_list_store_new(GTK_TYPE_FILE_FILTER);
 
-        if (request->filters[i].is_default) {
-            default_filter = filter;
+        for (gsize i = 0; i < request->filters_count; i++) {
+            GtkFileFilter* filter = gtk_file_filter_new();
+            gtk_file_filter_set_name(filter, request->filters[i].name);
+            gtk_file_filter_add_pattern(filter, request->filters[i].pattern);
+            g_list_store_append(filters, filter);
+            allocated_filters[i] = filter;
+
+            if (request->filters[i].is_default) {
+                default_filter = filter;
+            }
         }
-    }
 
-    gtk_file_dialog_set_filters(dialog, G_LIST_MODEL(filters));
-    if (default_filter != NULL) {
-        gtk_file_dialog_set_default_filter(dialog, default_filter);
+        gtk_file_dialog_set_filters(dialog, G_LIST_MODEL(filters));
+        if (default_filter != NULL) {
+            gtk_file_dialog_set_default_filter(dialog, default_filter);
+        }
+
+        g_object_unref(filters);
     }
 
     GFile* folder = g_file_new_for_path(request->path);
@@ -662,13 +672,14 @@ static gboolean file_picker_present(gpointer user_data)
 
     gtk_file_dialog_open(dialog, parent, NULL, file_picker_finish, file_picker_request_ref(request));
 
-    g_object_unref(filters);
+    if (request->filters_count > 0) {
+        for (gsize i = 0; i < request->filters_count; i++) {
+            g_object_unref(allocated_filters[i]);
+        }
 
-    for (gsize i = 0; i < request->filters_count; i++) {
-        g_object_unref(allocated_filters[i]);
+        g_free(allocated_filters);
     }
 
-    g_free(allocated_filters);
     g_object_unref(dialog);
     g_object_unref(parent);
 
@@ -719,6 +730,11 @@ gboolean ls_file_picker_open(GtkWindow* parent, const LSFilePickerOptions* optio
         return FALSE;
     }
 
+    if (options->filters_count < 0 || options->filters_count > MAX_FILTERS) {
+        LOG_ERR("Invalid ls_file_picker_open usage: number of filters out of bounds");
+        return FALSE;
+    }
+
     bool has_default = false;
     for (gsize i = 0; i < options->filters_count; i++) {
         LSFilePickerFilter filter = options->filters[i];
@@ -748,7 +764,7 @@ gboolean ls_file_picker_open(GtkWindow* parent, const LSFilePickerOptions* optio
     request->title = g_strdup(options->title);
     request->path = g_strdup(options->path);
     request->callback = callback;
-    request->filters = g_new(LSFilePickerFilter, options->filters_count);
+    request->filters = options->filters_count > 0 ? g_new(LSFilePickerFilter, options->filters_count) : NULL;
     request->filters_count = options->filters_count;
 
     for (gsize i = 0; i < options->filters_count; i++) {
