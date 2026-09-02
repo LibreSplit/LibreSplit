@@ -142,18 +142,12 @@ int display_root_warning_dialog()
  * This allows the caller to pass the function that should be called when a reset is allowed
  * by the user. The `perform_reset` callback must be supplied or the dialog will do nothing.
  *
- * Optionally you may also pass your own user_data and destruction function. When no user_data
- * is supplied, the main GtkApplication is passed to the dialog (and therefore, perform_reset) as
- * the user_data.
- *
  * @param perform_reset Function to run if user allows the reset.
- * @param user_data Optional custom user data to pass to perform_reset; defaults to default GTK Application
- * @param destroy_user_data Optional custom data destruction method for your custom user_data.
+ * @param win The main application window.
  */
 void display_confirm_reset_dialog(LSDialogCallback perform_reset, LSAppWindow* win)
 {
     LOG_DEBUG("Detected gold/rainbow split, asking user for confirmation");
-    GtkApplication* app = GTK_APPLICATION(g_application_get_default());
 
     const LSDialogOption options[] = {
         {

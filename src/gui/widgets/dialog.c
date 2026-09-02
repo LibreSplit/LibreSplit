@@ -43,7 +43,6 @@ typedef struct {
     GWeakRef parent;
     char* title;
     char* path;
-    char* filter_name;
     LSFilePickerFilter* filters;
     gsize filters_count;
     LSFileSelectedCallback callback;
@@ -699,12 +698,12 @@ gboolean ls_file_picker_open(GtkWindow* parent, const LSFilePickerOptions* optio
         return FALSE;
     }
 
-    if (options->title == NULL || options->title == '\0') {
+    if (options->title == NULL || options->title[0] == '\0') {
         LOG_ERR("Invalid ls_file_picker_open usage: title was null or empty");
         return FALSE;
     }
 
-    if (options->path == NULL || options->path == '\0') {
+    if (options->path == NULL || options->path[0] == '\0') {
         LOG_ERR("Invalid ls_file_picker_open usage: path was null or empty");
         return FALSE;
     }
@@ -723,12 +722,12 @@ gboolean ls_file_picker_open(GtkWindow* parent, const LSFilePickerOptions* optio
     bool has_default = false;
     for (gsize i = 0; i < options->filters_count; i++) {
         LSFilePickerFilter filter = options->filters[i];
-        if (filter.name == NULL || filter.name == '\0') {
+        if (filter.name == NULL || filter.name[0] == '\0') {
             LOG_ERRF("Invalid ls_file_picker_open usage: filter[%d].name was null or empty", i);
             return FALSE;
         }
 
-        if (filter.pattern == NULL || filter.pattern == '\0') {
+        if (filter.pattern == NULL || filter.pattern[0] == '\0') {
             LOG_ERRF("Invalid ls_file_picker_open usage: filter[%d].pattern was null or empty", i);
             return FALSE;
         }

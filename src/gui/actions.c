@@ -291,7 +291,7 @@ void close_activated(GSimpleAction* action,
 /**
  * @brief Perform the quit operation after agreeable checks.
  *
- * @param win pointer to the main application window
+ * @param window pointer to the main application window
  */
 static void perform_quit(gpointer window)
 {
