@@ -168,8 +168,10 @@ void timer_cancel_run(LSAppWindow* win)
 
     // Warn if the reset will lose a gold split, and allow the user to cancel the reset if they want to keep it
     if (ls_timer_has_gold_split(win->timer) || ls_timer_has_rainbow_split(win->timer)) {
-        display_confirm_reset_dialog(perform_cancel_run, win, NULL);
-        return;
+        if (cfg.libresplit.ask_on_gold.value.b) {
+            display_confirm_reset_dialog(perform_cancel_run, win, NULL);
+            return;
+        }
     }
 
     perform_cancel_run(win);
