@@ -1,9 +1,9 @@
 #pragma once
 
+#include "src/gui/widgets/dialog.h"
 #include <glib.h>
 #include <gtk/gtk.h>
 #include <stdbool.h>
-#include "src/gui/widgets/dialog.h"
 
 void display_non_capable_mem_read_dialog();
 

@@ -1,9 +1,9 @@
 #include "timer.h"
 #include "game.h"
-#include "src/logging.h"
-#include "src/gui/dialogs.h"
 #include "src/gui/component/components.h"
+#include "src/gui/dialogs.h"
 #include "src/lasr/utils.h"
+#include "src/logging.h"
 #include "src/timer.h"
 
 /**
