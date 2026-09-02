@@ -32,9 +32,11 @@ static void open_troubleshoot_page(gpointer user_data)
 }
 
 /**
- * Shows a message dialog in case of a memory read error.
+ * @brief Shows a message dialog in case of a memory read error.
+ *
+ * @return gboolean FALSE to remove this function from the main loop.
  */
-void display_non_capable_mem_read_dialog()
+gboolean display_non_capable_mem_read_dialog()
 {
     atomic_store(&auto_splitter_enabled, 0);
     GtkApplication* app = GTK_APPLICATION(g_application_get_default());
@@ -78,6 +80,8 @@ void display_non_capable_mem_read_dialog()
         G_N_ELEMENTS(options),
         win,
         NULL);
+
+    return G_SOURCE_REMOVE;
 }
 
 /**

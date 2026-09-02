@@ -5,7 +5,7 @@
 #include <gtk/gtk.h>
 #include <stdbool.h>
 
-void display_non_capable_mem_read_dialog();
+gboolean display_non_capable_mem_read_dialog();
 
 int display_root_warning_dialog();
 
