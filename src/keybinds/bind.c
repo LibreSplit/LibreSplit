@@ -519,8 +519,8 @@ filter_func(GdkDisplay* display, gpointer gdk_xevent, gpointer data)
                 iter = bindings;
                 while (iter != NULL) {
                     /* NOTE: ``iter`` might be removed from the list
-                    * in the callback.
-                    */
+                     * in the callback.
+                     */
                     struct Binding* binding = iter->data;
                     iter = iter->next;
 

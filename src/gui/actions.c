@@ -131,7 +131,7 @@ void open_activated(GSimpleAction* action,
         gtk_widget_set_visible(win->welcome_box->box, TRUE);
     }
 
-    const LSFilePickerFilter filters[] = {{ .name = "LibreSplit JSON Split File", .pattern = "*.json", .is_default = true }};
+    const LSFilePickerFilter filters[] = { { .name = "LibreSplit JSON Split File", .pattern = "*.json", .is_default = true } };
     const LSFilePickerOptions options = {
         .title = "Open Splits File",
         .path = splits_path,
@@ -446,7 +446,7 @@ void open_auto_splitter(GSimpleAction* action,
         }
     }
 
-    const LSFilePickerFilter filters[] = {{ .name = "LibreSplit LUA Auto Splitters", .pattern = "*.lua", .is_default = true }};
+    const LSFilePickerFilter filters[] = { { .name = "LibreSplit LUA Auto Splitters", .pattern = "*.lua", .is_default = true } };
     const LSFilePickerOptions options = {
         .title = "Open Auto Splitter File",
         .path = auto_splitters_path,
