@@ -87,6 +87,12 @@
 	padding-left: 8px;
 	padding-bottom: 4px;
 }
+.split-group-header-time {
+    opacity: 0.7;
+}
+.split-group-header > .subsplit-progress {
+    color: rgba(255,255,255,0.35);
+}
 .split-time {
 	padding-right: 8px;
 }

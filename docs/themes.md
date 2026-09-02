@@ -33,12 +33,17 @@ See the [GtkCssProvider documentation](https://docs.gtk.org/gtk3/css-properties.
 | `.delay`                      | Timer not running/in negative time                                                                                                                       |
 | `.splits`                     | Container of the splits                                                                                                                                  |
 | `.split`                      | The splits themselves                                                                                                                                    |
+| `.subsplit`                   | A split that is part of a subsplit group (indented)                                                                                                      |
 | `.current-split`              | The split you're currently on                                                                                                                            |
 | `.split-title`                | Name of the splits                                                                                                                                       |
 | `.split-icon`                 | Icon for splits                                                                                                                                          |
 | `.split-time`                 | Time for the splits                                                                                                                                      |
 | `.split-delta`                | Comparison time in the split                                                                                                                             |
 | `.split-last`                 | The last split, if its not yet scrolled down to                                                                                                          |
+| `.split-group-header`         | A subsplit group header row                                                                                                                              |
+| `.split-group-header-title`   | The group name label inside a group header                                                                                                               |
+| `.split-group-header-time`    | The cumulative time label inside a group header                                                                                                          |
+| `.split-group-header-delta`   | The time gain/loss label inside a group header (shown after the group is completed)                                                                      |
 | `.done`                       | Colour of split timer after that split has been completed                                                                                                |
 | `.behind`                     | Behind the PB but gaining time                                                                                                                           |
 | `.losing`                     | Ahead of PB but losing time                                                                                                                              |
