@@ -5,9 +5,6 @@
 #include <stdbool.h>
 #include "src/gui/widgets/dialog.h"
 
-/** TODO: Remove temp helpers */
-gint run_dialog(GtkDialog* dialog);
-
 void display_non_capable_mem_read_dialog();
 
 int display_root_warning_dialog();

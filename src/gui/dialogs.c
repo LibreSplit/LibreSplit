@@ -7,57 +7,6 @@
 #include <stdatomic.h>
 #include <stdbool.h>
 
-// TODO: Remove temp helpers
-/** Temporary sync dialog compatibility helpers - ignore these */
-typedef struct {
-    GMainLoop* loop;
-    gint response;
-} DialogRun;
-
-static void dialog_response(GtkDialog* dialog, gint response, gpointer data)
-{
-    DialogRun* run = data;
-    run->response = response;
-    g_main_loop_quit(run->loop);
-}
-
-static gboolean dialog_close_request(GtkWindow* window, gpointer data)
-{
-    DialogRun* run = data;
-    run->response = GTK_RESPONSE_DELETE_EVENT;
-    g_main_loop_quit(run->loop);
-    return TRUE;
-}
-
-gint run_dialog(GtkDialog* dialog)
-{
-    DialogRun run = {
-        .loop = g_main_loop_new(NULL, FALSE),
-        .response = GTK_RESPONSE_NONE,
-    };
-    gboolean was_modal = gtk_window_get_modal(GTK_WINDOW(dialog));
-    gulong response_handler = g_signal_connect(dialog,
-        "response", G_CALLBACK(dialog_response), &run);
-    gulong close_handler = g_signal_connect(dialog,
-        "close-request", G_CALLBACK(dialog_close_request), &run);
-
-    if (!was_modal) {
-        gtk_window_set_modal(GTK_WINDOW(dialog), TRUE);
-    }
-    gtk_window_present(GTK_WINDOW(dialog));
-    g_main_loop_run(run.loop);
-
-    if (!was_modal) {
-        gtk_window_set_modal(GTK_WINDOW(dialog), FALSE);
-    }
-    g_signal_handler_disconnect(dialog, response_handler);
-    g_signal_handler_disconnect(dialog, close_handler);
-    g_main_loop_unref(run.loop);
-
-    return run.response;
-}
-/** End temporary sync dialog compatibility helpers */
-
 static void open_troubleshoot_page_finished(GObject* launcher_ref, GAsyncResult* result, gpointer user_data)
 {
     GtkUriLauncher* launcher = GTK_URI_LAUNCHER(launcher_ref);
