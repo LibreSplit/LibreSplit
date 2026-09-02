@@ -688,7 +688,7 @@ static gboolean file_picker_present(gpointer user_data)
  */
 gboolean ls_file_picker_open(GtkWindow* parent, const LSFilePickerOptions* options, LSFileSelectedCallback callback)
 {
-    if (parent == NULL && !GTK_IS_WINDOW(parent)) {
+    if (parent == NULL || !GTK_IS_WINDOW(parent)) {
         LOG_ERR("Invalid ls_file_picker_open usage: parent was NULL or not a valid GTK Window");
         return FALSE;
     }
