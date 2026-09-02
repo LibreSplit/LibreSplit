@@ -92,7 +92,6 @@ void ls_app_window_open(LSAppWindow* win, const char* file)
 {
     LOG_DEBUG("Opening LibreSplit window");
     char* error_msg = NULL;
-    GtkWidget* error_popup;
 
     if (win->timer) {
         ls_app_window_clear_game(win);
