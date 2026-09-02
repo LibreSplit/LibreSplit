@@ -221,40 +221,14 @@ static void ls_app_window_size_allocate(GtkWidget* widget, int width, int height
 }
 
 /**
- * @brief Data needed to handle setting the user_reset value
- * depending on callback and terminating the UI thread loop.
+ * @brief The user was presented a confirm reset dialog while closing the app and chose yes.
+ * This function performs the close operation after user confirmation.
+ *
+ * @param window The main application window
  */
-typedef struct {
-    GMainLoop* loop;
-    bool* user_reset;
-} AppCloseRequestData;
-
-/**
- * @brief Callback for when the user allows closing LibreSplit.
- * Needed because the check defaults to false (deny closing)
- * the callback needs to set that to true when the user accepts.
- */
-static void user_allowed_close(gpointer data)
+static void user_allowed_close(gpointer window)
 {
-    AppCloseRequestData* close_data = data;
-    if (close_data == NULL || close_data->user_reset == NULL) {
-        LOG_WARN("user_reset pointer was invalid; this should never happen");
-        return;
-    }
-
-    *close_data->user_reset = true;
-}
-
-static void app_window_delete_loop_unref(gpointer data)
-{
-    AppCloseRequestData* close_data = data;
-    if (close_data == NULL || close_data->user_reset == NULL) {
-        LOG_WARN("loop pointer was invalid; this should never happen");
-        return;
-    }
-
-    g_main_loop_quit(close_data->loop);
-    g_main_loop_unref(close_data->loop);
+    gtk_window_destroy(GTK_WINDOW(window));
 }
 
 /**
@@ -269,15 +243,8 @@ gboolean ls_app_window_delete(GtkWindow* window, gpointer data)
 
     // Warn if the reset will lose a gold split, and allow the user to cancel the reset if they want to keep it
     if (win->timer && win->timer->running && (ls_timer_has_gold_split(win->timer) || ls_timer_has_rainbow_split(win->timer))) {
-        bool user_reset = false;
         if (cfg.libresplit.ask_on_gold.value.b) {
-            GMainLoop* loop = g_main_loop_new(NULL, FALSE);
-            AppCloseRequestData data = { .loop = loop, .user_reset = &user_reset };
-            display_confirm_reset_dialog(user_allowed_close, &data, app_window_delete_loop_unref);
-            g_main_loop_run(loop);
-        }
-
-        if (!user_reset) {
+            display_confirm_reset_dialog(user_allowed_close, window, NULL);
             return TRUE;
         }
     }
