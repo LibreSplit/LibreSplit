@@ -1,5 +1,7 @@
 #include "dialog.h"
 #include "src/logging.h"
+#include <stdatomic.h>
+#include <sys/stat.h>
 
 /**
  * @brief The request object to construct when requesting a new dialog.
@@ -26,6 +28,36 @@ typedef struct {
     int cancel_button;
     gboolean completed;
 } LSDialogRequest;
+
+/**
+ * @brief The request object to construct when requesting a new file picker.
+ * This copies all of the caller's data into persistent memory and is responsible
+ * for storing strings, callback, filters etc.
+ *
+ * For internal use only.
+ */
+typedef struct {
+    gatomicrefcount references;
+    GWeakRef parent;
+    char* title;
+    char* path;
+    char* filter_name;
+    LSFilePickerFilter* filters;
+    gsize filters_count;
+    LSFileSelectedCallback callback;
+} LSFilePickerRequest;
+
+static atomic_uint dialog_count;
+
+/**
+ * @brief Returns a bool value of whether or not any number of dialogs are open.
+ *
+ * @return bool whether or not any dialogs are displayed
+ */
+bool ls_dialog_exists()
+{
+    return atomic_load(&dialog_count) > 0;
+}
 
 /**
  * @brief Ensures the icon supplied is valid for the source/type combination.
@@ -157,6 +189,7 @@ static void dialog_request_free(LSDialogRequest* request)
     }
 
     g_free(request);
+    atomic_fetch_sub(&dialog_count, 1);
 }
 
 static LSDialogRequest* dialog_request_ref(LSDialogRequest* request)
@@ -466,6 +499,219 @@ gboolean ls_dialog_open(GtkWindow* parent,
         request->options[i].label = g_strdup(options[i].label);
     }
 
+    atomic_fetch_add(&dialog_count, 1);
     g_idle_add_full(G_PRIORITY_DEFAULT, dialog_present, g_steal_pointer(&request), dialog_request_unref);
+    return TRUE;
+}
+
+static void file_picker_request_free(LSFilePickerRequest* request)
+{
+    g_weak_ref_clear(&request->parent);
+    g_free(request->title);
+    g_free(request->path);
+    for (gsize i = 0; i < request->filters_count; i++) {
+        g_free(request->filters[i].name);
+        g_free(request->filters[i].pattern);
+    }
+
+    g_free(request->filters);
+    g_free(request);
+
+    atomic_fetch_sub(&dialog_count, 1);
+}
+
+static LSFilePickerRequest* file_picker_request_ref(LSFilePickerRequest* request)
+{
+    g_atomic_ref_count_inc(&request->references);
+    return request;
+}
+
+static void file_picker_request_unref(gpointer data)
+{
+    LSFilePickerRequest* request = data;
+    if (g_atomic_ref_count_dec(&request->references)) {
+        file_picker_request_free(request);
+    }
+}
+
+static void file_picker_finish(GObject* diag, GAsyncResult* result, gpointer data)
+{
+    GError* error = NULL;
+    LSFilePickerRequest* request = data;
+    GtkFileDialog* dialog = GTK_FILE_DIALOG(diag);
+    GFile* file = gtk_file_dialog_open_finish(dialog, result, &error);
+
+    if (file != NULL) {
+        GtkWindow* parent = GTK_WINDOW(g_weak_ref_get(&request->parent));
+        if (parent != NULL && !gtk_widget_in_destruction(GTK_WIDGET(parent))) {
+            char* path = g_file_get_path(file);
+            if (path != NULL) {
+                request->callback(parent, path);
+                g_free(path);
+            } else {
+                LOG_WARN("Selected file did not have a local path");
+            }
+        }
+
+        g_clear_object(&parent);
+    } else if (error != NULL) {
+        if (!g_error_matches(error, GTK_DIALOG_ERROR, GTK_DIALOG_ERROR_DISMISSED) && !g_error_matches(error, GTK_DIALOG_ERROR, GTK_DIALOG_ERROR_CANCELLED)) {
+            LOG_WARNF("Failed to open file: %s", error->message);
+        }
+    } else {
+        LOG_WARN("File selection returned no file");
+    }
+
+    g_clear_object(&file);
+    g_clear_error(&error);
+    file_picker_request_unref(request);
+}
+
+/**
+ * @brief Builds the actual file picker once GTK is ready to run the function on the main thread.
+ * It is required for all of the GUI elements to be constructed in the main thread, therefore all of this work
+ * must happen once GTK calls `file_picker_present` and never in `ls_file_picker_open`
+ *
+ * @param user_data The LSFilePickerRequest
+ * @return gboolean Whether or not this method needs to remain in the GTK queue for continued calling - always false/G_SOURCE_REMOVE
+ */
+static gboolean file_picker_present(gpointer user_data)
+{
+    LSFilePickerRequest* request = user_data;
+    GtkWindow* parent = GTK_WINDOW(g_weak_ref_get(&request->parent));
+    if (parent == NULL || gtk_widget_in_destruction(GTK_WIDGET(parent))) {
+        g_clear_object(&parent);
+        return G_SOURCE_REMOVE;
+    }
+
+    GtkFileDialog* dialog = gtk_file_dialog_new();
+    gtk_file_dialog_set_title(dialog, request->title);
+    gtk_file_dialog_set_modal(dialog, true);
+
+    GtkFileFilter** allocated_filters = g_new0(GtkFileFilter*, request->filters_count);
+    GListStore* filters = g_list_store_new(GTK_TYPE_FILE_FILTER);
+    GtkFileFilter* default_filter = NULL;
+
+    for (gsize i = 0; i < request->filters_count; i++) {
+        GtkFileFilter* filter = gtk_file_filter_new();
+        gtk_file_filter_set_name(filter, request->filters[i].name);
+        gtk_file_filter_add_pattern(filter, request->filters[i].pattern);
+        g_list_store_append(filters, filter);
+        allocated_filters[i] = filter;
+
+        if (request->filters[i].is_default) {
+            default_filter = filter;
+        }
+    }
+
+    gtk_file_dialog_set_filters(dialog, G_LIST_MODEL(filters));
+    if (default_filter != NULL) {
+        gtk_file_dialog_set_default_filter(dialog, default_filter);
+    }
+
+    GFile* folder = g_file_new_for_path(request->path);
+    gtk_file_dialog_set_initial_folder(dialog, folder);
+    g_object_unref(folder);
+
+    gtk_file_dialog_open(dialog, parent, NULL, file_picker_finish, file_picker_request_ref(request));
+
+    g_object_unref(filters);
+
+    for (gsize i = 0; i < request->filters_count; i++) {
+        g_object_unref(allocated_filters[i]);
+    }
+
+    g_free(allocated_filters);
+    g_object_unref(dialog);
+    g_object_unref(parent);
+
+    return G_SOURCE_REMOVE;
+}
+
+/**
+ * @brief Queues a file picker dialog to be created by the main GTK Thread.
+ * All of the data passed in must be valid at the time of calling.
+ * We then copy all of the data to persistent memory to pass the dialog request
+ * along to the GTK queue.
+ *
+ * @param parent The window that owns the file picker - required
+ * @param options The file picker config - all fields are required
+ * @param callback Callback for a successful local file selection - required
+ * @return gboolean Whether or not the request was valid and successfully queue'd for presentation
+ */
+gboolean ls_file_picker_open(GtkWindow* parent, const LSFilePickerOptions* options, LSFileSelectedCallback callback)
+{
+    if (parent == NULL && !GTK_IS_WINDOW(parent)) {
+        LOG_ERR("Invalid ls_file_picker_open usage: parent was NULL or not a valid GTK Window");
+        return FALSE;
+    }
+
+    if (options == NULL) {
+        LOG_ERR("Invalid ls_file_picker_open usage: options were null");
+        return FALSE;
+    }
+
+    if (options->title == NULL || options->title == '\0') {
+        LOG_ERR("Invalid ls_file_picker_open usage: title was null or empty");
+        return FALSE;
+    }
+
+    if (options->path == NULL || options->path == '\0') {
+        LOG_ERR("Invalid ls_file_picker_open usage: path was null or empty");
+        return FALSE;
+    }
+
+    struct stat st = { 0 };
+    if (stat(options->path, &st) != 0 || !S_ISDIR(st.st_mode)) {
+        LOG_ERR("Invalid ls_file_picker_open usage: path was not a valid system folder path")
+        return FALSE;
+    }
+
+    if (callback == NULL) {
+        LOG_ERR("Invalid ls_file_picker_open usage: callback was null");
+        return FALSE;
+    }
+
+    bool has_default = false;
+    for (gsize i = 0; i < options->filters_count; i++) {
+        LSFilePickerFilter filter = options->filters[i];
+        if (filter.name == NULL || filter.name == '\0') {
+            LOG_ERRF("Invalid ls_file_picker_open usage: filter[%d].name was null or empty", i);
+            return FALSE;
+        }
+
+        if (filter.pattern == NULL || filter.pattern == '\0') {
+            LOG_ERRF("Invalid ls_file_picker_open usage: filter[%d].pattern was null or empty", i);
+            return FALSE;
+        }
+
+        if (filter.is_default) {
+            if (has_default) {
+                LOG_ERRF("Invalid ls_file_picker_open usage: filter[%d].is_default multiple default filters defined", i);
+                return FALSE;
+            }
+
+            has_default = true;
+        }
+    }
+
+    LSFilePickerRequest* request = g_new(LSFilePickerRequest, 1);
+    g_atomic_ref_count_init(&request->references);
+    g_weak_ref_init(&request->parent, G_OBJECT(parent));
+    request->title = g_strdup(options->title);
+    request->path = g_strdup(options->path);
+    request->callback = callback;
+    request->filters = g_new(LSFilePickerFilter, options->filters_count);
+    request->filters_count = options->filters_count;
+
+    for (gsize i = 0; i < options->filters_count; i++) {
+        LSFilePickerFilter filter = options->filters[i];
+        request->filters[i].name = g_strdup(filter.name);
+        request->filters[i].pattern = g_strdup(filter.pattern);
+        request->filters[i].is_default = filter.is_default;
+    }
+
+    atomic_fetch_add(&dialog_count, 1);
+    g_idle_add_full(G_PRIORITY_DEFAULT, file_picker_present, request, file_picker_request_unref);
     return TRUE;
 }

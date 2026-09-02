@@ -15,6 +15,8 @@ G_BEGIN_DECLS
  */
 typedef void (*LSDialogCallback)(gpointer user_data);
 
+typedef void (*LSFileSelectedCallback)(GtkWindow* parent, const char* path);
+
 /**
  * @brief Valid supported icon types.
  * To add a new type, you must add a new entry to the enum, then add its implementation
@@ -46,6 +48,21 @@ typedef struct {
     gboolean is_default; /**< Whether or not this option is the default focus */
 } LSDialogOption;
 
+typedef struct {
+    const char* name; /**< The name of the filter the user sees */
+    const char* pattern; /**< Glob pattern the filter uses */
+    gboolean is_default; /**< Whether or not this filter is the default */
+} LSFilePickerFilter;
+
+typedef struct {
+    const char* title; /**< File picker title */
+    const char* path; /**< Initial path that the file picker presents to the user */
+    LSFilePickerFilter* filters; /**< Pointer to an array of filters */
+    gsize filters_count; /**< The number of filters in the filters array */
+} LSFilePickerOptions;
+
+bool ls_dialog_exists();
+
 gboolean ls_dialog_open(GtkWindow* parent,
     const char* title,
     const char* message,
@@ -55,5 +72,7 @@ gboolean ls_dialog_open(GtkWindow* parent,
     gsize options_count,
     gpointer user_data,
     GDestroyNotify user_data_destroy);
+
+gboolean ls_file_picker_open(GtkWindow* parent, const LSFilePickerOptions* options, LSFileSelectedCallback callback);
 
 G_END_DECLS

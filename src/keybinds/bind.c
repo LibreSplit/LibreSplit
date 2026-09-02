@@ -21,6 +21,7 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+#include "src/gui/widgets/dialog.h"
 #include <inttypes.h>
 #include <string.h>
 #include <unistd.h>
@@ -513,20 +514,23 @@ filter_func(GdkDisplay* display, gpointer gdk_xevent, gpointer data)
             processing_event = TRUE;
             last_event_time = xevent->xkey.time;
 
-            iter = bindings;
-            while (iter != NULL) {
-                /* NOTE: ``iter`` might be removed from the list
-                 * in the callback.
-                 */
-                struct Binding* binding = iter->data;
-                iter = iter->next;
+            // Don't allow global hotkeys to affect the timer while a dialog is presented to the user
+            if (!ls_dialog_exists()) {
+                iter = bindings;
+                while (iter != NULL) {
+                    /* NOTE: ``iter`` might be removed from the list
+                    * in the callback.
+                    */
+                    struct Binding* binding = iter->data;
+                    iter = iter->next;
 
-                if (keyvalues_equal(binding->keyval, keyval) && modifiers_equal(binding->modifiers, modifiers)) {
-                    TRACE(g_print("Calling handler for '%s'...\n",
-                        binding->keystring));
+                    if (keyvalues_equal(binding->keyval, keyval) && modifiers_equal(binding->modifiers, modifiers)) {
+                        TRACE(g_print("Calling handler for '%s'...\n",
+                            binding->keystring));
 
-                    (binding->handler)(binding->keystring,
-                        binding->user_data);
+                        (binding->handler)(binding->keystring,
+                            binding->user_data);
+                    }
                 }
             }
 
