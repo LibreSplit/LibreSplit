@@ -335,7 +335,7 @@ void quit_activated(GSimpleAction* action,
         }
     }
 
-    perform_quit(app);
+    perform_quit(win);
 }
 
 /**
