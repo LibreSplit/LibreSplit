@@ -214,8 +214,30 @@ static void ls_app_class_init(LSAppClass* class)
     G_APPLICATION_CLASS(class)->open = ls_app_open;
 }
 
+/**
+ * @brief Keeps the context menu sized and positioned correctly during application layout.
+ *
+ * When a manual popover's parent is allocated, the popover must update its allocation as well.
+ * This chains the window's normal allocation with the context menu if it exists.
+ *
+ * @param widget The application window
+ * @param width The window's allocated width
+ * @param height The window's allocated height
+ * @param baseline The window's allocated baseline (-1 if there is none)
+ */
+static void ls_app_window_size_allocate(GtkWidget* widget, int width, int height, int baseline)
+{
+    // This is the GtkApplicationWindow size allocate, not our appwindow
+    GTK_WIDGET_CLASS(ls_app_window_parent_class)->size_allocate(widget, width, height, baseline);
+    LSAppWindow* win = LS_APP_WINDOW(widget);
+    if (win->context_menu != NULL) {
+        gtk_popover_present(GTK_POPOVER(win->context_menu));
+    }
+}
+
 static void ls_app_window_class_init(LSAppWindowClass* class)
 {
+    GTK_WIDGET_CLASS(class)->size_allocate = ls_app_window_size_allocate;
 }
 
 /**
@@ -433,6 +455,7 @@ static void ls_app_window_init(LSAppWindow* win)
 
     LOG_DEBUG("Creating the main window...");
     win->container = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+    add_class(win->container, "libresplit-content");
     gtk_widget_set_margin_top(win->container, WINDOW_PAD);
     gtk_widget_set_margin_bottom(win->container, WINDOW_PAD);
     gtk_widget_set_vexpand(win->container, TRUE);
