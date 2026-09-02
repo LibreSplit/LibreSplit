@@ -320,17 +320,16 @@ void close_activated(GSimpleAction* action,
 /**
  * @brief Perform the quit operation after agreeable checks.
  *
- * @param app pointer to the main application
+ * @param win pointer to the main application window
  */
-static void perform_quit(gpointer app)
+static void perform_quit(gpointer window)
 {
-    LSAppWindow* win = ls_get_main_app_window(GTK_APPLICATION(app));
+    LSAppWindow* win = LS_APP_WINDOW(window);
     if (win->welcome_box) {
         welcome_box_destroy(win->welcome_box);
     }
 
     gtk_window_destroy(GTK_WINDOW(win));
-    g_application_quit(app);
 }
 
 /**
@@ -360,7 +359,7 @@ void quit_activated(GSimpleAction* action,
     // Warn if the reset will lose a gold split, and allow the user to cancel the reset if they want to keep it
     if (win->timer && win->timer->running && (ls_timer_has_gold_split(win->timer) || ls_timer_has_rainbow_split(win->timer))) {
         if (cfg.libresplit.ask_on_gold.value.b) {
-            display_confirm_reset_dialog(perform_quit, NULL, NULL);
+            display_confirm_reset_dialog(perform_quit, win);
             return;
         }
     }

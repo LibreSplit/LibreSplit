@@ -150,14 +150,10 @@ int display_root_warning_dialog()
  * @param user_data Optional custom user data to pass to perform_reset; defaults to default GTK Application
  * @param destroy_user_data Optional custom data destruction method for your custom user_data.
  */
-void display_confirm_reset_dialog(LSDialogCallback perform_reset, gpointer user_data, LSDialogCallback destroy_user_data)
+void display_confirm_reset_dialog(LSDialogCallback perform_reset, LSAppWindow* win)
 {
     LOG_DEBUG("Detected gold/rainbow split, asking user for confirmation");
     GtkApplication* app = GTK_APPLICATION(g_application_get_default());
-    GtkWindow* win = NULL;
-    if (app != NULL) {
-        win = gtk_application_get_active_window(app);
-    }
 
     const LSDialogOption options[] = {
         {
@@ -180,13 +176,13 @@ void display_confirm_reset_dialog(LSDialogCallback perform_reset, gpointer user_
     };
 
     ls_dialog_open(
-        win,
+        GTK_WINDOW(win),
         "Confirm Reset?",
         "This run contains a gold and/or rainbow split",
         "Are you sure you want to proceed?",
         &icon,
         options,
         G_N_ELEMENTS(options),
-        user_data != NULL ? user_data : app,
-        user_data != NULL ? destroy_user_data : NULL);
+        win,
+        NULL);
 }

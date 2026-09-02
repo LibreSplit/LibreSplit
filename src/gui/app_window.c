@@ -225,7 +225,7 @@ static void ls_app_window_size_allocate(GtkWidget* widget, int width, int height
  *
  * @param window The main application window
  */
-static void user_allowed_close(gpointer window)
+static void destroy_window_after_confirmation(gpointer window)
 {
     gtk_window_destroy(GTK_WINDOW(window));
 }
@@ -243,7 +243,7 @@ gboolean ls_app_window_delete(GtkWindow* window, gpointer data)
     // Warn if the reset will lose a gold split, and allow the user to cancel the reset if they want to keep it
     if (win->timer && win->timer->running && (ls_timer_has_gold_split(win->timer) || ls_timer_has_rainbow_split(win->timer))) {
         if (cfg.libresplit.ask_on_gold.value.b) {
-            display_confirm_reset_dialog(user_allowed_close, window, NULL);
+            display_confirm_reset_dialog(destroy_window_after_confirmation, win);
             return TRUE;
         }
     }
