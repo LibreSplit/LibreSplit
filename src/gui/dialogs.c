@@ -169,14 +169,20 @@ void display_confirm_reset_dialog(LSDialogCallback perform_reset, LSAppWindow* w
         .type = LS_DIALOG_ICON_NAME,
     };
 
-    ls_dialog_open(
-        GTK_WINDOW(win),
-        "Confirm Reset?",
-        "This run contains a gold and/or rainbow split",
-        "Are you sure you want to proceed?",
-        &icon,
-        options,
-        G_N_ELEMENTS(options),
-        win,
-        NULL);
+    // Ensure a reference to the main window exists for the lifetime of the dialog
+    LSAppWindow* win_ref = g_object_ref(win);
+
+    if (!ls_dialog_open(
+            GTK_WINDOW(win),
+            "Confirm Reset?",
+            "This run contains a gold and/or rainbow split",
+            "Are you sure you want to proceed?",
+            &icon,
+            options,
+            G_N_ELEMENTS(options),
+            win_ref,
+            g_object_unref)) {
+        // unref if dialog creation failed.
+        g_object_unref(win_ref);
+    }
 }

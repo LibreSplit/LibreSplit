@@ -528,8 +528,11 @@ filter_func(GdkDisplay* display, gpointer gdk_xevent, gpointer data)
                         TRACE(g_print("Calling handler for '%s'...\n",
                             binding->keystring));
 
-                        (binding->handler)(binding->keystring,
-                            binding->user_data);
+                        (binding->handler)(binding->keystring, binding->user_data);
+                        // in case a dialog is opened by this binding, stop processing global hotkeys for now
+                        if (ls_dialog_exists()) {
+                            break;
+                        }
                     }
                 }
             }

@@ -238,6 +238,11 @@ static void destroy_window_after_confirmation(gpointer window)
  */
 gboolean ls_app_window_delete(GtkWindow* window, gpointer data)
 {
+    // avoid dialog spamming the user
+    if (ls_dialog_exists()) {
+        return TRUE;
+    }
+
     LSAppWindow* win = LS_APP_WINDOW(window);
 
     // Warn if the reset will lose a gold split, and allow the user to cancel the reset if they want to keep it
