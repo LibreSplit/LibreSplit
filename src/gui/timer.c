@@ -125,6 +125,18 @@ void timer_stop_or_reset(LSAppWindow* win)
 static void perform_cancel_run(gpointer window)
 {
     LSAppWindow* win = window;
+
+    // autosplitter/global hotkey start sanity checks
+    if (!win->timer) {
+        LOG_WARN("Timer became null after confirm, cannot cancel run.");
+        return;
+    }
+
+    if (win->timer->running) {
+        LOG_WARN("Timer started running after confirm, cannot cancel run.");
+        return;
+    }
+
     ls_timer_cancel(win->timer);
     ls_app_window_clear_game(win);
     ls_app_window_show_game(win);
