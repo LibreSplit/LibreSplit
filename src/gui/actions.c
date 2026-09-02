@@ -86,7 +86,7 @@ static void open_splits_finished(GObject* diag, GAsyncResult* result, gpointer u
             }
         }
     } else if (error != NULL) {
-        if (!g_error_matches(error, GTK_DIALOG_ERROR, GTK_DIALOG_ERROR_DISMISSED) && g_error_matches(error, GTK_DIALOG_ERROR, GTK_DIALOG_ERROR_CANCELLED)) {
+        if (!g_error_matches(error, GTK_DIALOG_ERROR, GTK_DIALOG_ERROR_DISMISSED) && !g_error_matches(error, GTK_DIALOG_ERROR, GTK_DIALOG_ERROR_CANCELLED)) {
             LOG_WARNF("Failed to open split file: %s", error->message);
         }
     } else {
@@ -440,7 +440,7 @@ static void open_autosplitter_finished(GObject* diag, GAsyncResult* result, gpoi
             }
         }
     } else if (error != NULL) {
-        if (!g_error_matches(error, GTK_DIALOG_ERROR, GTK_DIALOG_ERROR_DISMISSED) && g_error_matches(error, GTK_DIALOG_ERROR, GTK_DIALOG_ERROR_CANCELLED)) {
+        if (!g_error_matches(error, GTK_DIALOG_ERROR, GTK_DIALOG_ERROR_DISMISSED) && !g_error_matches(error, GTK_DIALOG_ERROR, GTK_DIALOG_ERROR_CANCELLED)) {
             LOG_WARNF("Failed to open auto splitter: %s", error->message);
         }
     } else {
