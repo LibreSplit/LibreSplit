@@ -115,10 +115,17 @@ void open_activated(GSimpleAction* action,
         return;
     }
 
-    if (last_split_folder != NULL && last_split_folder[0] != '\0' && stat(splits_path, &st) == 0) {
-        // Just use the last saved path
+    bool use_default_path = true;
+    if (last_split_folder != NULL && last_split_folder[0] != '\0') {
         strcpy(splits_path, last_split_folder);
-    } else {
+
+        // Just use the last saved path if it exists
+        if (stat(splits_path, &st) == 0) {
+            use_default_path = false;
+        }
+    }
+
+    if (use_default_path) {
         // We have no saved path or the path no longer exists, go to the default splits path and eventually create it
         strcpy(splits_path, win->data_path);
         strcat(splits_path, "/splits");
@@ -435,10 +442,17 @@ void open_auto_splitter(GSimpleAction* action,
         return;
     }
 
-    if (last_auto_splitter_folder != NULL && last_auto_splitter_folder[0] != '\0' && stat(last_auto_splitter_folder, &st) == 0) {
-        // Just use the last saved path
+    bool use_default_path = true;
+    if (last_auto_splitter_folder != NULL && last_auto_splitter_folder[0] != '\0') {
         strcpy(auto_splitters_path, last_auto_splitter_folder);
-    } else {
+
+        // Just use the last saved path if it exists
+        if (stat(last_auto_splitter_folder, &st) == 0) {
+            use_default_path = false;
+        }
+    }
+
+    if (use_default_path) {
         strcpy(auto_splitters_path, win->data_path);
         strcat(auto_splitters_path, "/auto-splitters");
         if (stat(auto_splitters_path, &st) == -1) {
