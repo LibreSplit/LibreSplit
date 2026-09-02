@@ -735,7 +735,7 @@ gboolean ls_file_picker_open(GtkWindow* parent, const LSFilePickerOptions* optio
         return FALSE;
     }
 
-    if (options->filters == NULL && options->filters_count != 0){
+    if (options->filters == NULL && options->filters_count != 0) {
         LOG_ERR("Invalid ls_file_picker_open usage: filters was NULL with a positive filters_count");
         return FALSE;
     }
