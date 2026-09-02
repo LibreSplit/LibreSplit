@@ -1,4 +1,6 @@
 #include "dialog.h"
+#include "src/gui/app_window.h"
+#include "src/gui/backends/x11.h"
 #include "src/logging.h"
 #include <stdatomic.h>
 #include <sys/stat.h>
@@ -48,6 +50,49 @@ typedef struct {
 } LSFilePickerRequest;
 
 static atomic_uint dialog_count;
+
+/**
+ * @brief x11 workaround, dialogs do not inherit their parent's wm_state. As a workaround for x11
+ * we disable keep on top temporarily while a dialog is open in order to allow the dialog to appear
+ * above the main window. This should not interfer with the intent of the actual user's
+ * keep on top preference since the window will be in focus during dialog interactions and restored
+ * after the dialog is dismissed.
+ *
+ * @param setting
+ */
+static void set_main_window_keep_above(gboolean setting)
+{
+    if (!is_x11_display()) {
+        return;
+    }
+
+    GApplication* app = g_application_get_default();
+    if (!GTK_IS_APPLICATION(app)) {
+        return;
+    }
+
+    LSAppWindow* win = ls_get_main_app_window(GTK_APPLICATION(app));
+    if (win != NULL && win->opts.win_on_top) {
+        x11_set_keep_above(GTK_WINDOW(win), setting);
+    }
+}
+
+static gboolean restore_main_window_keep_above(gpointer data)
+{
+    if (atomic_load(&dialog_count) == 0) {
+        set_main_window_keep_above(TRUE);
+    }
+
+    return G_SOURCE_REMOVE;
+}
+
+static void dialog_count_dec()
+{
+    // atomic_fetch_sub returns the value BEFORE the subtraction.
+    if (atomic_fetch_sub(&dialog_count, 1) == 1) {
+        g_idle_add(restore_main_window_keep_above, NULL);
+    }
+}
 
 /**
  * @brief Returns a bool value of whether or not any number of dialogs are open.
@@ -189,7 +234,7 @@ static void dialog_request_free(LSDialogRequest* request)
     }
 
     g_free(request);
-    atomic_fetch_sub(&dialog_count, 1);
+    dialog_count_dec();
 }
 
 static LSDialogRequest* dialog_request_ref(LSDialogRequest* request)
@@ -291,6 +336,8 @@ static gboolean dialog_present(gpointer user_data)
         g_clear_object(&parent);
         return G_SOURCE_REMOVE;
     }
+
+    set_main_window_keep_above(FALSE);
 
     GtkApplication* application = NULL;
     GtkWindow* window = GTK_WINDOW(gtk_window_new());
@@ -517,7 +564,7 @@ static void file_picker_request_free(LSFilePickerRequest* request)
     g_free(request->filters);
     g_free(request);
 
-    atomic_fetch_sub(&dialog_count, 1);
+    dialog_count_dec();
 }
 
 static LSFilePickerRequest* file_picker_request_ref(LSFilePickerRequest* request)
@@ -540,9 +587,9 @@ static void file_picker_finish(GObject* diag, GAsyncResult* result, gpointer dat
     LSFilePickerRequest* request = data;
     GtkFileDialog* dialog = GTK_FILE_DIALOG(diag);
     GFile* file = gtk_file_dialog_open_finish(dialog, result, &error);
+    GtkWindow* parent = GTK_WINDOW(g_weak_ref_get(&request->parent));
 
     if (file != NULL) {
-        GtkWindow* parent = GTK_WINDOW(g_weak_ref_get(&request->parent));
         if (parent != NULL && !gtk_widget_in_destruction(GTK_WIDGET(parent))) {
             char* path = g_file_get_path(file);
             if (path != NULL) {
@@ -552,8 +599,6 @@ static void file_picker_finish(GObject* diag, GAsyncResult* result, gpointer dat
                 LOG_WARN("Selected file did not have a local path");
             }
         }
-
-        g_clear_object(&parent);
     } else if (error != NULL) {
         if (!g_error_matches(error, GTK_DIALOG_ERROR, GTK_DIALOG_ERROR_DISMISSED) && !g_error_matches(error, GTK_DIALOG_ERROR, GTK_DIALOG_ERROR_CANCELLED)) {
             LOG_WARNF("Failed to open file: %s", error->message);
@@ -562,6 +607,7 @@ static void file_picker_finish(GObject* diag, GAsyncResult* result, gpointer dat
         LOG_WARN("File selection returned no file");
     }
 
+    g_clear_object(&parent);
     g_clear_object(&file);
     g_clear_error(&error);
     file_picker_request_unref(request);
@@ -584,9 +630,11 @@ static gboolean file_picker_present(gpointer user_data)
         return G_SOURCE_REMOVE;
     }
 
+    set_main_window_keep_above(FALSE);
+
     GtkFileDialog* dialog = gtk_file_dialog_new();
     gtk_file_dialog_set_title(dialog, request->title);
-    gtk_file_dialog_set_modal(dialog, true);
+    gtk_file_dialog_set_modal(dialog, TRUE);
 
     GtkFileFilter** allocated_filters = g_new0(GtkFileFilter*, request->filters_count);
     GListStore* filters = g_list_store_new(GTK_TYPE_FILE_FILTER);
