@@ -69,7 +69,7 @@ static void open_splits_selected(GtkWindow* parent, const char* filename)
     if (win->timer && win->timer->running) {
         ls_alert_info(GTK_WINDOW(win), "LibreSplit", "The timer is currently running", "Please stop the run before changing splits.");
     } else {
-        const char* folder_path = g_path_get_dirname(filename);
+        char* folder_path = g_path_get_dirname(filename);
         CFG_SET_STR(cfg.history.last_split_folder.value.s, folder_path);
         ls_app_window_open(win, filename);
         CFG_SET_STR(cfg.history.split_file.value.s, filename);
@@ -120,7 +120,7 @@ void open_activated(GSimpleAction* action,
         strcpy(splits_path, last_split_folder);
 
         // Just use the last saved path if it exists
-        if (stat(splits_path, &st) == 0) {
+        if (stat(splits_path, &st) == 0 && S_ISDIR(st.st_mode)) {
             use_default_path = false;
         }
     }
@@ -138,7 +138,7 @@ void open_activated(GSimpleAction* action,
         gtk_widget_set_visible(win->welcome_box->box, TRUE);
     }
 
-    const LSFilePickerFilter filters[] = { { .name = "LibreSplit JSON Split File", .pattern = "*.json", .is_default = true } };
+    LSFilePickerFilter filters[] = { { .name = "LibreSplit JSON Split File", .pattern = "*.json", .is_default = true } };
     const LSFilePickerOptions options = {
         .title = "Open Splits File",
         .path = splits_path,
@@ -396,7 +396,7 @@ static void open_autosplitter_selected(GtkWindow* parent, const char* filename)
     if (win->timer && win->timer->running) {
         ls_alert_info(GTK_WINDOW(win), "LibreSplit", "The timer is currently running", "Please stop the run before changing the auto splitter.");
     } else {
-        const char* folder_path = g_path_get_dirname(filename);
+        char* folder_path = g_path_get_dirname(filename);
         CFG_SET_STR(cfg.history.last_auto_splitter_folder.value.s, folder_path);
         CFG_SET_STR(cfg.history.auto_splitter_file.value.s, filename);
         strcpy(auto_splitter_file, filename);
@@ -447,7 +447,7 @@ void open_auto_splitter(GSimpleAction* action,
         strcpy(auto_splitters_path, last_auto_splitter_folder);
 
         // Just use the last saved path if it exists
-        if (stat(last_auto_splitter_folder, &st) == 0) {
+        if (stat(last_auto_splitter_folder, &st) == 0 && S_ISDIR(st.st_mode)) {
             use_default_path = false;
         }
     }
@@ -460,7 +460,7 @@ void open_auto_splitter(GSimpleAction* action,
         }
     }
 
-    const LSFilePickerFilter filters[] = { { .name = "LibreSplit LUA Auto Splitters", .pattern = "*.lua", .is_default = true } };
+    LSFilePickerFilter filters[] = { { .name = "LibreSplit LUA Auto Splitters", .pattern = "*.lua", .is_default = true } };
     const LSFilePickerOptions options = {
         .title = "Open Auto Splitter File",
         .path = auto_splitters_path,

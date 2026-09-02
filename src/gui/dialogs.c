@@ -99,7 +99,6 @@ static void root_warning_finish(gpointer data)
 /**
  * Displays a modal warning dialog explaining that LibreSplit should not be
  * run as the root user due to potential security and file permission issues.
- * The dialog is parented to the active application window when one exists.
  *
  * @return this is called in main and returns this function's value so return 1 to indicate error
  */

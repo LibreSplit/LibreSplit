@@ -558,8 +558,8 @@ static void file_picker_request_free(LSFilePickerRequest* request)
 
     if (request->filters_count > 0) {
         for (gsize i = 0; i < request->filters_count; i++) {
-            g_free(request->filters[i].name);
-            g_free(request->filters[i].pattern);
+            g_free((gpointer)request->filters[i].name);
+            g_free((gpointer)request->filters[i].pattern);
         }
 
         g_free(request->filters);
@@ -693,7 +693,7 @@ static gboolean file_picker_present(gpointer user_data)
  * along to the GTK queue.
  *
  * @param parent The window that owns the file picker - required
- * @param options The file picker config - all fields are required
+ * @param options The file picker config - all fields other than filters are required
  * @param callback Callback for a successful local file selection - required
  * @return gboolean Whether or not the request was valid and successfully queue'd for presentation
  */
@@ -732,6 +732,11 @@ gboolean ls_file_picker_open(GtkWindow* parent, const LSFilePickerOptions* optio
 
     if (options->filters_count < 0 || options->filters_count > MAX_FILTERS) {
         LOG_ERR("Invalid ls_file_picker_open usage: number of filters out of bounds");
+        return FALSE;
+    }
+
+    if (options->filters == NULL && options->filters_count != 0){
+        LOG_ERR("Invalid ls_file_picker_open usage: filters was NULL with a positive filters_count");
         return FALSE;
     }
 
