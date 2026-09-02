@@ -233,7 +233,7 @@ LSComponent* ls_component_splits_new(void)
 {
     LSSplits* self;
 
-    self = malloc(sizeof(LSSplits));
+    self = calloc(1, sizeof(LSSplits));
     if (!self) {
         return NULL;
     }
