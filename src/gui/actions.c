@@ -204,8 +204,10 @@ void save_activated(GSimpleAction* action,
         gtk_window_get_default_size(GTK_WINDOW(win), &width, &height);
         win->game->width = width;
         win->game->height = height;
+        bool save = true;
         if (cfg.libresplit.ask_on_worse.value.b) {
             if (!ls_is_timer_better(win->game, win->timer)) {
+                save = false;
                 const LSDialogOption options[] = {
                     {
                         .label = "_Yes",
@@ -237,6 +239,10 @@ void save_activated(GSimpleAction* action,
                     win,
                     NULL);
             }
+        }
+
+        if (save) {
+            perform_save_splits(win);
         }
     }
 }
