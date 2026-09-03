@@ -406,7 +406,7 @@ gboolean ls_dialog_open(GtkWindow* parent,
     }
 
     if (options_count <= 0 || options_count > MAX_BUTTONS) {
-        LOG_ERR("Invalid ls_dialog_open usage: number of options exceeded limits");
+        LOG_ERR("Invalid ls_dialog_open usage: number of options out of bounds");
         return FALSE;
     }
 
