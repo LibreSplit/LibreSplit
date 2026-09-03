@@ -57,7 +57,7 @@ static atomic_uint dialog_count;
  * keep on top preference since the window will be in focus during dialog interactions and restored
  * after the dialog is dismissed.
  *
- * @param setting
+ * @param setting The setting value for whether to keep on top or not
  */
 static void set_main_window_keep_above(gboolean setting)
 {
