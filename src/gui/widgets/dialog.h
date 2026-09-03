@@ -11,7 +11,8 @@ G_BEGIN_DECLS
 #define DIALOG_MARGIN 18
 #define DIALOG_MIN_WIDTH 360
 #define DIALOG_MIN_HEIGHT -1
-#define MAX_FILTERS 100
+
+#define FILE_PICKER_MAX_FILTERS 100
 
 /**
  * Callback for handling a dialog response select.

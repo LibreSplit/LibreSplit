@@ -730,7 +730,7 @@ gboolean ls_file_picker_open(GtkWindow* parent, const LSFilePickerOptions* optio
         return FALSE;
     }
 
-    if (options->filters_count < 0 || options->filters_count > MAX_FILTERS) {
+    if (options->filters_count < 0 || options->filters_count > FILE_PICKER_MAX_FILTERS) {
         LOG_ERR("Invalid ls_file_picker_open usage: number of filters out of bounds");
         return FALSE;
     }
