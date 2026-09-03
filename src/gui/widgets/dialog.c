@@ -283,15 +283,15 @@ static gboolean dialog_present(gpointer user_data)
     }
 
     request->window = window;
-    GtkWidget* content = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
-    gtk_widget_set_margin_top(content, 18);
-    gtk_widget_set_margin_bottom(content, 18);
-    gtk_widget_set_margin_start(content, 18);
-    gtk_widget_set_margin_end(content, 18);
-    gtk_widget_set_size_request(content, 360, -1);
+    GtkWidget* content = gtk_box_new(GTK_ORIENTATION_VERTICAL, DIALOG_CONTENT_SPACING);
+    gtk_widget_set_margin_top(content, DIALOG_MARGIN);
+    gtk_widget_set_margin_bottom(content, DIALOG_MARGIN);
+    gtk_widget_set_margin_start(content, DIALOG_MARGIN);
+    gtk_widget_set_margin_end(content, DIALOG_MARGIN);
+    gtk_widget_set_size_request(content, DIALOG_MIN_WIDTH, DIALOG_MIN_HEIGHT);
     gtk_window_set_child(window, content);
 
-    GtkWidget* body = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 16);
+    GtkWidget* body = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, DIALOG_BODY_SPACING);
     gtk_box_append(GTK_BOX(content), body);
 
     GtkWidget* icon = new_icon_widget(request->icon);
@@ -301,7 +301,7 @@ static gboolean dialog_present(gpointer user_data)
         gtk_box_append(GTK_BOX(body), icon);
     }
 
-    GtkWidget* text = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
+    GtkWidget* text = gtk_box_new(GTK_ORIENTATION_VERTICAL, DIALOG_ITEM_SPACING);
     gtk_widget_set_hexpand(text, TRUE);
     gtk_widget_set_valign(text, request->detail != NULL && request->detail[0] != '\0' ? GTK_ALIGN_START : GTK_ALIGN_CENTER);
     gtk_box_append(GTK_BOX(body), text);
@@ -314,7 +314,7 @@ static gboolean dialog_present(gpointer user_data)
         gtk_box_append(GTK_BOX(text), dialog_label_new(request->detail));
     }
 
-    GtkWidget* actions = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
+    GtkWidget* actions = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, DIALOG_ITEM_SPACING);
     gtk_widget_set_halign(actions, GTK_ALIGN_END);
     gtk_widget_set_margin_top(actions, 10);
     gtk_box_append(GTK_BOX(content), actions);
@@ -405,7 +405,7 @@ gboolean ls_dialog_open(GtkWindow* parent,
         return FALSE;
     }
 
-    if (options_count <= 0 || options_count > MAX_BUTTONS) {
+    if (options_count <= 0 || options_count > DIALOG_MAX_BUTTONS) {
         LOG_ERR("Invalid ls_dialog_open usage: number of options out of bounds");
         return FALSE;
     }

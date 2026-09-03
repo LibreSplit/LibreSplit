@@ -4,7 +4,14 @@
 
 G_BEGIN_DECLS
 
-#define MAX_BUTTONS 100
+#define DIALOG_MAX_BUTTONS 100
+#define DIALOG_CONTENT_SPACING 8
+#define DIALOG_BODY_SPACING 16
+#define DIALOG_ITEM_SPACING 6
+#define DIALOG_MARGIN 18
+#define DIALOG_MIN_WIDTH 360
+#define DIALOG_MIN_HEIGHT -1
+#define DIALOG_
 
 /**
  * Callback for handling a dialog response select.
