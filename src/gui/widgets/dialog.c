@@ -96,7 +96,7 @@ static void g_icondup(LSDialogRequest* request, const LSDialogIcon* icon)
 
         // For completeness but only a valid icon should have made it to this point after `is_valid_icon`
         default:
-            LOG_WARNF("Unsupported or invalid type: %d", icon->type);
+            LOG_WARNF("Unsupported or invalid icon type: %d", icon->type);
     }
 }
 
@@ -126,7 +126,7 @@ static GtkWidget* new_icon_widget(LSDialogIcon* icon)
 
         // For completeness but only a valid icon should have made it to this point after `is_valid_icon`
         default:
-            LOG_WARNF("Unsupported or invalid type: %d", icon->type);
+            LOG_WARNF("Unsupported or invalid icon type: %d", icon->type);
     }
 
     return NULL;
