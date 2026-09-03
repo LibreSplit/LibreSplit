@@ -11,7 +11,6 @@ G_BEGIN_DECLS
 #define DIALOG_MARGIN 18
 #define DIALOG_MIN_WIDTH 360
 #define DIALOG_MIN_HEIGHT -1
-#define DIALOG_
 
 /**
  * Callback for handling a dialog response select.
