@@ -23,7 +23,7 @@ typedef void (*LSDialogCallback)(gpointer user_data);
  * is_valid_icon - ensure that the supplied source is a valid source for the type.
  * g_icondup - call the correct allocation method for duplicating the resource in persistent memory and assign to the request
  *             assign the correct resource destruction method to the request's icon_free for your source type
- * get_icon_widget - create a new GtkWidget for the icon that displays your icon and return the GtkWidget.
+ * new_icon_widget - create a new GtkWidget for the icon that displays your icon and return the GtkWidget.
  */
 typedef enum {
     LS_DIALOG_ICON_NAME, /**< Icon from a standard theme icon name */

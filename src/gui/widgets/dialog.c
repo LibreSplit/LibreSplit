@@ -46,24 +46,24 @@ static gboolean is_valid_icon(const LSDialogIcon* icon)
     }
 
     if (icon->source == NULL) {
-        LOG_ERR("Invalid icon source was NULL");
+        LOG_ERR("Invalid icon: icon source is NULL");
         return FALSE;
     }
 
     if (icon->type == LS_DIALOG_ICON_GICON) {
         if (!G_IS_ICON(icon->source)) {
-            LOG_ERR("Invalid GIcon icon source was not a GIcon");
+            LOG_ERR("Invalid Icon: icon source is not a GIcon");
             return FALSE;
         }
     } else if (icon->type == LS_DIALOG_ICON_PAINTABLE) {
         if (!GDK_IS_PAINTABLE(icon->source)) {
-            LOG_ERR("Invalid GdkPaintable icon source was not a GdkPaintaible");
+            LOG_ERR("Invalid Icon: icon source is not a GdkPaintable");
             return FALSE;
         }
     } else {
         const char* resource = icon->source;
         if (resource[0] == '\0') {
-            LOG_ERR("Invalid string icon source was empty");
+            LOG_ERR("Invalid Icon: icon source is an empty string");
             return FALSE;
         }
     }
@@ -106,7 +106,7 @@ static void g_icondup(LSDialogRequest* request, const LSDialogIcon* icon)
  * @param icon The LSDialogIcon
  * @return GtkWidget*
  */
-static GtkWidget* get_icon_widget(LSDialogIcon* icon)
+static GtkWidget* new_icon_widget(LSDialogIcon* icon)
 {
     if (icon == NULL || icon->source == NULL) {
         return NULL;
@@ -294,7 +294,7 @@ static gboolean dialog_present(gpointer user_data)
     GtkWidget* body = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 16);
     gtk_box_append(GTK_BOX(content), body);
 
-    GtkWidget* icon = get_icon_widget(request->icon);
+    GtkWidget* icon = new_icon_widget(request->icon);
     if (icon != NULL) {
         gtk_image_set_icon_size(GTK_IMAGE(icon), GTK_ICON_SIZE_LARGE);
         gtk_widget_set_valign(icon, GTK_ALIGN_START);
