@@ -85,7 +85,7 @@ static gboolean restore_main_window_keep_above(gpointer data)
     return G_SOURCE_REMOVE;
 }
 
-static void dialog_count_dec()
+static void dialog_count_dec(void)
 {
     // atomic_fetch_sub returns the value BEFORE the subtraction.
     if (atomic_fetch_sub(&dialog_count, 1) == 1) {

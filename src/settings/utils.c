@@ -150,7 +150,7 @@ void check_directories(void)
 bool create_default_directory(const char* name, const char* path, GtkWindow* parent)
 {
     struct stat st = { 0 };
-    if (stat(path, &st) == 0) {
+    if (stat(path, &st) == 0 && S_ISDIR(st.st_mode)) {
         return true;
     }
 
