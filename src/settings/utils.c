@@ -1,6 +1,6 @@
 #include "utils.h"
-#include "src/logging.h"
 #include "src/gui/widgets/alert.h"
+#include "src/logging.h"
 #include <linux/limits.h>
 #include <pwd.h>
 #include <stdio.h>

@@ -1,5 +1,5 @@
-#include "gio/gio.h"
 #include "src/gui/actions.h"
+#include "gio/gio.h"
 #include "src/gui/app_window.h"
 #include "src/gui/backends/x11.h"
 #include "src/gui/dialogs.h"
