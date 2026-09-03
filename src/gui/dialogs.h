@@ -8,6 +8,6 @@
 
 gboolean display_non_capable_mem_read_dialog(gpointer data);
 
-int display_root_warning_dialog(void);
+void display_root_warning_dialog(void);
 
 void display_confirm_reset_dialog(LSDialogCallback perform_reset, LSAppWindow* win);

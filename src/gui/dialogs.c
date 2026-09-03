@@ -100,10 +100,8 @@ static void root_warning_finish(gpointer data)
 /**
  * Displays a modal warning dialog explaining that LibreSplit should not be
  * run as the root user due to potential security and file permission issues.
- *
- * @return this is called in main and returns this function's value so return 1 to indicate error
  */
-int display_root_warning_dialog(void)
+void display_root_warning_dialog(void)
 {
     GMainLoop* loop = g_main_loop_new(NULL, FALSE);
     const LSDialogOption options[] = {
