@@ -14,7 +14,7 @@
       Lua-based auto splitters that are easy to port from ASL.
     </p>
   </description>
-  <launchable type="desktop-id">libresplit.desktop</launchable>
+  <launchable type="desktop-id">org.libresplit.LibreSplit.desktop</launchable>
   <provides>
     <binary>libresplit</binary>
   </provides>

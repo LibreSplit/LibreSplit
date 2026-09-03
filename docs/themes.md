@@ -18,8 +18,9 @@ See the [GTK 4 CSS properties documentation](https://docs.gtk.org/gtk4/css-prope
 
 | LibreSplit CSS classes        | Explanation Where needed                                                                                                                                 |
 | ----------------------------- | -----------------------------------------------                                                                                                          |
-| `.window`                     | Any window of LibreSplit (editing this class might affect other LibreSplit windows)                                                                      |
-| `.window.main-window`         | LibreSplit's main timer window (this won't influence other LibreSplit windows)                                                                           |
+| `window`                      | Any window of LibreSplit (editing this class might affect other LibreSplit windows)                                                                      |
+| `.window.main-window`         | LibreSplit's main timer window - think of this like the main `<body>` of a standard webpage                                                              |
+| `.libresplit-content`         | LibreSplit's timer content container - this is like the top level `<div>` element who's parent is `<body>` that all the components are a descendant of   |
 | `.header`                     | The header, containing title and attempt counters                                                                                                        |
 | `.title`                      | The title of the category (set in the splits json file)                                                                                                  |
 | `.attempt-count`              | Counter for attempts in top right corner (#attempts_finished / attempts_total)                                                                           |
@@ -76,7 +77,7 @@ A more complex example: if your split is named "Space Station (Part 1)", the CSS
 
 ### How do I hide a section of LibreSplit?
 
-GTK does not have a built-in way of hiding pieces of the interface, but you can hide most items by setting the font-size to zero. For instance:
+GTK CSS does not have a built-in way of hiding pieces of the interface, but you can hide most items by setting the font-size to zero. For instance:
 
 ```css
 .segment-pb, .segment-best{

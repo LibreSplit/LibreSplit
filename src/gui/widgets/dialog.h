@@ -4,7 +4,13 @@
 
 G_BEGIN_DECLS
 
-#define MAX_BUTTONS 100
+#define DIALOG_MAX_BUTTONS 100
+#define DIALOG_CONTENT_SPACING 8
+#define DIALOG_BODY_SPACING 16
+#define DIALOG_ITEM_SPACING 6
+#define DIALOG_MARGIN 18
+#define DIALOG_MIN_WIDTH 360
+#define DIALOG_MIN_HEIGHT -1
 #define MAX_FILTERS 100
 
 /**
@@ -26,7 +32,7 @@ typedef void (*LSFileSelectedCallback)(GtkWindow* parent, const char* path);
  * is_valid_icon - ensure that the supplied source is a valid source for the type.
  * g_icondup - call the correct allocation method for duplicating the resource in persistent memory and assign to the request
  *             assign the correct resource destruction method to the request's icon_free for your source type
- * get_icon_widget - create a new GtkWidget for the icon that displays your icon and return the GtkWidget.
+ * new_icon_widget - create a new GtkWidget for the icon that displays your icon and return the GtkWidget.
  */
 typedef enum {
     LS_DIALOG_ICON_NAME, /**< Icon from a standard theme icon name */

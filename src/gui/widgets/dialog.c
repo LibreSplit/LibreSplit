@@ -122,24 +122,24 @@ static gboolean is_valid_icon(const LSDialogIcon* icon)
     }
 
     if (icon->source == NULL) {
-        LOG_ERR("Invalid icon source was NULL");
+        LOG_ERR("Invalid icon: icon source is NULL");
         return FALSE;
     }
 
     if (icon->type == LS_DIALOG_ICON_GICON) {
         if (!G_IS_ICON(icon->source)) {
-            LOG_ERR("Invalid GIcon icon source was not a GIcon");
+            LOG_ERR("Invalid Icon: icon source is not a GIcon");
             return FALSE;
         }
     } else if (icon->type == LS_DIALOG_ICON_PAINTABLE) {
         if (!GDK_IS_PAINTABLE(icon->source)) {
-            LOG_ERR("Invalid GdkPaintable icon source was not a GdkPaintaible");
+            LOG_ERR("Invalid Icon: icon source is not a GdkPaintable");
             return FALSE;
         }
     } else {
         const char* resource = icon->source;
         if (resource[0] == '\0') {
-            LOG_ERR("Invalid string icon source was empty");
+            LOG_ERR("Invalid Icon: icon source is an empty string");
             return FALSE;
         }
     }
@@ -172,7 +172,7 @@ static void g_icondup(LSDialogRequest* request, const LSDialogIcon* icon)
 
         // For completeness but only a valid icon should have made it to this point after `is_valid_icon`
         default:
-            LOG_WARNF("Unsupported or invalid type: %d", icon->type);
+            LOG_WARNF("Unsupported or invalid icon type: %d", icon->type);
     }
 }
 
@@ -182,7 +182,7 @@ static void g_icondup(LSDialogRequest* request, const LSDialogIcon* icon)
  * @param icon The LSDialogIcon
  * @return GtkWidget*
  */
-static GtkWidget* get_icon_widget(LSDialogIcon* icon)
+static GtkWidget* new_icon_widget(LSDialogIcon* icon)
 {
     if (icon == NULL || icon->source == NULL) {
         return NULL;
@@ -202,7 +202,7 @@ static GtkWidget* get_icon_widget(LSDialogIcon* icon)
 
         // For completeness but only a valid icon should have made it to this point after `is_valid_icon`
         default:
-            LOG_WARNF("Unsupported or invalid type: %d", icon->type);
+            LOG_WARNF("Unsupported or invalid icon type: %d", icon->type);
     }
 
     return NULL;
@@ -362,25 +362,25 @@ static gboolean dialog_present(gpointer user_data)
     }
 
     request->window = window;
-    GtkWidget* content = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
-    gtk_widget_set_margin_top(content, 18);
-    gtk_widget_set_margin_bottom(content, 18);
-    gtk_widget_set_margin_start(content, 18);
-    gtk_widget_set_margin_end(content, 18);
-    gtk_widget_set_size_request(content, 360, -1);
+    GtkWidget* content = gtk_box_new(GTK_ORIENTATION_VERTICAL, DIALOG_CONTENT_SPACING);
+    gtk_widget_set_margin_top(content, DIALOG_MARGIN);
+    gtk_widget_set_margin_bottom(content, DIALOG_MARGIN);
+    gtk_widget_set_margin_start(content, DIALOG_MARGIN);
+    gtk_widget_set_margin_end(content, DIALOG_MARGIN);
+    gtk_widget_set_size_request(content, DIALOG_MIN_WIDTH, DIALOG_MIN_HEIGHT);
     gtk_window_set_child(window, content);
 
-    GtkWidget* body = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 16);
+    GtkWidget* body = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, DIALOG_BODY_SPACING);
     gtk_box_append(GTK_BOX(content), body);
 
-    GtkWidget* icon = get_icon_widget(request->icon);
+    GtkWidget* icon = new_icon_widget(request->icon);
     if (icon != NULL) {
         gtk_image_set_icon_size(GTK_IMAGE(icon), GTK_ICON_SIZE_LARGE);
         gtk_widget_set_valign(icon, GTK_ALIGN_START);
         gtk_box_append(GTK_BOX(body), icon);
     }
 
-    GtkWidget* text = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
+    GtkWidget* text = gtk_box_new(GTK_ORIENTATION_VERTICAL, DIALOG_ITEM_SPACING);
     gtk_widget_set_hexpand(text, TRUE);
     gtk_widget_set_valign(text, request->detail != NULL && request->detail[0] != '\0' ? GTK_ALIGN_START : GTK_ALIGN_CENTER);
     gtk_box_append(GTK_BOX(body), text);
@@ -393,7 +393,7 @@ static gboolean dialog_present(gpointer user_data)
         gtk_box_append(GTK_BOX(text), dialog_label_new(request->detail));
     }
 
-    GtkWidget* actions = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
+    GtkWidget* actions = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, DIALOG_ITEM_SPACING);
     gtk_widget_set_halign(actions, GTK_ALIGN_END);
     gtk_widget_set_margin_top(actions, 10);
     gtk_box_append(GTK_BOX(content), actions);
@@ -484,8 +484,8 @@ gboolean ls_dialog_open(GtkWindow* parent,
         return FALSE;
     }
 
-    if (options_count <= 0 || options_count > MAX_BUTTONS) {
-        LOG_ERR("Invalid ls_dialog_open usage: number of options exceeded limits");
+    if (options_count <= 0 || options_count > DIALOG_MAX_BUTTONS) {
+        LOG_ERR("Invalid ls_dialog_open usage: number of options out of bounds");
         return FALSE;
     }
 

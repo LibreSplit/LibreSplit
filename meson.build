@@ -143,7 +143,7 @@ message('buildtype: ' + get_option('buildtype'))
 message('ioctl_maps: ' + ioctl_maps.enabled().to_string())
 
 install_data(
-    'assets/libresplit.desktop',
+    'assets/org.libresplit.LibreSplit.desktop',
     install_dir: get_option('prefix') / get_option('datadir') / 'applications',
 )
 install_data(
@@ -167,7 +167,7 @@ endforeach
 install_data(
     'assets/libresplit.svg',
     install_dir: get_option('prefix') / get_option('datadir') / 'icons/hicolor/scalable/apps/',
-    rename: 'libresplit.png',
+    rename: 'libresplit.svg',
     install_mode: 'rw-r--r--',
 )
 

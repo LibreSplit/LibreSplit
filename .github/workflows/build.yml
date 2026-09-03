@@ -132,9 +132,9 @@ jobs:
                   fi
 
                   mkdir -p AppDir/usr/share/applications
-                  cp assets/libresplit.desktop AppDir/
-                  cp assets/libresplit.desktop AppDir/usr/share/applications/
-                  sed -i 's/^Exec=.*/Exec=AppRun/' AppDir/libresplit.desktop
+                  cp assets/org.libresplit.LibreSplit.desktop AppDir/
+                  cp assets/org.libresplit.LibreSplit.desktop AppDir/usr/share/applications/
+                  sed -i 's/^Exec=.*/Exec=AppRun/' AppDir/org.libresplit.LibreSplit.desktop
                   cp assets/appimage.sh AppDir/AppRun
                   cp assets/icons/libresplit-256.png AppDir/libresplit.png
                   chmod +x AppDir/AppRun
@@ -177,7 +177,7 @@ jobs:
 
                   LDAI_OUTPUT="${APPIMAGE_NAME}" \
                   LDAI_UPDATE_INFORMATION="gh-releases-zsync|${{ github.repository_owner }}|LibreSplit|${UPDATE_CHANNEL}|LibreSplit-*-${ARCH}.AppImage.zsync" \
-                  "./linuxdeploy-${ARCH}.AppImage" --appdir AppDir --desktop-file AppDir/libresplit.desktop --icon-file AppDir/libresplit.png --output appimage
+                  "./linuxdeploy-${ARCH}.AppImage" --appdir AppDir --desktop-file AppDir/org.libresplit.LibreSplit.desktop --icon-file AppDir/libresplit.png --output appimage
 
                   if ! find AppDir -type f -name 'libgtk-4.so.1*' -print -quit | grep -q .; then
                     echo "::error::The AppImage does not contain GTK 4"
