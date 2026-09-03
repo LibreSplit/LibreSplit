@@ -22,8 +22,6 @@
 
 extern atomic_bool exit_requested; /*!< Set to 1 when LibreSplit is exiting */
 
-static void ls_app_window_size_allocate(GtkWidget* widget, int width, int height, int baseline);
-
 static void ls_app_init(LSApp* app)
 {
 }
@@ -237,16 +235,6 @@ static void ls_app_window_size_allocate(GtkWidget* widget, int width, int height
 static void ls_app_window_class_init(LSAppWindowClass* class)
 {
     GTK_WIDGET_CLASS(class)->size_allocate = ls_app_window_size_allocate;
-}
-
-static void ls_app_window_size_allocate(GtkWidget* widget, int width, int height, int baseline)
-{
-    // This is the GtkApplicationWindow size allocate, not our appwindow
-    GTK_WIDGET_CLASS(ls_app_window_parent_class)->size_allocate(widget, width, height, baseline);
-    LSAppWindow* win = LS_APP_WINDOW(widget);
-    if (win->context_menu != NULL) {
-        gtk_popover_present(GTK_POPOVER(win->context_menu));
-    }
 }
 
 /**
