@@ -132,7 +132,6 @@ void display_root_warning_dialog(void)
         root_warning_finish);
 
     g_main_loop_run(loop);
-    return 1;
 }
 
 /**
