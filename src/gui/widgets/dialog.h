@@ -18,11 +18,20 @@ G_BEGIN_DECLS
  * Callback for handling a dialog response select.
  * Null means that nothing needs to be notified and no action must be taken.
  *
- * @param user_data - Pointer to user supplied data pass to ls_dialog_open
+ * @param user_data Pointer to user supplied data pass to ls_dialog_open
  *
  */
 typedef void (*LSDialogCallback)(gpointer user_data);
 
+/**
+ * Callback for handling a file picker selection.
+ * This being called means that a successful selection was made so
+ * you need not worry about canellation/dismissal or error handling.
+ *
+ * @param parent The parent window that owns the file picker
+ * @param path The full path to the selected file
+ *
+ */
 typedef void (*LSFileSelectedCallback)(GtkWindow* parent, const char* path);
 
 /**
