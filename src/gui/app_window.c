@@ -104,8 +104,7 @@ void ls_app_window_open(LSAppWindow* win, const char* file)
     if (ls_game_create(&win->game, file, &error_msg)) {
         win->game = 0;
         if (error_msg) {
-            // max file size + reasonable error message length
-            char msg[384];
+            char msg[PATH_MAX];
             snprintf(msg, sizeof msg, "%s\n%s", error_msg, file);
             ls_alert_error(GTK_WINDOW(win), "LibreSplit", "JSON parse error:", msg);
             free(error_msg);

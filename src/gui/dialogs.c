@@ -34,9 +34,10 @@ static void open_troubleshoot_page(gpointer user_data)
 /**
  * @brief Shows a message dialog in case of a memory read error.
  *
+ * @param data user data - unused
  * @return gboolean FALSE to remove this function from the main loop.
  */
-gboolean display_non_capable_mem_read_dialog()
+gboolean display_non_capable_mem_read_dialog(gpointer data)
 {
     atomic_store(&auto_splitter_enabled, 0);
     GtkApplication* app = GTK_APPLICATION(g_application_get_default());
@@ -102,7 +103,7 @@ static void root_warning_finish(gpointer data)
  *
  * @return this is called in main and returns this function's value so return 1 to indicate error
  */
-int display_root_warning_dialog()
+int display_root_warning_dialog(void)
 {
     GMainLoop* loop = g_main_loop_new(NULL, FALSE);
     const LSDialogOption options[] = {

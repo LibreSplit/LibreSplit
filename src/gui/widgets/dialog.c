@@ -98,7 +98,7 @@ static void dialog_count_dec()
  *
  * @return bool whether or not any dialogs are displayed
  */
-bool ls_dialog_exists()
+bool ls_dialog_exists(void)
 {
     return atomic_load(&dialog_count) > 0;
 }
@@ -744,18 +744,18 @@ gboolean ls_file_picker_open(GtkWindow* parent, const LSFilePickerOptions* optio
     for (gsize i = 0; i < options->filters_count; i++) {
         LSFilePickerFilter filter = options->filters[i];
         if (filter.name == NULL || filter.name[0] == '\0') {
-            LOG_ERRF("Invalid ls_file_picker_open usage: filter[%d].name was null or empty", i);
+            LOG_ERRF("Invalid ls_file_picker_open usage: filter[%zu].name was null or empty", i);
             return FALSE;
         }
 
         if (filter.pattern == NULL || filter.pattern[0] == '\0') {
-            LOG_ERRF("Invalid ls_file_picker_open usage: filter[%d].pattern was null or empty", i);
+            LOG_ERRF("Invalid ls_file_picker_open usage: filter[%zu].pattern was null or empty", i);
             return FALSE;
         }
 
         if (filter.is_default) {
             if (has_default) {
-                LOG_ERRF("Invalid ls_file_picker_open usage: filter[%d].is_default multiple default filters defined", i);
+                LOG_ERRF("Invalid ls_file_picker_open usage: filter[%zu].is_default multiple default filters defined", i);
                 return FALSE;
             }
 

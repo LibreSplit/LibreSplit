@@ -1300,7 +1300,7 @@ void ls_timer_stop(ls_timer* timer)
  * Also saves run
  *
  * @param timer The timer instance
- * @return Whether the reset was successful, will fail if the timer is currently running/reset cancelled
+ * @return Whether the reset was successful, will fail if the timer is currently running/reset
  */
 int ls_timer_reset(ls_timer* timer, ls_game* game)
 {

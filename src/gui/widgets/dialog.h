@@ -62,7 +62,7 @@ typedef struct {
     gsize filters_count; /**< The number of filters in the filters array */
 } LSFilePickerOptions;
 
-bool ls_dialog_exists();
+bool ls_dialog_exists(void);
 
 gboolean ls_dialog_open(GtkWindow* parent,
     const char* title,

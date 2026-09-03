@@ -1,3 +1,6 @@
+#include "utils.h"
+#include "src/logging.h"
+#include "src/gui/widgets/alert.h"
 #include <linux/limits.h>
 #include <pwd.h>
 #include <stdio.h>
@@ -131,4 +134,34 @@ void check_directories(void)
     if (mkdir(runs_directory, 0755) == -1) {
         // Directory already exists or there was an error
     }
+}
+
+/**
+ * @brief Attempts to a directory at a specified path, intended for the default directories LibreSplit uses.
+ * If the directory already exist this does no work. Otherwise the directory is attempted to be created.
+ * If the creation fails, then displays an alert to the user indicating that the creation failed
+ * and logs the error.
+ *
+ * @param name The name of the directory type i.e. Splits for the splits directory
+ * @param path The path to the directory to create.
+ * @param parent The parent window for the potential user error message on failure.
+ * @return bool Whether or not the directory creation was successful
+ */
+bool create_default_directory(const char* name, const char* path, GtkWindow* parent)
+{
+    struct stat st = { 0 };
+    if (stat(path, &st) == 0) {
+        return true;
+    }
+
+    if (mkdir(path, 0700) != 0) {
+        LOG_ERRF("Failed to create directory: %s: %s", path, strerror(errno));
+
+        char error_msg[PATH_MAX];
+        snprintf(error_msg, sizeof error_msg, "We were unable to create the %s directory at:\n%s", name, path);
+        ls_alert_error(parent, "Error", "Unable to create directory", error_msg);
+        return false;
+    }
+
+    return true;
 }

@@ -1,5 +1,5 @@
-#include "src/gui/actions.h"
 #include "gio/gio.h"
+#include "src/gui/actions.h"
 #include "src/gui/app_window.h"
 #include "src/gui/backends/x11.h"
 #include "src/gui/dialogs.h"
@@ -11,6 +11,7 @@
 #include "src/lasr/utils.h"
 #include "src/logging.h"
 #include "src/settings/settings.h"
+#include "src/settings/utils.h"
 #include <gtk/gtk.h>
 #include <stdatomic.h>
 #include <sys/stat.h>
@@ -129,8 +130,8 @@ void open_activated(GSimpleAction* action,
         // We have no saved path or the path no longer exists, go to the default splits path and eventually create it
         strcpy(splits_path, win->data_path);
         strcat(splits_path, "/splits");
-        if (stat(splits_path, &st) == -1) {
-            mkdir(splits_path, 0700);
+        if (!create_default_directory("Splits", splits_path, GTK_WINDOW(win))) {
+            return;
         }
     }
 
@@ -455,8 +456,8 @@ void open_auto_splitter(GSimpleAction* action,
     if (use_default_path) {
         strcpy(auto_splitters_path, win->data_path);
         strcat(auto_splitters_path, "/auto-splitters");
-        if (stat(auto_splitters_path, &st) == -1) {
-            mkdir(auto_splitters_path, 0700);
+        if (!create_default_directory("Auto Splitters", auto_splitters_path, GTK_WINDOW(win))) {
+            return;
         }
     }
 
