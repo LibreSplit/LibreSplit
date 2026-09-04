@@ -27,18 +27,13 @@ static LSApp* g_app = NULL;
 // Function to handle CTL commands from the server thread
 void handle_ctl_command(CTLCommand command)
 {
-    GList* windows;
-    LSAppWindow* win;
-
     if (!g_app) {
         LOG_INFO("No application instance available to handle commands");
         return;
     }
 
-    windows = gtk_application_get_windows(GTK_APPLICATION(g_app));
-    if (windows) {
-        win = LS_APP_WINDOW(windows->data);
-    } else {
+    LSAppWindow* win = ls_get_main_app_window(GTK_APPLICATION(g_app));
+    if (!win) {
         LOG_INFO("No window available to handle commands");
         return;
     }
@@ -66,7 +61,7 @@ void handle_ctl_command(CTLCommand command)
             break;
         case CTL_CMD_EXIT:
             LOG_DEBUG("Exit requested via Server Command");
-            exit(0);
+            gtk_window_close(GTK_WINDOW(win));
             break;
         default:
             LOG_INFOF("Unknown CTL command: %d", command);

@@ -183,15 +183,12 @@ void ls_app_open(GApplication* app,
     const gchar* hint)
 {
     LOG_DEBUG("Starting LibreSplit App");
-    GList* windows;
-    LSAppWindow* win;
     int i;
-    windows = gtk_application_get_windows(GTK_APPLICATION(app));
-    if (windows) {
-        win = LS_APP_WINDOW(windows->data);
-    } else {
+    LSAppWindow* win = ls_get_main_app_window(GTK_APPLICATION(app));
+    if (!win) {
         win = ls_app_window_new(LS_APP(app));
     }
+
     for (i = 0; i < n_files; i++) {
         ls_app_window_open(win, g_file_get_path(files[i]));
     }
@@ -388,6 +385,26 @@ gboolean ls_app_window_draw(gpointer data)
         gtk_widget_queue_draw(GTK_WIDGET(win));
     }
     return TRUE;
+}
+
+/**
+ * @brief A helper function to get the main LibreSplit AppWindow.
+ * gtk_application_get_windows returns a list of windows ordered by the most
+ * recently focused window. Therefore the first result is not gauranteed to be
+ * the main window.
+ *
+ * @param app The application
+ * @return LSAppWindow* The main application window or NULL if none exists
+ */
+LSAppWindow* ls_get_main_app_window(GtkApplication* app)
+{
+    for (GList* node = gtk_application_get_windows(app); node != NULL; node = node->next) {
+        if (LS_IS_APP_WINDOW(node->data)) {
+            return LS_APP_WINDOW(node->data);
+        }
+    }
+
+    return NULL;
 }
 
 static void ls_app_window_init(LSAppWindow* win)
