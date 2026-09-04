@@ -41,6 +41,12 @@ void set_window_decorations(LSAppWindow* win)
     gtk_window_set_decorated(GTK_WINDOW(win), win->opts.decorated);
 }
 
+/**
+ * Toggles window decorations on and off, inverting the internal
+ * window state
+ *
+ * @param win The LibreSplit window pointer
+ */
 void toggle_decorations(LSAppWindow* win)
 {
     LOG_DEBUG("Toggling window decorations");
@@ -50,6 +56,11 @@ void toggle_decorations(LSAppWindow* win)
     config_save();
 }
 
+/**
+ * Toggles the EWMH "Always on top" flag.
+ *
+ * @param win The LibreSplit Window pointer.
+ */
 void toggle_win_on_top(LSAppWindow* win)
 {
     gboolean active = !win->opts.win_on_top;

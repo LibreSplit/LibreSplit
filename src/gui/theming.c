@@ -4,10 +4,17 @@
 #include <string.h>
 #include <sys/stat.h>
 
+/**
+ * Returns the fallback CSS theme integrated in LibreSplit
+ */
 static inline const unsigned char* fallback_css_data(void)
 {
     return _binary____src_fallback_css_start;
 }
+
+/**
+ * Returns the length of the fallback CSS theme integrated in LibreSplit
+ */
 static inline size_t fallback_css_data_len(void)
 {
     return (size_t)((uintptr_t)_binary____src_fallback_css_end - (uintptr_t)_binary____src_fallback_css_start);
