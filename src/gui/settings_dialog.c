@@ -118,6 +118,12 @@ void on_entry_clear_press(GtkEntry* widget, GtkEntryIconPosition icon_pos, gpoin
     gtk_editable_set_text(GTK_EDITABLE(widget), "");
 }
 
+/**
+ * Takes the values from the GUI and saves them back into the program settings.
+ * @param action The action performed (unused).
+ * @param parameter Parameters to the action (unused).
+ * @param app The LibreSplit Application pointer (unused).
+ */
 static void save_gui_settings(GtkButton* button, gpointer app)
 {
     LOG_INFO("Saving settings from the GUI...");
@@ -157,6 +163,11 @@ static void save_gui_settings(GtkButton* button, gpointer app)
     }
 }
 
+/**
+ * Sets some default options used across many widgets.
+ *
+ * @param obj The widget to apply the settings to.
+ */
 static void set_widget_defaults(GtkWidget* obj)
 {
     gtk_widget_set_margin_top(obj, 8);
@@ -167,6 +178,12 @@ static void set_widget_defaults(GtkWidget* obj)
     gtk_widget_set_hexpand(obj, TRUE);
 }
 
+/**
+ * Builds the settings dialog.
+ *
+ * @param app The main LibreSplit Application.
+ * @param data Unused.
+ */
 static void build_settings_dialog(GtkApplication* app, gpointer data)
 {
     LOG_INFO("Creating the settings dialog...");
@@ -221,6 +238,7 @@ static void build_settings_dialog(GtkApplication* app, gpointer data)
                     }
                 case CFG_KEYBIND:
                     {
+                        /*! TODO: Unbind logic and buttons */
                         GtkWidget* lbl_kb = gtk_label_new(entry.desc);
                         gtk_box_append(GTK_BOX(box), lbl_kb);
 
@@ -267,6 +285,13 @@ static void build_settings_dialog(GtkApplication* app, gpointer data)
     gtk_window_present(GTK_WINDOW(window));
 }
 
+/**
+ * Shows the settings dialog when the ContextMenu option is clicked.
+ *
+ * @param action The action performed.
+ * @param parameter Parameters to the action
+ * @param app The LibreSplit Application pointer.
+ */
 void show_settings_dialog(GSimpleAction* action, GVariant* parameter, gpointer app)
 {
     if (parameter != NULL) {
