@@ -137,8 +137,8 @@ void check_directories(void)
 }
 
 /**
- * @brief Attempts to a directory at a specified path, intended for the default directories LibreSplit uses.
- * If the directory already exist this does no work. Otherwise the directory is attempted to be created.
+ * @brief Attempts to create a directory at a specified path, intended for the default directories LibreSplit uses.
+ * If the directory already exist this returns true before creating. Otherwise the directory is attempted to be created.
  * If the creation fails, then displays an alert to the user indicating that the creation failed
  * and logs the error.
  *
