@@ -85,14 +85,6 @@ static gboolean restore_main_window_keep_above(gpointer data)
     return G_SOURCE_REMOVE;
 }
 
-static void dialog_count_dec(void)
-{
-    // atomic_fetch_sub returns the value BEFORE the subtraction.
-    if (atomic_fetch_sub(&dialog_count, 1) == 1) {
-        g_idle_add(restore_main_window_keep_above, NULL);
-    }
-}
-
 /**
  * @brief Returns a bool value of whether or not any number of dialogs are open.
  *
@@ -101,6 +93,28 @@ static void dialog_count_dec(void)
 bool ls_dialog_exists(void)
 {
     return atomic_load(&dialog_count) > 0;
+}
+
+/**
+ * @brief Increments the dialog count. This function should ONLY be called when you
+ * create a your own dialog manually. DO NOT call this when using alerts or `ls_dialog_open`
+ */
+void dialog_count_inc(void)
+{
+    atomic_fetch_add(&dialog_count, 1);
+}
+
+/**
+ * @brief Decrements the dialog count. This function should ONLY be called when you
+ * created your own dialog manually during destruction. DO NOT call this
+ * when using alerts or `ls_dialog_open`
+ */
+void dialog_count_dec(void)
+{
+    // atomic_fetch_sub returns the value BEFORE the subtraction.
+    if (atomic_fetch_sub(&dialog_count, 1) == 1) {
+        g_idle_add(restore_main_window_keep_above, NULL);
+    }
 }
 
 /**
@@ -545,7 +559,7 @@ gboolean ls_dialog_open(GtkWindow* parent,
         request->options[i].label = g_strdup(options[i].label);
     }
 
-    atomic_fetch_add(&dialog_count, 1);
+    dialog_count_inc();
     g_idle_add_full(G_PRIORITY_DEFAULT, dialog_present, g_steal_pointer(&request), dialog_request_unref);
     return TRUE;
 }
@@ -779,7 +793,7 @@ gboolean ls_file_picker_open(GtkWindow* parent, const LSFilePickerOptions* optio
         request->filters[i].is_default = filter.is_default;
     }
 
-    atomic_fetch_add(&dialog_count, 1);
+    dialog_count_inc();
     g_idle_add_full(G_PRIORITY_DEFAULT, file_picker_present, request, file_picker_request_unref);
     return TRUE;
 }

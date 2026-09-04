@@ -113,8 +113,7 @@ css_o = custom_target(
 shared_c_flags = [
     '-DPREFIX="' + get_option('prefix') + '"',
     '-DDATADIR="' + get_option('datadir') + '"',
-    # TODO: replace deprecated functions and re-enable -Werror
-    # '-Werror',
+    '-Werror',
     '-Wall',
     '-Wbad-function-cast',
     '-Wsign-compare',

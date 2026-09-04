@@ -1,5 +1,6 @@
 #include "settings_dialog.h"
 #include "app_window.h"
+#include "src/gui/widgets/alert.h"
 #include "src/logging.h"
 #include "src/settings/definitions.h"
 #include "src/settings/settings.h"
@@ -12,7 +13,7 @@
 
 static LSGuiSetting* gui_settings = NULL;
 
-static GtkWidget* settings_window_singleton = NULL;
+static GtkWindow* settings_window_singleton = NULL;
 
 /**
  * Takes the application config and counts how many settings are available.
@@ -34,6 +35,7 @@ static size_t enumerate_settings(AppConfig cfg)
         }
         settings_number += section_info.count;
     }
+
     return settings_number;
 }
 
@@ -49,6 +51,28 @@ static void on_settings_window_destroy(GtkWidget* widget, gpointer user_data)
     settings_window_singleton = NULL;
     free(gui_settings);
     gui_settings = NULL;
+    dialog_count_dec();
+}
+
+/**
+ * Closes the settings window when Escape is pressed.
+ *
+ * @param controller The key controller attached to the help window.
+ * @param keyval The pressed key value.
+ * @param keycode The pressed hardware keycode.
+ * @param state The active keyboard modifiers.
+ * @param data Unused.
+ *
+ * @return Whether the key event was handled.
+ */
+static gboolean close_settings_window_on_escape(GtkEventControllerKey* controller, guint keyval, guint keycode, GdkModifierType state, gpointer data)
+{
+    if (keyval != GDK_KEY_Escape) {
+        return FALSE;
+    }
+
+    gtk_window_close(GTK_WINDOW(gtk_event_controller_get_widget(GTK_EVENT_CONTROLLER(controller))));
+    return TRUE;
 }
 
 /**
@@ -154,6 +178,7 @@ static void save_gui_settings(GtkButton* button, gpointer app)
                 }
         }
     }
+
     // Call the normal save_settings thing
     if (config_save()) {
         // on success, set decorations in case the setting changed.
@@ -164,83 +189,125 @@ static void save_gui_settings(GtkButton* button, gpointer app)
 }
 
 /**
- * Sets some default options used across many widgets.
+ * Creates the label for a setting.
  *
- * @param obj The widget to apply the settings to.
+ * @param text The setting description.
+ * @return The label.
  */
-static void set_widget_defaults(GtkWidget* obj)
+static GtkWidget* new_setting_label(const char* text)
 {
-    gtk_widget_set_margin_top(obj, 8);
-    gtk_widget_set_margin_bottom(obj, 8);
-    gtk_widget_set_margin_start(obj, 8);
-    gtk_widget_set_margin_end(obj, 8);
-    gtk_widget_set_vexpand(obj, TRUE);
-    gtk_widget_set_hexpand(obj, TRUE);
+    GtkWidget* label = gtk_label_new(text);
+    gtk_label_set_xalign(GTK_LABEL(label), 0.0f);
+    gtk_widget_set_halign(label, GTK_ALIGN_START);
+    gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
+    return label;
 }
 
 /**
  * Builds the settings dialog.
  *
- * @param app The main LibreSplit Application.
- * @param data Unused.
+ * @param data The LibreSplit GTK Application
+ * @return Whether or not to remove this function from the queue
  */
-static void build_settings_dialog(GtkApplication* app, gpointer data)
+static gboolean build_settings_dialog(gpointer data)
 {
-    LOG_INFO("Creating the settings dialog...");
-    // Show already open window if another one is called.
     if (settings_window_singleton) {
-        gtk_window_present(GTK_WINDOW(settings_window_singleton));
-        return;
+        gtk_window_present(settings_window_singleton);
+        return G_SOURCE_REMOVE;
     }
 
+    LOG_INFO("Creating the settings dialog...");
+    GtkApplication* app = GTK_APPLICATION(data);
+    LSAppWindow* win = ls_get_main_app_window(app);
+    if (win == NULL) {
+        LOG_ERR("Main application window was not found");
+        return G_SOURCE_REMOVE;
+    }
+
+    GtkWindow* parent = GTK_WINDOW(win);
     int settings_number = enumerate_settings(cfg);
     gui_settings = malloc(settings_number * sizeof(LSGuiSetting));
     if (gui_settings == NULL) {
         LOG_WARN("Cannot allocate memory for the settings GUI.");
-        return;
+        // I supposed this wouldn't work either since there was no memory for the settings struct? But worth a shot
+        ls_alert_warning(parent, "LibreSplit", "Unable to display settings", "Check your memory usage");
+        return G_SOURCE_REMOVE;
     }
 
-    GtkWindow* parent = gtk_application_get_active_window(app);
-    GtkWidget* window = gtk_dialog_new_with_buttons("LibreSplit Settings", parent, GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT, NULL, NULL);
-    gtk_window_set_application(GTK_WINDOW(window), app);
+    dialog_count_inc();
+
+    GtkWindow* window = GTK_WINDOW(gtk_window_new());
+    gtk_window_set_title(window, "LibreSplit Settings");
+    gtk_window_set_application(window, app);
+    gtk_window_set_modal(window, TRUE);
+    gtk_window_set_resizable(window, FALSE);
+    gtk_window_set_default_size(window, 500, 500);
+    gtk_window_set_transient_for(window, parent);
+    gtk_window_set_destroy_with_parent(window, TRUE);
+
     settings_window_singleton = window;
-    gtk_window_set_default_size(GTK_WINDOW(window), 500, 500);
-    gtk_window_set_resizable(GTK_WINDOW(window), FALSE);
     g_signal_connect(window, "destroy", G_CALLBACK(on_settings_window_destroy), NULL);
-    GtkWidget* main_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 2);
-    set_widget_defaults(main_box);
+
+    GtkEventController* key_controller = gtk_event_controller_key_new();
+    g_signal_connect(key_controller, "key-pressed", G_CALLBACK(close_settings_window_on_escape), NULL);
+    gtk_widget_add_controller(GTK_WIDGET(window), key_controller);
+
+    GtkWidget* main_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, DIALOG_CONTENT_SPACING);
+    gtk_widget_set_margin_top(main_box, DIALOG_MARGIN);
+    gtk_widget_set_margin_bottom(main_box, DIALOG_MARGIN);
+    gtk_widget_set_margin_start(main_box, DIALOG_MARGIN);
+    gtk_widget_set_margin_end(main_box, DIALOG_MARGIN);
+    gtk_window_set_child(window, main_box);
+
     GtkWidget* tabs = gtk_notebook_new();
-    set_widget_defaults(tabs);
+    gtk_widget_set_hexpand(tabs, TRUE);
+    gtk_widget_set_vexpand(tabs, TRUE);
     int settings_idx = 0;
     for (size_t s = 0; s < sections_count; ++s) {
         SectionInfo section_info = sections[s];
         if (!section_info.in_gui) {
             continue;
         }
-        GtkWidget* box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 2);
-        set_widget_defaults(box);
+
+        GtkWidget* page = gtk_scrolled_window_new();
+        gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(page), GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
+        gtk_widget_set_hexpand(page, TRUE);
+        gtk_widget_set_vexpand(page, TRUE);
+
+        GtkWidget* grid = gtk_grid_new();
+        gtk_grid_set_row_spacing(GTK_GRID(grid), DIALOG_ROW_SPACING);
+        gtk_grid_set_column_spacing(GTK_GRID(grid), DIALOG_COLUMN_SPACING);
+        gtk_widget_set_margin_top(grid, DIALOG_INNER_MARGIN);
+        gtk_widget_set_margin_bottom(grid, DIALOG_INNER_MARGIN);
+        gtk_widget_set_margin_start(grid, DIALOG_INNER_MARGIN);
+        gtk_widget_set_margin_end(grid, DIALOG_INNER_MARGIN);
+        gtk_widget_set_hexpand(grid, TRUE);
+        gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(page), grid);
+
         GtkWidget* title = gtk_label_new(section_info.name);
+        int row = 0;
         for (size_t i = 0; i < section_info.count; ++i) {
             ConfigEntry entry = ((ConfigEntry*)section_info.entries)[i];
             gui_settings[settings_idx].settings_entry = &((ConfigEntry*)section_info.entries)[i];
             switch (entry.type) {
                 case CFG_STRING:
                     {
-                        GtkWidget* lbl_str = gtk_label_new(entry.desc);
-                        gtk_box_append(GTK_BOX(box), lbl_str);
+                        GtkWidget* lbl_str = new_setting_label(entry.desc);
+                        gtk_grid_attach(GTK_GRID(grid), lbl_str, 0, row, 1, 1);
 
                         gui_settings[settings_idx].entry_buffer = gtk_entry_buffer_new(entry.value.s, sizeof(entry.value.s));
                         gui_settings[settings_idx].widget = gtk_entry_new_with_buffer(gui_settings[settings_idx].entry_buffer);
                         gtk_entry_set_icon_from_icon_name(GTK_ENTRY(gui_settings[settings_idx].widget), GTK_ENTRY_ICON_SECONDARY, "edit-clear");
                         g_signal_connect(gui_settings[settings_idx].widget, "icon-press", G_CALLBACK(on_entry_clear_press), NULL);
-                        gtk_box_append(GTK_BOX(box), gui_settings[settings_idx].widget);
+                        gtk_widget_set_hexpand(gui_settings[settings_idx].widget, TRUE);
+                        gtk_grid_attach(GTK_GRID(grid), gui_settings[settings_idx].widget, 1, row, 1, 1);
                         break;
                     }
                 case CFG_KEYBIND:
                     {
                         /*! TODO: Unbind logic and buttons */
-                        GtkWidget* lbl_kb = gtk_label_new(entry.desc);
-                        gtk_box_append(GTK_BOX(box), lbl_kb);
+                        GtkWidget* lbl_kb = new_setting_label(entry.desc);
+                        gtk_grid_attach(GTK_GRID(grid), lbl_kb, 0, row, 1, 1);
 
                         gui_settings[settings_idx].entry_buffer = gtk_entry_buffer_new(entry.value.s, sizeof(entry.value.s));
                         gui_settings[settings_idx].widget = gtk_entry_new_with_buffer(gui_settings[settings_idx].entry_buffer);
@@ -250,52 +317,61 @@ static void build_settings_dialog(GtkApplication* app, gpointer data)
                         g_signal_connect(key_controller, "key-pressed", G_CALLBACK(on_key_press), NULL);
                         gtk_widget_add_controller(gui_settings[settings_idx].widget, key_controller);
                         g_signal_connect(gui_settings[settings_idx].widget, "icon-press", G_CALLBACK(on_entry_clear_press), NULL);
-                        gtk_box_append(GTK_BOX(box), gui_settings[settings_idx].widget);
+                        gtk_widget_set_hexpand(gui_settings[settings_idx].widget, TRUE);
+                        gtk_grid_attach(GTK_GRID(grid), gui_settings[settings_idx].widget, 1, row, 1, 1);
                         break;
                     }
                 case CFG_BOOL:
                     {
                         gui_settings[settings_idx].widget = gtk_check_button_new_with_label(entry.desc);
                         gtk_check_button_set_active(GTK_CHECK_BUTTON(gui_settings[settings_idx].widget), entry.value.b);
-                        gtk_box_append(GTK_BOX(box), gui_settings[settings_idx].widget);
+                        gtk_widget_set_halign(gui_settings[settings_idx].widget, GTK_ALIGN_START);
+                        gtk_grid_attach(GTK_GRID(grid), gui_settings[settings_idx].widget, 0, row, 2, 1);
                         break;
                     }
                 case CFG_INT:
                     {
-                        GtkWidget* lbl_int = gtk_label_new(entry.desc);
-                        gtk_box_append(GTK_BOX(box), lbl_int);
+                        GtkWidget* lbl_int = new_setting_label(entry.desc);
+                        gtk_grid_attach(GTK_GRID(grid), lbl_int, 0, row, 1, 1);
                         char setting_as_str[64];
                         sprintf(setting_as_str, "%d", entry.value.i);
 
                         gui_settings[settings_idx].entry_buffer = gtk_entry_buffer_new(setting_as_str, sizeof(setting_as_str));
                         gui_settings[settings_idx].widget = gtk_entry_new_with_buffer(gui_settings[settings_idx].entry_buffer);
-                        gtk_box_append(GTK_BOX(box), gui_settings[settings_idx].widget);
+                        gtk_widget_set_hexpand(gui_settings[settings_idx].widget, TRUE);
+                        gtk_grid_attach(GTK_GRID(grid), gui_settings[settings_idx].widget, 1, row, 1, 1);
                         break;
                     }
             }
             settings_idx++;
+            row++;
         }
-        gtk_notebook_append_page(GTK_NOTEBOOK(tabs), box, title);
+        gtk_notebook_append_page(GTK_NOTEBOOK(tabs), page, title);
     }
     gtk_box_append(GTK_BOX(main_box), tabs);
+
+    GtkWidget* actions = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+    gtk_widget_set_halign(actions, GTK_ALIGN_END);
+    gtk_box_append(GTK_BOX(main_box), actions);
+
     GtkWidget* save_btn = gtk_button_new_with_label("Save");
+    gtk_widget_set_size_request(save_btn, DIALOG_ACTION_WIDTH, -1);
+    gtk_widget_add_css_class(save_btn, "suggested-action");
     g_signal_connect(save_btn, "clicked", G_CALLBACK(save_gui_settings), parent);
-    gtk_box_append(GTK_BOX(main_box), save_btn);
-    gtk_box_append(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(window))), main_box);
-    gtk_window_present(GTK_WINDOW(window));
+    gtk_box_append(GTK_BOX(actions), save_btn);
+
+    gtk_window_present(window);
+    return G_SOURCE_REMOVE;
 }
 
 /**
  * Shows the settings dialog when the ContextMenu option is clicked.
  *
  * @param action The action performed.
- * @param parameter Parameters to the action
+ * @param parameter Unused
  * @param app The LibreSplit Application pointer.
  */
 void show_settings_dialog(GSimpleAction* action, GVariant* parameter, gpointer app)
 {
-    if (parameter != NULL) {
-        app = parameter;
-    }
-    build_settings_dialog(app, NULL);
+    g_idle_add_full(G_PRIORITY_DEFAULT, build_settings_dialog, g_object_ref(app), g_object_unref);
 }
