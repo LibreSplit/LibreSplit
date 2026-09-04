@@ -62,7 +62,6 @@ libresplit_sources = files(
     'src/gui/widgets/alert.c',
     'src/gui/widgets/dialog.c',
     'src/keybinds/bind.c',
-    'src/keybinds/delayed_handlers.c',
 
     # Keybinds
     'src/keybinds/keybinds.c',

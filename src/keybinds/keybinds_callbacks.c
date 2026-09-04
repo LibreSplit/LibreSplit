@@ -9,15 +9,12 @@ void keybind_start_split(GtkWidget* widget, LSAppWindow* win)
 
 void keybind_stop_reset(const char* str, LSAppWindow* win)
 {
-    // NOTE: [Penaz] [2026-02-02] This needs to be put as a "delayed handler",
-    // ^ since it shows a dialog, such dialog would stop the event processing,
-    // ^ locking up LibreSplit or potentially the entire DE when global_hotkeys is enabled.
-    win->delayed_handlers.stop_reset = true;
+    timer_stop_or_reset(win);
 }
 
 void keybind_cancel(const char* str, LSAppWindow* win)
 {
-    win->delayed_handlers.cancel = true;
+    timer_cancel_run(win);
 }
 
 void keybind_skip(const char* str, LSAppWindow* win)

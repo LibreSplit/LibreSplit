@@ -145,7 +145,7 @@ void ls_timer_stop(ls_timer* timer);
 
 int ls_timer_reset(ls_timer* timer, ls_game* game);
 
-int ls_timer_cancel(ls_timer* timer);
+void ls_timer_cancel(ls_timer* timer);
 
 void json_time_get(const json_t* ref, ls_time* time);
 

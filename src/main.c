@@ -7,7 +7,6 @@
 #include "settings/utils.h"
 #include "shared.h"
 #include "src/gui/dialogs.h"
-#include "src/keybinds/delayed_callbacks.h"
 
 #include <gtk/gtk.h>
 #include <jansson.h>

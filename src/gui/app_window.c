@@ -7,7 +7,7 @@
 #include "src/gui/game.h"
 #include "src/gui/theming.h"
 #include "src/gui/timer.h"
-#include "src/keybinds/delayed_callbacks.h"
+#include "src/gui/widgets/alert.h"
 #include "src/keybinds/keybinds_callbacks.h"
 #include "src/lasr/auto-splitter.h"
 #include "src/logging.h"
@@ -100,7 +100,6 @@ void ls_app_window_open(LSAppWindow* win, const char* file)
 {
     LOG_DEBUG("Opening LibreSplit window");
     char* error_msg = NULL;
-    GtkWidget* error_popup;
 
     if (win->timer) {
         ls_app_window_clear_game(win);
@@ -114,18 +113,10 @@ void ls_app_window_open(LSAppWindow* win, const char* file)
     if (ls_game_create(&win->game, file, &error_msg)) {
         win->game = 0;
         if (error_msg) {
-            error_popup = gtk_message_dialog_new(
-                GTK_WINDOW(win),
-                GTK_DIALOG_DESTROY_WITH_PARENT,
-                GTK_MESSAGE_INFO,
-                GTK_BUTTONS_OK,
-                "JSON parse error: %s\n%s",
-                error_msg,
-                file);
-            run_dialog(GTK_DIALOG(error_popup));
-
+            char msg[PATH_MAX];
+            snprintf(msg, sizeof msg, "%s\n%s", error_msg, file);
+            ls_alert_error(GTK_WINDOW(win), "LibreSplit", "JSON parse error:", msg);
             free(error_msg);
-            gtk_window_destroy(GTK_WINDOW(error_popup));
         }
     } else if (ls_timer_create(&win->timer, win->game)) {
         win->timer = 0;
@@ -249,6 +240,17 @@ static void ls_app_window_class_init(LSAppWindowClass* class)
 }
 
 /**
+ * @brief The user was presented a confirm reset dialog while closing the app and chose yes.
+ * This function performs the close operation after user confirmation.
+ *
+ * @param window The main application window
+ */
+static void destroy_window_after_confirmation(gpointer window)
+{
+    gtk_window_destroy(GTK_WINDOW(window));
+}
+
+/**
  * Triggered when LibreSplit receives a notification to close.
  *
  * @param window The LibreSplit window being closed.
@@ -256,16 +258,17 @@ static void ls_app_window_class_init(LSAppWindowClass* class)
  */
 gboolean ls_app_window_delete(GtkWindow* window, gpointer data)
 {
+    // avoid dialog spamming the user
+    if (ls_dialog_exists()) {
+        return TRUE;
+    }
+
     LSAppWindow* win = LS_APP_WINDOW(window);
 
     // Warn if the reset will lose a gold split, and allow the user to cancel the reset if they want to keep it
     if (win->timer && win->timer->running && (ls_timer_has_gold_split(win->timer) || ls_timer_has_rainbow_split(win->timer))) {
-        bool user_reset = true;
         if (cfg.libresplit.ask_on_gold.value.b) {
-            user_reset = display_confirm_reset_dialog();
-        }
-
-        if (!user_reset) {
+            display_confirm_reset_dialog(destroy_window_after_confirmation, win);
             return TRUE;
         }
     }
@@ -376,7 +379,6 @@ gboolean ls_app_window_step(gpointer data)
             }
         }
     }
-    process_delayed_handlers(win);
 
     return TRUE;
 }

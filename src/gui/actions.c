@@ -5,10 +5,13 @@
 #include "src/gui/dialogs.h"
 #include "src/gui/game.h"
 #include "src/gui/timer.h"
+#include "src/gui/widgets/alert.h"
+#include "src/gui/widgets/dialog.h"
 #include "src/lasr/auto-splitter.h"
 #include "src/lasr/utils.h"
 #include "src/logging.h"
 #include "src/settings/settings.h"
+#include "src/settings/utils.h"
 #include <gtk/gtk.h>
 #include <stdatomic.h>
 #include <sys/stat.h>
@@ -53,6 +56,35 @@ bool ls_is_timer_better(ls_game* game, ls_timer* timer)
 }
 
 /**
+ * @brief Callback function for when a valid local file is selected as the new splits file.
+ * It is safe to assume that parent is the LSAppWindow becuase the LSAppWindow is passed to
+ * ls_file_picker_open from the implementer. This assumption must not change.
+ *
+ * @param parent The main app window
+ * @param filename The successfully selected local file
+ */
+static void open_splits_selected(GtkWindow* parent, const char* filename)
+{
+    LSAppWindow* win = LS_APP_WINDOW(parent);
+    // Timer started while picking file sanity check
+    if (win->timer && win->timer->running) {
+        ls_alert_info(GTK_WINDOW(win), "LibreSplit", "The timer is currently running", "Please stop the run before changing splits.");
+    } else {
+        char* folder_path = g_path_get_dirname(filename);
+        CFG_SET_STR(cfg.history.last_split_folder.value.s, folder_path);
+        ls_app_window_open(win, filename);
+        CFG_SET_STR(cfg.history.split_file.value.s, filename);
+
+        g_free(folder_path);
+        config_save();
+    }
+
+    if (!win->game || !win->timer) {
+        gtk_widget_set_visible(win->welcome_box->box, TRUE);
+    }
+}
+
+/**
  * Shows the "Open JSON Split File" dialog eventually using
  * the last known split folder. Also saves a new "last used split folder".
  *
@@ -66,10 +98,8 @@ void open_activated(GSimpleAction* action,
 {
     char splits_path[PATH_MAX];
     LSAppWindow* win;
-    GtkWidget* dialog;
-    GtkFileFilter* filter;
     struct stat st = { 0 };
-    gint res;
+
     // Load the last used split folder, if present
     const char* last_split_folder = cfg.history.last_split_folder.value.s;
     if (parameter != NULL) {
@@ -82,74 +112,49 @@ void open_activated(GSimpleAction* action,
     }
 
     if (win->timer && win->timer->running) {
-        GtkWidget* warning = gtk_message_dialog_new(
-            GTK_WINDOW(win),
-            GTK_DIALOG_MODAL,
-            GTK_MESSAGE_INFO,
-            GTK_BUTTONS_OK,
-            "The timer is currently running, please stop the run before changing splits.");
-        run_dialog(GTK_DIALOG(warning));
-        gtk_window_destroy(GTK_WINDOW(warning));
+        ls_alert_info(GTK_WINDOW(win), "LibreSplit", "The timer is currently running", "Please stop the run before changing splits.");
         return;
     }
-    dialog = gtk_file_chooser_dialog_new(
-        "Open File", GTK_WINDOW(win), GTK_FILE_CHOOSER_ACTION_OPEN,
-        "_Cancel", GTK_RESPONSE_CANCEL,
-        "_Open", GTK_RESPONSE_ACCEPT,
-        NULL);
-    filter = gtk_file_filter_new();
-    gtk_file_filter_add_pattern(filter, "*.json");
-    gtk_file_filter_set_name(filter, "LibreSplit JSON Split Files");
-    gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), filter);
 
-    if (last_split_folder != NULL) {
-        // Just use the last saved path
+    bool use_default_path = true;
+    if (last_split_folder != NULL && last_split_folder[0] != '\0') {
         strcpy(splits_path, last_split_folder);
-    } else {
-        // We have no saved path, go to the default splits path and eventually create it
+
+        // Just use the last saved path if it exists
+        if (stat(splits_path, &st) == 0 && S_ISDIR(st.st_mode)) {
+            use_default_path = false;
+        }
+    }
+
+    if (use_default_path) {
+        // We have no saved path or the path no longer exists, go to the default splits path and eventually create it
         strcpy(splits_path, win->data_path);
         strcat(splits_path, "/splits");
-        if (stat(splits_path, &st) == -1) {
-            mkdir(splits_path, 0700);
+        if (!create_default_directory("Splits", splits_path, GTK_WINDOW(win))) {
+            return;
         }
     }
 
-    // We couldn't recover any previous split, open the file dialog
-    GFile* folder = g_file_new_for_path(splits_path);
-    gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(dialog), folder, NULL);
-    g_object_unref(folder);
-
-    res = run_dialog(GTK_DIALOG(dialog));
-    if (res == GTK_RESPONSE_ACCEPT) {
-        GtkFileChooser* chooser = GTK_FILE_CHOOSER(dialog);
-        char last_folder[PATH_MAX];
-        GFile* file = gtk_file_chooser_get_file(chooser);
-        char* filename = file ? g_file_get_path(file) : NULL;
-        GFile* current_folder = gtk_file_chooser_get_current_folder(chooser);
-        char* current_folder_path = current_folder ? g_file_get_path(current_folder) : NULL;
-        if (current_folder_path) {
-            strncpy(last_folder, current_folder_path, sizeof(last_folder) - 1);
-            last_folder[sizeof(last_folder) - 1] = '\0';
-            CFG_SET_STR(cfg.history.last_split_folder.value.s, last_folder);
-        }
-        if (filename) {
-            ls_app_window_open(win, filename);
-            CFG_SET_STR(cfg.history.split_file.value.s, filename);
-            g_free(filename);
-        }
-        if (file) {
-            g_object_unref(file);
-        }
-        g_free(current_folder_path);
-        if (current_folder) {
-            g_object_unref(current_folder);
-        }
-    }
     if (!win->game || !win->timer) {
         gtk_widget_set_visible(win->welcome_box->box, TRUE);
     }
-    gtk_window_destroy(GTK_WINDOW(dialog));
-    config_save();
+
+    LSFilePickerFilter filters[] = { { .name = "LibreSplit JSON Split File", .pattern = "*.json", .is_default = true } };
+    const LSFilePickerOptions options = {
+        .title = "Open Splits File",
+        .path = splits_path,
+        .filters = filters,
+        .filters_count = G_N_ELEMENTS(filters),
+    };
+
+    ls_file_picker_open(GTK_WINDOW(win), &options, open_splits_selected);
+}
+
+static void perform_save_splits(gpointer window)
+{
+    LSAppWindow* win = LS_APP_WINDOW(window);
+    ls_game_update_splits(win->game, win->timer);
+    save_game(win->game);
 }
 
 /**
@@ -178,25 +183,45 @@ void save_activated(GSimpleAction* action,
         gtk_window_get_default_size(GTK_WINDOW(win), &width, &height);
         win->game->width = width;
         win->game->height = height;
-        bool saving = true;
+        bool save = true;
         if (cfg.libresplit.ask_on_worse.value.b) {
             if (!ls_is_timer_better(win->game, win->timer)) {
-                GtkWidget* confirm = gtk_message_dialog_new(
+                save = false;
+                const LSDialogOption options[] = {
+                    {
+                        .label = "_Yes",
+                        .callback = perform_save_splits,
+                        .is_cancel = FALSE,
+                        .is_default = FALSE,
+                    },
+                    {
+                        .label = "_No",
+                        .callback = NULL,
+                        .is_cancel = TRUE,
+                        .is_default = TRUE,
+                    }
+                };
+
+                const LSDialogIcon icon = {
+                    .source = "dialog-question",
+                    .type = LS_DIALOG_ICON_NAME,
+                };
+
+                ls_dialog_open(
                     GTK_WINDOW(win),
-                    GTK_DIALOG_MODAL,
-                    GTK_MESSAGE_QUESTION,
-                    GTK_BUTTONS_YES_NO,
-                    "This run seems to be worse than the saved one. Continue?");
-                gint response = run_dialog(GTK_DIALOG(confirm));
-                if (response == GTK_RESPONSE_NO) {
-                    saving = false;
-                }
-                gtk_window_destroy(GTK_WINDOW(confirm));
+                    "LibreSplit",
+                    "This run seems to be worse than the saved one. Continue?",
+                    NULL,
+                    &icon,
+                    options,
+                    G_N_ELEMENTS(options),
+                    win,
+                    NULL);
             }
         }
-        if (saving) {
-            ls_game_update_splits(win->game, win->timer);
-            save_game(win->game);
+
+        if (save) {
+            perform_save_splits(win);
         }
     }
 }
@@ -272,6 +297,21 @@ void close_activated(GSimpleAction* action,
 }
 
 /**
+ * @brief Perform the quit operation after agreeable checks.
+ *
+ * @param window pointer to the main application window
+ */
+static void perform_quit(gpointer window)
+{
+    LSAppWindow* win = LS_APP_WINDOW(window);
+    if (win->welcome_box) {
+        welcome_box_destroy(win->welcome_box);
+    }
+
+    gtk_window_destroy(GTK_WINDOW(win));
+}
+
+/**
  * Exits LibreSplit.
  *
  * @param action Usually NULL
@@ -297,21 +337,13 @@ void quit_activated(GSimpleAction* action,
 
     // Warn if the reset will lose a gold split, and allow the user to cancel the reset if they want to keep it
     if (win->timer && win->timer->running && (ls_timer_has_gold_split(win->timer) || ls_timer_has_rainbow_split(win->timer))) {
-        bool user_reset = true;
         if (cfg.libresplit.ask_on_gold.value.b) {
-            user_reset = display_confirm_reset_dialog();
-        }
-
-        if (!user_reset) {
+            display_confirm_reset_dialog(perform_quit, win);
             return;
         }
     }
 
-    if (win->welcome_box) {
-        welcome_box_destroy(win->welcome_box);
-    }
-    gtk_window_destroy(GTK_WINDOW(win));
-    g_application_quit(G_APPLICATION(app));
+    perform_quit(win);
 }
 
 /**
@@ -351,6 +383,34 @@ void menu_toggle_win_on_top(GSimpleAction* action, GVariant* value, gpointer app
 }
 
 /**
+ * @brief Callback function for when a valid local file is selected as the new auto splitter.
+ * It is safe to assume that parent is the LSAppWindow becuase the LSAppWindow is passed to
+ * ls_file_picker_open from the implementer. This assumption must not change.
+ *
+ * @param parent The main app window
+ * @param filename The successfully selected local file
+ */
+static void open_autosplitter_selected(GtkWindow* parent, const char* filename)
+{
+    LSAppWindow* win = LS_APP_WINDOW(parent);
+    // Timer started while picking file sanity check
+    if (win->timer && win->timer->running) {
+        ls_alert_info(GTK_WINDOW(win), "LibreSplit", "The timer is currently running", "Please stop the run before changing the auto splitter.");
+    } else {
+        char* folder_path = g_path_get_dirname(filename);
+        CFG_SET_STR(cfg.history.last_auto_splitter_folder.value.s, folder_path);
+        CFG_SET_STR(cfg.history.auto_splitter_file.value.s, filename);
+        strcpy(auto_splitter_file, filename);
+        config_save();
+
+        // Restart auto-splitter if it was running
+        restart_auto_splitter();
+
+        g_free(folder_path);
+    }
+}
+
+/**
  * Shows the "Open Lua Auto Splitter" dialog eventually using
  * the last known auto splitter folder. Also saves a new
  * "last used auto splitter folder".
@@ -365,10 +425,8 @@ void open_auto_splitter(GSimpleAction* action,
 {
     char auto_splitters_path[PATH_MAX];
     LSAppWindow* win;
-    GtkWidget* dialog;
-    GtkFileFilter* filter;
     struct stat st = { 0 };
-    gint res;
+
     // Load the last used auto splitter folder, if present
     const char* last_auto_splitter_folder = cfg.history.last_auto_splitter_folder.value.s;
     if (parameter != NULL) {
@@ -381,69 +439,36 @@ void open_auto_splitter(GSimpleAction* action,
     }
 
     if (win->timer && win->timer->running) {
-        GtkWidget* warning = gtk_message_dialog_new(
-            GTK_WINDOW(win),
-            GTK_DIALOG_MODAL,
-            GTK_MESSAGE_INFO,
-            GTK_BUTTONS_OK,
-            "The timer is currently running, please stop the run before changing auto splitter.");
-        run_dialog(GTK_DIALOG(warning));
-        gtk_window_destroy(GTK_WINDOW(warning));
+        ls_alert_info(GTK_WINDOW(win), "LibreSplit", "The timer is currently running", "Please stop the run before changing the auto splitter.");
         return;
     }
-    dialog = gtk_file_chooser_dialog_new(
-        "Open File", GTK_WINDOW(win), GTK_FILE_CHOOSER_ACTION_OPEN,
-        "_Cancel", GTK_RESPONSE_CANCEL,
-        "_Open", GTK_RESPONSE_ACCEPT,
-        NULL);
-    filter = gtk_file_filter_new();
-    gtk_file_filter_add_pattern(filter, "*.lua");
-    gtk_file_filter_set_name(filter, "LibreSplit Lua Auto Splitters");
-    gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), filter);
 
-    if (last_auto_splitter_folder != NULL) {
-        // Just use the last saved path
+    bool use_default_path = true;
+    if (last_auto_splitter_folder != NULL && last_auto_splitter_folder[0] != '\0') {
         strcpy(auto_splitters_path, last_auto_splitter_folder);
-    } else {
+
+        // Just use the last saved path if it exists
+        if (stat(last_auto_splitter_folder, &st) == 0 && S_ISDIR(st.st_mode)) {
+            use_default_path = false;
+        }
+    }
+
+    if (use_default_path) {
         strcpy(auto_splitters_path, win->data_path);
         strcat(auto_splitters_path, "/auto-splitters");
-        if (stat(auto_splitters_path, &st) == -1) {
-            mkdir(auto_splitters_path, 0700);
+        if (!create_default_directory("Auto Splitters", auto_splitters_path, GTK_WINDOW(win))) {
+            return;
         }
     }
-    GFile* folder = g_file_new_for_path(auto_splitters_path);
-    gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(dialog), folder, NULL);
-    g_object_unref(folder);
 
-    res = run_dialog(GTK_DIALOG(dialog));
-    if (res == GTK_RESPONSE_ACCEPT) {
-        GtkFileChooser* chooser = GTK_FILE_CHOOSER(dialog);
-        GFile* file = gtk_file_chooser_get_file(chooser);
-        char* filename = file ? g_file_get_path(file) : NULL;
-        char last_folder[PATH_MAX];
-        GFile* current_folder = gtk_file_chooser_get_current_folder(chooser);
-        char* current_folder_path = current_folder ? g_file_get_path(current_folder) : NULL;
-        if (current_folder_path) {
-            strncpy(last_folder, current_folder_path, sizeof(last_folder) - 1);
-            last_folder[sizeof(last_folder) - 1] = '\0';
-            CFG_SET_STR(cfg.history.last_auto_splitter_folder.value.s, last_folder);
-        }
-        if (filename) {
-            CFG_SET_STR(cfg.history.auto_splitter_file.value.s, filename);
-            strcpy(auto_splitter_file, filename);
-            g_free(filename);
-        }
-        if (file) {
-            g_object_unref(file);
-        }
-        g_free(current_folder_path);
-        if (current_folder) {
-            g_object_unref(current_folder);
-        }
-        config_save();
+    LSFilePickerFilter filters[] = { { .name = "LibreSplit LUA Auto Splitters", .pattern = "*.lua", .is_default = true } };
+    const LSFilePickerOptions options = {
+        .title = "Open Auto Splitter File",
+        .path = auto_splitters_path,
+        .filters = filters,
+        .filters_count = G_N_ELEMENTS(filters),
+    };
 
-        // Restart auto-splitter if it was running
-        restart_auto_splitter();
-    }
-    gtk_window_destroy(GTK_WINDOW(dialog));
+    // win here must ALWAYS be the LSAppWindow
+    ls_file_picker_open(GTK_WINDOW(win), &options, open_autosplitter_selected);
 }

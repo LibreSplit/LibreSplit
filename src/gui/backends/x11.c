@@ -10,7 +10,7 @@
  *
  * @return bool
  */
-bool is_x11_display()
+bool is_x11_display(void)
 {
     GdkDisplay* display = gdk_display_get_default();
     return display != NULL && GDK_IS_X11_DISPLAY(display);

@@ -12,14 +12,27 @@ G_BEGIN_DECLS
 #define DIALOG_MIN_WIDTH 360
 #define DIALOG_MIN_HEIGHT -1
 
+#define FILE_PICKER_MAX_FILTERS 100
+
 /**
  * Callback for handling a dialog response select.
  * Null means that nothing needs to be notified and no action must be taken.
  *
- * @param user_data - Pointer to user supplied data pass to ls_dialog_open
+ * @param user_data Pointer to user supplied data pass to ls_dialog_open
  *
  */
 typedef void (*LSDialogCallback)(gpointer user_data);
+
+/**
+ * Callback for handling a file picker selection.
+ * This being called means that a successful selection was made so
+ * you need not worry about canellation/dismissal or error handling.
+ *
+ * @param parent The parent window that owns the file picker
+ * @param path The full path to the selected file
+ *
+ */
+typedef void (*LSFileSelectedCallback)(GtkWindow* parent, const char* path);
 
 /**
  * @brief Valid supported icon types.
@@ -52,6 +65,21 @@ typedef struct {
     gboolean is_default; /**< Whether or not this option is the default focus */
 } LSDialogOption;
 
+typedef struct {
+    const char* name; /**< The name of the filter the user sees */
+    const char* pattern; /**< Glob pattern the filter uses */
+    gboolean is_default; /**< Whether or not this filter is the default */
+} LSFilePickerFilter;
+
+typedef struct {
+    const char* title; /**< File picker title */
+    const char* path; /**< Initial path that the file picker presents to the user */
+    LSFilePickerFilter* filters; /**< Pointer to an array of filters */
+    gsize filters_count; /**< The number of filters in the filters array */
+} LSFilePickerOptions;
+
+bool ls_dialog_exists(void);
+
 gboolean ls_dialog_open(GtkWindow* parent,
     const char* title,
     const char* message,
@@ -61,5 +89,7 @@ gboolean ls_dialog_open(GtkWindow* parent,
     gsize options_count,
     gpointer user_data,
     GDestroyNotify user_data_destroy);
+
+gboolean ls_file_picker_open(GtkWindow* parent, const LSFilePickerOptions* options, LSFileSelectedCallback callback);
 
 G_END_DECLS
