@@ -57,7 +57,7 @@ static void on_settings_window_destroy(GtkWidget* widget, gpointer user_data)
 /**
  * Closes the settings window when Escape is pressed.
  *
- * @param controller The key controller attached to the help window.
+ * @param controller The key controller attached to the settings dialog.
  * @param keyval The pressed key value.
  * @param keycode The pressed hardware keycode.
  * @param state The active keyboard modifiers.
