@@ -56,13 +56,20 @@ inline ls_time ls_timer_get_time(const ls_timer* timer, bool load_removed)
  */
 long long ls_time_value(const char* string)
 {
-    char seconds_part[256];
+    if (!string) {
+        return 0;
+    }
+
+    char seconds_part[MAX_TIMESTAMP_LENGTH];
     double subseconds_part = 0.;
     int hours = 0;
     int minutes = 0;
     int seconds = 0;
     int sign = 1;
-    if (!string || !strlen(string)) {
+    unsigned int time_str_len = strlen(string);
+
+    // It's unreasonable for a time string to be larger than this.
+    if (!time_str_len || time_str_len >= MAX_TIMESTAMP_LENGTH) {
         return 0;
     }
 
@@ -804,10 +811,15 @@ int ls_game_save(const ls_game* game)
     }
     const int json_dump_result = json_dump_file(json, game->path, JSON_PRESERVE_ORDER | JSON_INDENT(2));
     if (json_dump_result) {
-        LOG_WARNF("Error dumping JSON:\n%s", json_dumps(json, JSON_PRESERVE_ORDER | JSON_INDENT(2)));
+        char* json_dump = json_dumps(json, JSON_PRESERVE_ORDER | JSON_INDENT(2));
+        LOG_WARNF("Error dumping JSON:\n%s", json_dump != NULL ? json_dump : "");
         LOG_WARNF("Error: '%d'", json_dump_result);
         LOG_WARNF("Path: %s", game->path);
         error = 1;
+
+        if (json_dump != NULL) {
+            free(json_dump);
+        }
     }
     json_decref(json);
     return error;
@@ -896,15 +908,21 @@ int ls_run_save(ls_timer* timer, const char* reason)
     int ret = snprintf(filename, sizeof(filename), "%s/run_%s.json", path, time_buf);
     if (ret < 0 || (size_t)ret >= sizeof(filename)) {
         LOG_WARN("Error creating run filename. The path may be too long, aborting save.");
+        json_decref(json);
         return 1;
     }
 
     const int json_dump_result = json_dump_file(json, filename, JSON_PRESERVE_ORDER | JSON_INDENT(2));
     if (json_dump_result) {
-        LOG_WARNF("Error dumping JSON:\n%s", json_dumps(json, JSON_PRESERVE_ORDER | JSON_INDENT(2)));
+        char* json_dump = json_dumps(json, JSON_PRESERVE_ORDER | JSON_INDENT(2));
+        LOG_WARNF("Error dumping JSON:\n%s", json_dump != NULL ? json_dump : "");
         LOG_WARNF("Error: '%d'", json_dump_result);
         LOG_WARNF("Path: %s", filename);
         error = 1;
+
+        if (json_dump != NULL) {
+            free(json_dump);
+        }
     }
 
     json_decref(json);
