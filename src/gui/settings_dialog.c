@@ -229,8 +229,6 @@ static gboolean build_settings_dialog(gpointer data)
     gui_settings = malloc(settings_number * sizeof(LSGuiSetting));
     if (gui_settings == NULL) {
         LOG_WARN("Cannot allocate memory for the settings GUI.");
-        // I supposed this wouldn't work either since there was no memory for the settings struct? But worth a shot
-        ls_alert_warning(parent, "LibreSplit", "Unable to display settings", "Check your memory usage");
         return G_SOURCE_REMOVE;
     }
 
