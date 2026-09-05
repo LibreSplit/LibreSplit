@@ -367,7 +367,14 @@ void ls_game_release(ls_game* game)
         game->split_times = 0;
     }
     if (game->split_icon_paths) {
+        for (unsigned int i = 0; i < game->split_count; ++i) {
+            if (game->split_icon_paths[i]) {
+                free(game->split_icon_paths[i]);
+                game->split_icon_paths[i] = 0;
+            }
+        }
         free(game->split_icon_paths);
+        game->split_icon_paths = 0;
     }
     if (game->segment_times) {
         free(game->segment_times);
