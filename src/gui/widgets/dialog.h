@@ -83,6 +83,7 @@ typedef struct {
     gsize filters_count; /**< The number of filters in the filters array */
 } LSFilePickerOptions;
 
+void set_main_window_keep_above(gboolean setting);
 bool ls_dialog_exists(void);
 void dialog_count_inc(void);
 void dialog_count_dec(void);

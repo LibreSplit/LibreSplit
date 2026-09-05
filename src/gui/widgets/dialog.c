@@ -57,9 +57,13 @@ static atomic_uint dialog_count;
  * keep on top preference since the window will be in focus during dialog interactions and restored
  * after the dialog is dismissed.
  *
+ * This function is intended to be used internally by dialogs. DO NOT call this unless you are
+ * building your own window dialogs and also making proper use of `dialog_count_inc` and
+ * `dialog_count_dec` or you will run into problems.
+ *
  * @param setting The setting value for whether to keep on top or not
  */
-static void set_main_window_keep_above(gboolean setting)
+void set_main_window_keep_above(gboolean setting)
 {
     if (!is_x11_display()) {
         return;

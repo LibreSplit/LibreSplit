@@ -235,6 +235,7 @@ static gboolean build_settings_dialog(gpointer data)
     }
 
     dialog_count_inc();
+    set_main_window_keep_above(FALSE);
 
     GtkWindow* window = GTK_WINDOW(gtk_window_new());
     gtk_window_set_title(window, "LibreSplit Settings");
