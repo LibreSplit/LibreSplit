@@ -9,7 +9,7 @@ jobs:
               uses: actions/checkout@v7
 
             # To install a specific clang-format version
-            - name: Setup Puthon
+            - name: Setup Python
               uses: actions/setup-python@v7
               with:
                 python-version: "3.13"
