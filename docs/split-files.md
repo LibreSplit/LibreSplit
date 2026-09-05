@@ -43,7 +43,7 @@ Most of the above keys are optional.
 A time object is an object containing times for real time and game time. Times in a time object are strings in `HH:MM:SS.mmmmmm` format.
 
 Icons can be either a local file path (preferably absolute) or a URL. Note that only GTK-supported image formats will work.
-Most common immage formats like PNG and JPEG should work. Exact format support may vary by system.
+Most common image formats like PNG and JPEG should work. Exact format support may vary by system.
 
 ## Example
 
