@@ -66,7 +66,7 @@ long long ls_time_value(const char* string)
     int minutes = 0;
     int seconds = 0;
     int sign = 1;
-    unsigned int time_str_len = strlen(string);
+    size_t time_str_len = strlen(string);
 
     // It's unreasonable for a time string to be larger than this.
     if (!time_str_len || time_str_len >= MAX_TIMESTAMP_LENGTH) {
