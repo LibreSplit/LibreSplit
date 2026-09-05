@@ -1,8 +1,8 @@
-#include "game.h"
-#include "src/gui/component/components.h"
-#include "src/gui/theming.h"
-#include "src/logging.h"
-#include "src/settings/definitions.h"
+#include "gui/game.h"
+#include "gui/component/components.h"
+#include "gui/theming.h"
+#include "logging.h"
+#include "settings/definitions.h"
 #include <gtk/gtk.h>
 
 extern AppConfig cfg;

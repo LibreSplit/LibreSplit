@@ -1,6 +1,6 @@
 #pragma once
 
-#include "src/gui/app_window.h"
+#include "gui/app_window.h"
 
 // Linker-provided symbols from fallback.o
 extern const unsigned char _binary____src_fallback_css_start[];

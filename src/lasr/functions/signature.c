@@ -1,7 +1,7 @@
-#include "signature.h"
+#include "lasr/functions/signature.h"
+#include "lasr/utils.h"
 
-#include "../utils.h"
-
+#include <assert.h>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <lua.h>
@@ -60,6 +60,8 @@ ProcessMap* get_memory_regions(pid_t pid, int* count)
 
     char line[256];
     while (fgets(line, sizeof(line), maps_file)) {
+        // This assert helps the GCC Analyzer understand the code better
+        assert(*count >= 0);
         if (*count >= capacity) {
             capacity = capacity == 0 ? 10 : capacity * 2;
             ProcessMap* temp = realloc(regions, capacity * sizeof(ProcessMap));
@@ -129,7 +131,8 @@ uint16_t* convert_signature(const char* signature, size_t* pattern_size)
     }
     size_t size = 0;
     size_t capacity = 10;
-    uint16_t* pattern = (uint16_t*)malloc(capacity * sizeof(uint16_t));
+    // Seems the GCC analyzer freaks out if this memory is left uninitialized.
+    uint16_t* pattern = (uint16_t*)calloc(capacity, sizeof(uint16_t));
     if (!pattern) {
         free(signature_copy);
         return NULL;

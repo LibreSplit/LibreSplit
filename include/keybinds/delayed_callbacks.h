@@ -1,5 +1,5 @@
 #pragma once
-#include "src/gui/app_window.h"
+#include "gui/app_window.h"
 
 extern void timer_stop_or_reset(LSAppWindow* win);
 extern void timer_cancel_run(LSAppWindow* win);

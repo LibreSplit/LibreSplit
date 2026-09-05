@@ -1,6 +1,6 @@
 #pragma once
 
-#include "src/settings/definitions.h"
+#include "settings/definitions.h"
 #include <jansson.h>
 #include <stdatomic.h>
 #include <stdbool.h>
@@ -82,6 +82,31 @@ typedef struct ls_timer {
     int* attempt_count;
     int* finished_count;
 } ls_timer;
+
+typedef int (*timer_hook_func)(const ls_timer* timer);
+
+/**
+ * A registry for hook functions for each timer action.
+ */
+typedef struct _TimerHookRegistry {
+    int count; /*!< Current count of functions in the registry */
+    int size; /*!< Current size of the registry array */
+    timer_hook_func* functions; /*!< Array of fuctions */
+    bool active; /*!< Whether the registry is correctly initialized */
+} TimerHookRegistry;
+
+extern TimerHookRegistry start_hooks;
+extern TimerHookRegistry stop_hooks;
+extern TimerHookRegistry split_hooks;
+extern TimerHookRegistry reset_hooks;
+extern TimerHookRegistry cancel_hooks;
+extern TimerHookRegistry skip_hooks;
+extern TimerHookRegistry unsplit_hooks;
+extern TimerHookRegistry pause_hooks;
+extern TimerHookRegistry unpause_hooks;
+
+void init_timer_registries(void);
+void free_timer_registries(void);
 
 extern atomic_bool run_started;
 

@@ -1,6 +1,6 @@
-#include "delayed_handlers.h"
-#include "delayed_callbacks.h"
-#include "src/gui/app_window.h"
+#include "keybinds/delayed_handlers.h"
+#include "gui/app_window.h"
+#include "keybinds/delayed_callbacks.h"
 
 /**
  * @brief Process all handlers that are pending to be processed.

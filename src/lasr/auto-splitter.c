@@ -2,11 +2,12 @@
  *
  * Implementation of the auto splitter Lua Runtime
  */
-#include "auto-splitter.h"
+#include "lasr/auto-splitter.h"
 
-#include "./maps/maps.h"
-#include "functions.h"
-#include "utils.h"
+#include "lasr/functions.h"
+#include "lasr/maps/maps.h"
+#include "lasr/utils.h"
+#include "logging.h"
 
 #include <assert.h>
 #include <lauxlib.h>
@@ -15,6 +16,7 @@
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <time.h>
@@ -100,7 +102,7 @@ static const luaL_Reg lj_lib_load[] = {
  *
  * Must be NULL-terminated.
  */
-static const lasr_function luac_functions[] = {
+static const lasr_function default_luac_functions[] = {
     { "process", find_process_id },
     { "cmdline", find_cmdline_id },
     { "getBaseAddress", getBaseAddress },
@@ -123,17 +125,53 @@ static const lasr_function luac_functions[] = {
     { NULL, NULL }
 };
 
+ExternalLASRFunctionRegistry external_lasr_functions = {
+    .size = 2,
+    .count = 0,
+    .functions = NULL,
+    .enabled = false,
+};
+
 /**
- * Registers the Lua Auto Split Runtime functions.
+ * Frees memory taken by the luac_functions array.
+ */
+void unregister_luac_functions(void)
+{
+    for (int i = 0; external_lasr_functions.functions[i].function_name != NULL; i++) {
+        LOG_DEBUGF("Unregistering Lua C function %s", external_lasr_functions.functions[i].function_name);
+        free(external_lasr_functions.functions[i].function_name);
+    }
+    // After freeing memory, we free the array itself.
+    free(external_lasr_functions.functions);
+}
+
+/**
+ * Registers the Default Lua Auto Split Runtime functions.
  *
  * @param L The lua Stack
- * @param functions The array of name/function pairs to register.
  */
-void push_lasr_functions(lua_State* L, const lasr_function* functions)
+void push_default_lasr_functions(lua_State* L)
 {
-    for (int i = 0; functions[i].function_name != NULL; i++) {
-        lua_pushcfunction(L, functions[i].function_ptr);
-        lua_setglobal(L, functions[i].function_name);
+    for (int i = 0; default_luac_functions[i].function_name != NULL; i++) {
+        lua_pushcfunction(L, default_luac_functions[i].function_ptr);
+        lua_setglobal(L, default_luac_functions[i].function_name);
+    }
+}
+
+/**
+ * Registers the Plugin Lua Auto Split Runtime functions.
+ *
+ * @param L The lua Stack
+ */
+void push_external_lasr_functions(lua_State* L)
+{
+    if (!external_lasr_functions.enabled || external_lasr_functions.count == 0) {
+        LOG_INFO("External LASR Functions registry not enabled or no functions to register. Skipping");
+        return;
+    }
+    for (int i = 0; i < external_lasr_functions.count; i++) {
+        lua_pushcfunction(L, external_lasr_functions.functions[i].function_ptr);
+        lua_setglobal(L, external_lasr_functions.functions[i].function_name);
     }
 }
 
@@ -527,7 +565,8 @@ void run_auto_splitter(void)
     lua_State* L = luaL_newstate();
     luaL_openlibs(L);
     disable_functions(L, disabled_functions);
-    push_lasr_functions(L, luac_functions);
+    push_default_lasr_functions(L);
+    push_external_lasr_functions(L);
 
     char current_file[PATH_MAX];
     strcpy(current_file, auto_splitter_file);
@@ -605,6 +644,9 @@ void run_auto_splitter(void)
         clock_gettime(CLOCK_MONOTONIC, &clock_start);
 
         if (!atomic_load(&auto_splitter_enabled) || strcmp(current_file, auto_splitter_file) != 0 || !process_exists() || process.pid == 0) {
+            // NOTE: [Penaz] [2026-03-14] Here we can decide what to do when a game detaches.
+            // ^ maybe we should divide it between "process_exists()" (auto splitter active but not connected)
+            // ^ and the other cases (autosplitter disabled, process not found, changed auto splitter).
             break;
         }
 

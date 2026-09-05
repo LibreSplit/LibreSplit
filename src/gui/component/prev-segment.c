@@ -2,7 +2,7 @@
  *
  * Implementation of the "previous segment" component.
  */
-#include "components.h"
+#include "gui/component/components.h"
 
 /**
  * @brief The component representing the "Previous segment" part of LibreSplit

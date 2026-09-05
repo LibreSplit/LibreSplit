@@ -8,6 +8,7 @@
 #include "settings/utils.h"
 
 #include "lasr/auto-splitter.h"
+#include "logging.h"
 
 #include <assert.h>
 #include <limits.h>
@@ -17,6 +18,69 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+
+TimerHookRegistry start_hooks = {
+    .count = 0,
+    .size = 2,
+    .functions = NULL,
+    .active = false,
+};
+
+TimerHookRegistry stop_hooks = {
+    .count = 0,
+    .size = 2,
+    .functions = NULL,
+    .active = false,
+};
+
+TimerHookRegistry split_hooks = {
+    .count = 0,
+    .size = 2,
+    .functions = NULL,
+    .active = false,
+};
+
+TimerHookRegistry reset_hooks = {
+    .count = 0,
+    .size = 2,
+    .functions = NULL,
+    .active = false,
+};
+
+TimerHookRegistry cancel_hooks = {
+    .count = 0,
+    .size = 2,
+    .functions = NULL,
+    .active = false,
+};
+
+TimerHookRegistry skip_hooks = {
+    .count = 0,
+    .size = 2,
+    .functions = NULL,
+    .active = false,
+};
+
+TimerHookRegistry unsplit_hooks = {
+    .count = 0,
+    .size = 2,
+    .functions = NULL,
+    .active = false,
+};
+
+TimerHookRegistry pause_hooks = {
+    .count = 0,
+    .size = 2,
+    .functions = NULL,
+    .active = false,
+};
+
+TimerHookRegistry unpause_hooks = {
+    .count = 0,
+    .size = 2,
+    .functions = NULL,
+    .active = false,
+};
 
 /**
  * Returns the current time, taken from a monotonic clock
@@ -1125,6 +1189,11 @@ int ls_timer_start(ls_timer* timer)
         timer->running = true;
         atomic_store(&run_running, true);
     }
+    if (start_hooks.active) {
+        for (int i = 0; i < start_hooks.count; i++) {
+            start_hooks.functions[i](timer);
+        }
+    }
     return timer->running;
 }
 
@@ -1200,7 +1269,11 @@ int ls_timer_split(ls_timer* timer)
             ls_run_save(timer, "FINISHED");
         }
     }
-
+    if (split_hooks.active) {
+        for (int i = 0; i < split_hooks.count; i++) {
+            split_hooks.functions[i](timer);
+        }
+    }
     return timer->curr_split;
 }
 
@@ -1230,6 +1303,11 @@ int ls_timer_skip(ls_timer* timer)
     timer->split_info[timer->curr_split] = 0;
     ls_time_clear(&timer->segment_times[timer->curr_split]);
     ls_time_clear(&timer->segment_deltas[timer->curr_split]);
+    if (skip_hooks.active) {
+        for (int i = 0; i < skip_hooks.count; i++) {
+            skip_hooks.functions[i](timer);
+        }
+    }
     return ++timer->curr_split;
 }
 
@@ -1258,6 +1336,11 @@ int ls_timer_unsplit(ls_timer* timer)
         timer->running = true;
         atomic_store(&run_running, true);
     }
+    if (unsplit_hooks.active) {
+        for (int i = 0; i < unsplit_hooks.count; i++) {
+            unsplit_hooks.functions[i](timer);
+        }
+    }
     return timer->curr_split;
 }
 
@@ -1270,6 +1353,11 @@ void ls_timer_pause(ls_timer* timer)
 {
     LOG_DEBUG("Pausing timer...");
     timer->loading = 1;
+    if (pause_hooks.active) {
+        for (int i = 0; i < pause_hooks.count; i++) {
+            pause_hooks.functions[i](timer);
+        }
+    }
 }
 
 /**
@@ -1281,6 +1369,11 @@ void ls_timer_unpause(ls_timer* timer)
 {
     LOG_DEBUG("Unpausing timer...");
     timer->loading = 0;
+    if (unpause_hooks.active) {
+        for (int i = 0; i < unpause_hooks.count; i++) {
+            unpause_hooks.functions[i](timer);
+        }
+    }
 }
 
 /**
@@ -1293,6 +1386,11 @@ void ls_timer_stop(ls_timer* timer)
     LOG_DEBUG("Stopping timer...");
     timer->running = false;
     atomic_store(&run_running, false);
+    if (stop_hooks.active) {
+        for (int i = 0; i < stop_hooks.count; i++) {
+            stop_hooks.functions[i](timer);
+        }
+    }
 }
 
 /**
@@ -1319,6 +1417,12 @@ int ls_timer_reset(ls_timer* timer, ls_game* game)
     if (timer->curr_split < timer->game->split_count) {
         if (cfg.libresplit.save_run_history.value.b) {
             ls_run_save(timer, "RESET");
+        }
+    }
+
+    if (reset_hooks.active) {
+        for (int i = 0; i < reset_hooks.count; i++) {
+            reset_hooks.functions[i](timer);
         }
     }
 
@@ -1360,8 +1464,85 @@ int ls_timer_cancel(ls_timer* timer)
             --*timer->attempt_count;
         }
     }
+    if (cancel_hooks.active) {
+        for (int i = 0; i < cancel_hooks.count; i++) {
+            cancel_hooks.functions[i](timer);
+        }
+    }
     reset_timer(timer);
     return 1;
+}
+
+/**
+ * Utility function to initialize a single TimerHookRegistry.
+ *
+ * @param hook_registry The registry to initialize.
+ * @returns True if the registry initialized correctly, false otherwise
+ */
+static bool init_timer_registry(TimerHookRegistry* hook_registry)
+{
+    hook_registry->functions = malloc(hook_registry->size * sizeof(timer_hook_func));
+    if (hook_registry->functions) {
+        hook_registry->active = true;
+        hook_registry->functions[0] = NULL;
+        return true;
+    }
+    hook_registry->active = false;
+    return false;
+}
+
+/**
+ * Initializes the timer hook registries, allocating the memory
+ * for their usage.
+ */
+void init_timer_registries(void)
+{
+    LOG_DEBUG("Initializing timer hook registries");
+    if (!init_timer_registry(&start_hooks)) {
+        LOG_ERR("Cannot Allocate Timer Start Hooks Registry, some events will not work");
+    }
+    if (!init_timer_registry(&stop_hooks)) {
+        LOG_ERR("Cannot Allocate Timer Stop Hooks Registry, some events will not work");
+    }
+    if (!init_timer_registry(&split_hooks)) {
+        LOG_ERR("Cannot Allocate Timer Split Hooks Registry, some events will not work");
+    }
+    if (!init_timer_registry(&reset_hooks)) {
+        LOG_ERR("Cannot Allocate Timer Reset Hooks Registry, some events will not work");
+    }
+    if (!init_timer_registry(&cancel_hooks)) {
+        LOG_ERR("Cannot Allocate Timer Cancel Hooks Registry, some events will not work");
+    }
+    if (!init_timer_registry(&skip_hooks)) {
+        LOG_ERR("Cannot Allocate Timer Skip Hooks Registry, some events will not work");
+    }
+    if (!init_timer_registry(&unsplit_hooks)) {
+        LOG_ERR("Cannot Allocate Timer Unsplit Hooks Registry, some events will not work");
+    }
+    if (!init_timer_registry(&pause_hooks)) {
+        LOG_ERR("Cannot Allocate Timer Pause Hooks Registry, some events will not work");
+    }
+    if (!init_timer_registry(&unpause_hooks)) {
+        LOG_ERR("Cannot Allocate Timer Unpause Hooks Registry, some events will not work");
+    }
+}
+
+/**
+ * Frees the memory for all the timer hooks.
+ */
+void free_timer_registries(void)
+{
+    LOG_DEBUG("Freeing timer hook registries");
+    free(start_hooks.functions);
+    free(stop_hooks.functions);
+    free(split_hooks.functions);
+    free(reset_hooks.functions);
+    free(cancel_hooks.functions);
+    free(skip_hooks.functions);
+    free(unsplit_hooks.functions);
+    free(pause_hooks.functions);
+    free(unpause_hooks.functions);
+    // XXX: [Penaz] [2026-03-14] Do I have to free the structs themselves too?
 }
 
 /**

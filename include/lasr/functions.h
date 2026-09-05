@@ -1,0 +1,15 @@
+#pragma once
+
+#include "lasr/functions/bitwise.h"
+#include "lasr/functions/getBaseAddress.h"
+#include "lasr/functions/getMaps.h"
+#include "lasr/functions/getModuleSize.h"
+#include "lasr/functions/getPID.h"
+#include "lasr/functions/md5.h"
+#include "lasr/functions/print_tbl.h"
+#include "lasr/functions/process.h"
+#include "lasr/functions/readAddress.h"
+#include "lasr/functions/shallow_copy_tbl.h"
+#include "lasr/functions/signature.h"
+#include "lasr/functions/sizeOf.h"
+#include "lasr/functions/strtoida.h"

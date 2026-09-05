@@ -1,14 +1,15 @@
 #include "gui/app_window.h"
 #include "gui/dialogs.h"
 #include "gui/timer.h"
+#include "keybinds/delayed_callbacks.h"
 #include "keybinds/keybinds_callbacks.h"
 #include "lasr/auto-splitter.h"
 #include "logging.h"
+#include "plugins/plugin_loading.h"
+#include "plugins/plugin_utils.h"
 #include "server.h"
 #include "settings/utils.h"
 #include "shared.h"
-#include "src/gui/dialogs.h"
-#include "src/keybinds/delayed_callbacks.h"
 
 #include <gtk/gtk.h>
 #include <jansson.h>
@@ -95,6 +96,7 @@ static void* ls_auto_splitter(void* arg)
         }
         usleep(50000);
     }
+    unregister_luac_functions();
     return NULL;
 }
 
@@ -116,6 +118,9 @@ int main(int argc, char* argv[])
     initLogQueue();
     LOG_INFOF("Starting LibreSplit - version %s", APP_VERSION);
     check_directories();
+    init_external_lasr_functions();
+    init_timer_registries();
+    load_plugins();
 
     g_app = ls_app_new();
     LOG_INFO("Creating Auto-Splitter Thread");

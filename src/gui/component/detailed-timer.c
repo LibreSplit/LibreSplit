@@ -2,7 +2,7 @@
  *
  * Implementation of the "Detailed timer" component.
  */
-#include "components.h"
+#include "gui/component/components.h"
 
 /**
  * @brief The component representing the detailed timer part of the window.

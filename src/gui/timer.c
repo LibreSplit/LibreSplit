@@ -1,8 +1,8 @@
+#include "gui/timer.h"
+#include "gui/component/components.h"
+#include "gui/game.h"
+#include "lasr/utils.h"
 #include "timer.h"
-#include "game.h"
-#include "src/gui/component/components.h"
-#include "src/lasr/utils.h"
-#include "src/timer.h"
 
 /**
  * Stops the timer if it's running, otherwise resets it. If the timer is reset, the current run will be saved to history if enabled.

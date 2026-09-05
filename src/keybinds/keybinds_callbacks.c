@@ -1,6 +1,6 @@
-#include "keybinds_callbacks.h"
-#include "bind.h"
-#include "src/gui/timer.h"
+#include "keybinds/keybinds_callbacks.h"
+#include "gui/timer.h"
+#include "keybinds/bind.h"
 
 void keybind_start_split(GtkWidget* widget, LSAppWindow* win)
 {

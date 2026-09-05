@@ -1,4 +1,4 @@
-#include "sizeOf.h"
+#include "lasr/functions/sizeOf.h"
 
 #include <stdbool.h>
 #include <stdint.h>
