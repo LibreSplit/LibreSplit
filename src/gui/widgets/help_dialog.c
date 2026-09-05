@@ -1,6 +1,6 @@
 #include "help_dialog.h"
-#include "app_window.h"
-#include "src/gui/widgets/alert.h"
+#include "alert.h"
+#include "src/gui/app_window.h"
 #include "src/logging.h"
 #include <gtk/gtk.h>
 #include <stdio.h>
