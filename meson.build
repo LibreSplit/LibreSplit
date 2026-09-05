@@ -51,8 +51,6 @@ libresplit_sources = files(
     'src/gui/context_menu.c',
     'src/gui/dialogs.c',
     'src/gui/game.c',
-    'src/gui/help_dialog.c',
-    'src/gui/settings_dialog.c',
     'src/gui/theming.c',
     'src/gui/timer.c',
 
@@ -61,6 +59,8 @@ libresplit_sources = files(
     'src/gui/welcome_box.c',
     'src/gui/widgets/alert.c',
     'src/gui/widgets/dialog.c',
+    'src/gui/widgets/help_dialog.c',
+    'src/gui/widgets/settings_dialog.c',
     'src/keybinds/bind.c',
 
     # Keybinds
@@ -113,8 +113,7 @@ css_o = custom_target(
 shared_c_flags = [
     '-DPREFIX="' + get_option('prefix') + '"',
     '-DDATADIR="' + get_option('datadir') + '"',
-    # TODO: replace deprecated functions and re-enable -Werror
-    # '-Werror',
+    '-Werror',
     '-Wall',
     '-Wbad-function-cast',
     '-Wsign-compare',

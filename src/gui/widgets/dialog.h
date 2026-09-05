@@ -5,12 +5,17 @@
 G_BEGIN_DECLS
 
 #define DIALOG_MAX_BUTTONS 100
+
 #define DIALOG_CONTENT_SPACING 8
 #define DIALOG_BODY_SPACING 16
 #define DIALOG_ITEM_SPACING 6
 #define DIALOG_MARGIN 18
+#define DIALOG_INNER_MARGIN 12
 #define DIALOG_MIN_WIDTH 360
 #define DIALOG_MIN_HEIGHT -1
+#define DIALOG_COLUMN_SPACING 18
+#define DIALOG_ROW_SPACING 8
+#define DIALOG_ACTION_WIDTH 96
 
 #define FILE_PICKER_MAX_FILTERS 100
 
@@ -78,7 +83,10 @@ typedef struct {
     gsize filters_count; /**< The number of filters in the filters array */
 } LSFilePickerOptions;
 
+void set_main_window_keep_above(gboolean setting);
 bool ls_dialog_exists(void);
+void dialog_count_inc(void);
+void dialog_count_dec(void);
 
 gboolean ls_dialog_open(GtkWindow* parent,
     const char* title,
