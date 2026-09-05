@@ -33,21 +33,19 @@ extern LSComponentOps ls_splits_operations;
 void free_all(LSSplits* self_)
 {
     LSSplits* self = (LSSplits*)self_;
-    if (self->split_rows) {
-        free(self->split_rows);
-    }
-    if (self->split_titles) {
-        free(self->split_titles);
-    }
-    if (self->split_icons) {
-        free(self->split_icons);
-    }
-    if (self->split_deltas) {
-        free(self->split_deltas);
-    }
-    if (self->split_times) {
-        free(self->split_times);
-    }
+
+    free(self->split_rows);
+    free(self->split_titles);
+    free(self->split_icons);
+    free(self->split_deltas);
+    free(self->split_times);
+
+    self->split_rows = NULL;
+    self->split_titles = NULL;
+    self->split_icons = NULL;
+    self->split_deltas = NULL;
+    self->split_times = NULL;
+    self->split_count = 0;
 }
 
 /**
@@ -56,11 +54,11 @@ void free_all(LSSplits* self_)
 LSComponent* ls_component_splits_new(void)
 {
     LSSplits* self;
-
-    self = malloc(sizeof(LSSplits));
+    self = calloc(1, sizeof(LSSplits));
     if (!self) {
         return NULL;
     }
+
     self->base.ops = &ls_splits_operations;
 
     self->split_adjust = gtk_adjustment_new(0., 0., 0., 0., 0., 0.);
@@ -101,6 +99,13 @@ static void splits_delete(LSComponent* self)
 {
     LSSplits* splits = (LSSplits*)self;
     g_clear_signal_handler(&splits->scroll_changed_handler, splits->split_adjust);
+    free_all(splits);
+    if (splits->icons_css_provider) {
+        gtk_style_context_remove_provider_for_display(
+            gtk_widget_get_display(splits->container),
+            GTK_STYLE_PROVIDER(splits->icons_css_provider));
+        g_clear_object(&splits->icons_css_provider);
+    }
     free(self);
 }
 
