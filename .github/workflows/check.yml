@@ -8,6 +8,17 @@ jobs:
             - name: Checkout repository
               uses: actions/checkout@v7
 
+            # To install a specific clang-format version
+            - name: Setup Python
+              uses: actions/setup-python@v7
+              with:
+                python-version: "3.13"
+
+            - name: Install clang-format
+              run: |
+                python -m pip install "clang-format==22.1.8"
+                clang-format --version | grep -F "clang-format version 22.1.8"
+
             - name: Format files
               run: |
                   clang-format -i $(find src -name '*.c' -or -name '*.h')

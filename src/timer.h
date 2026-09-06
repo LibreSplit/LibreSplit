@@ -10,6 +10,8 @@
 #define LS_INFO_BEST_SPLIT (1 << 2)
 #define LS_INFO_BEST_SEGMENT (1 << 3) // Gold split
 
+#define MAX_TIMESTAMP_LENGTH 256
+
 extern AppConfig cfg;
 
 /**

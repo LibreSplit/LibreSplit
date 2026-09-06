@@ -8,6 +8,7 @@
 #include "src/gui/theming.h"
 #include "src/gui/timer.h"
 #include "src/gui/widgets/alert.h"
+#include "src/keybinds/bind.h"
 #include "src/keybinds/keybinds_callbacks.h"
 #include "src/lasr/auto-splitter.h"
 #include "src/logging.h"
@@ -192,8 +193,13 @@ void ls_app_open(GApplication* app,
     }
 
     for (i = 0; i < n_files; i++) {
-        ls_app_window_open(win, g_file_get_path(files[i]));
+        gchar* path = g_file_get_path(files[i]);
+        if (path != NULL) {
+            ls_app_window_open(win, path);
+            g_free(path);
+        }
     }
+
     gtk_window_present(GTK_WINDOW(win));
 }
 
@@ -234,8 +240,64 @@ static void ls_app_window_size_allocate(GtkWidget* widget, int width, int height
     }
 }
 
+/**
+ * @brief Call the component's delete method when the window is being disposed.
+ *
+ * @param data The component to cleanup.
+ */
+static void ls_component_destroy(gpointer data)
+{
+    LSComponent* component = data;
+    if (component && component->ops && component->ops->delete) {
+        component->ops->delete(component);
+    }
+}
+
+/**
+ * @brief Dispose handler for the main window. This happens when the object
+ * is being released and resources should be released as well.
+ *
+ * @param object The main window object.
+ */
+static void ls_app_window_dispose(GObject* object)
+{
+    LSAppWindow* win = LS_APP_WINDOW(object);
+
+    if (win->step_source_id != 0) {
+        g_source_remove(win->step_source_id);
+        win->step_source_id = 0;
+    }
+
+    if (win->draw_source_id) {
+        g_source_remove(win->draw_source_id);
+        win->draw_source_id = 0;
+    }
+
+    if (win->global_hotkeys_initialized) {
+        keybinder_dispose();
+        win->global_hotkeys_initialized = false;
+    }
+
+    GList* components = g_steal_pointer(&win->components);
+    g_list_free_full(components, ls_component_destroy);
+    g_clear_pointer(&win->welcome_box, welcome_box_destroy);
+
+    if (win->style != NULL) {
+        gtk_style_context_remove_provider_for_display(win->display, GTK_STYLE_PROVIDER(win->style));
+        g_clear_object(&win->style);
+    }
+
+    if (win->reset_style != NULL) {
+        gtk_style_context_remove_provider_for_display(win->display, GTK_STYLE_PROVIDER(win->reset_style));
+        g_clear_object(&win->reset_style);
+    }
+
+    G_OBJECT_CLASS(ls_app_window_parent_class)->dispose(object);
+}
+
 static void ls_app_window_class_init(LSAppWindowClass* class)
 {
+    G_OBJECT_CLASS(class)->dispose = ls_app_window_dispose;
     GTK_WIDGET_CLASS(class)->size_allocate = ls_app_window_size_allocate;
 }
 
@@ -428,7 +490,11 @@ static void ls_app_window_init(LSAppWindow* win)
     int i;
 
     win->display = gdk_display_get_default();
+    win->reset_style = NULL;
     win->style = NULL;
+    win->step_source_id = 0;
+    win->draw_source_id = 0;
+    win->global_hotkeys_initialized = false;
     win->context_menu = NULL;
     win->resize_cursor_hover = false;
 
@@ -476,6 +542,7 @@ static void ls_app_window_init(LSAppWindow* win)
     if (win->opts.global_hotkeys && (is_x11_display() || force_global_hotkeys)) {
         LOG_DEBUG("Global Hotkeys Enabled, binding hotkeys globally...");
         bind_global_hotkeys(cfg, win);
+        win->global_hotkeys_initialized = true;
     } else {
         LOG_DEBUG("Global Hotkeys Disabled, binding hotkeys only to the main window...");
         GtkEventController* key_controller = gtk_event_controller_key_new();
@@ -538,7 +605,7 @@ static void ls_app_window_init(LSAppWindow* win)
 
     LOG_DEBUG("Setting up timers for updating and drawing the window...");
     // Update the internal state every millisecond
-    g_timeout_add(1, ls_app_window_step, win);
+    win->step_source_id = g_timeout_add(1, ls_app_window_step, win);
     // Draw the window at 30 FPS
-    g_timeout_add((int)(1000 / 30.), ls_app_window_draw, win);
+    win->draw_source_id = g_timeout_add((int)(1000 / 30.), ls_app_window_draw, win);
 }

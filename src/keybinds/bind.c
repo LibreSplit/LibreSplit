@@ -76,6 +76,8 @@ static guint32 last_event_time = 0;
 static gboolean processing_event = FALSE;
 static GdkModifierType modmap[8];
 static int xkb_event_type = 0;
+static GdkDisplay* keybinder_display = NULL;
+static gulong xevent_handler_id = 0;
 
 /* Build a map from X11's real modifier slots to the corresponding
  * Meta, Super, and Hyper modifiers. This replaces the modifier map
@@ -309,8 +311,8 @@ grab_ungrab(Window rootwin,
     gboolean grab)
 {
     int k;
-    GdkKeymapKey* keys;
-    gint n_keys;
+    GdkKeymapKey* keys = NULL;
+    gint n_keys = 0;
     GdkModifierType add_modifiers;
     XkbDescPtr xmap;
     gboolean success = FALSE;
@@ -321,10 +323,15 @@ grab_ungrab(Window rootwin,
         XkbAllClientInfoMask,
         XkbUseCoreKbd);
 
-    gdk_display_map_keyval(display, keyval, &keys, &n_keys);
-
-    if (n_keys == 0)
+    if (xmap == NULL) {
         return FALSE;
+    }
+
+    if (!gdk_display_map_keyval(display, keyval, &keys, &n_keys) || n_keys == 0) {
+        g_free(keys);
+        XkbFreeKeyboard(xmap, XkbAllComponentsMask, TRUE);
+        return FALSE;
+    }
 
     for (k = 0; k < n_keys; k++) {
         /* NOTE: We only bind for the first group,
@@ -361,7 +368,7 @@ grab_ungrab(Window rootwin,
         }
     }
     g_free(keys);
-    XkbFreeClientMap(xmap, 0, TRUE);
+    XkbFreeKeyboard(xmap, XkbAllComponentsMask, TRUE);
 
     return success;
 }
@@ -503,9 +510,14 @@ filter_func(GdkDisplay* display, gpointer gdk_xevent, gpointer data)
             add_virtual_modifiers(&modifiers);
             modifiers &= mod_mask;
 
-            TRACE(g_print("Translated keyval: %u, vmodifiers: 0x%x, name: %s\n",
-                keyval, modifiers,
-                gtk_accelerator_name(keyval, modifiers)));
+#ifdef DEBUG
+            {
+                gchar* accelerator = gtk_accelerator_name(keyval, modifiers);
+                TRACE(g_print("Translated keyval: %u, vmodifiers: 0x%x, name: %s\n",
+                    keyval, modifiers, accelerator));
+                g_free(accelerator);
+            }
+#endif
 
             /*
              * Set the last event time for use when showing
@@ -580,6 +592,10 @@ keymap_changed(Display* xdisplay)
 void keybinder_init(void)
 {
     GdkDisplay* display = gdk_display_get_default();
+    if (keybinder_display != NULL || display == NULL) {
+        return;
+    }
+
     Display* xdisplay = gdk_x11_display_get_xdisplay(display);
     Window rootwin = gdk_x11_display_get_xrootwindow(display);
     int xkb_opcode;
@@ -595,10 +611,40 @@ void keybinder_init(void)
         &xkb_minor);
     update_modmap(xdisplay);
 
-    g_signal_connect_after(display,
+    keybinder_display = g_object_ref(display);
+    xevent_handler_id = g_signal_connect_after(display,
         "xevent",
         G_CALLBACK(filter_func),
         GDK_XID_TO_POINTER(rootwin));
+}
+
+/**
+ * @brief Release global key grabs and disconnect X11 event handler.
+ */
+void keybinder_dispose(void)
+{
+    if (keybinder_display != NULL && xevent_handler_id != 0) {
+        g_signal_handler_disconnect(keybinder_display, xevent_handler_id);
+        xevent_handler_id = 0;
+    }
+
+    GSList* old_bindings = g_steal_pointer(&bindings);
+    for (GSList* iter = old_bindings; iter != NULL; iter = iter->next) {
+        struct Binding* binding = iter->data;
+        do_ungrab_key(binding);
+        if (binding->notify) {
+            binding->notify(binding->user_data);
+        }
+
+        g_free(binding->keystring);
+        g_free(binding);
+    }
+
+    g_slist_free(old_bindings);
+    g_clear_object(&keybinder_display);
+    processing_event = FALSE;
+    last_event_time = 0;
+    xkb_event_type = 0;
 }
 
 /**

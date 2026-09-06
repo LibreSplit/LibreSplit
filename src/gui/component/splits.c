@@ -33,21 +33,19 @@ extern LSComponentOps ls_splits_operations;
 void free_all(LSSplits* self_)
 {
     LSSplits* self = (LSSplits*)self_;
-    if (self->split_rows) {
-        free(self->split_rows);
-    }
-    if (self->split_titles) {
-        free(self->split_titles);
-    }
-    if (self->split_icons) {
-        free(self->split_icons);
-    }
-    if (self->split_deltas) {
-        free(self->split_deltas);
-    }
-    if (self->split_times) {
-        free(self->split_times);
-    }
+
+    free(self->split_rows);
+    free(self->split_titles);
+    free(self->split_icons);
+    free(self->split_deltas);
+    free(self->split_times);
+
+    self->split_rows = NULL;
+    self->split_titles = NULL;
+    self->split_icons = NULL;
+    self->split_deltas = NULL;
+    self->split_times = NULL;
+    self->split_count = 0;
 }
 
 /**
@@ -143,11 +141,11 @@ static void append_quoted_uri(GString* str, const char* value)
 LSComponent* ls_component_splits_new(void)
 {
     LSSplits* self;
-
-    self = malloc(sizeof(LSSplits));
+    self = calloc(1, sizeof(LSSplits));
     if (!self) {
         return NULL;
     }
+
     self->base.ops = &ls_splits_operations;
 
     self->split_adjust = gtk_adjustment_new(0., 0., 0., 0., 0., 0.);
@@ -188,6 +186,13 @@ static void splits_delete(LSComponent* self)
 {
     LSSplits* splits = (LSSplits*)self;
     g_clear_signal_handler(&splits->scroll_changed_handler, splits->split_adjust);
+    free_all(splits);
+    if (splits->icons_css_provider) {
+        gtk_style_context_remove_provider_for_display(
+            gtk_widget_get_display(splits->container),
+            GTK_STYLE_PROVIDER(splits->icons_css_provider));
+        g_clear_object(&splits->icons_css_provider);
+    }
     free(self);
 }
 
@@ -269,8 +274,12 @@ static void splits_show_game(LSComponent* self_, const ls_game* game,
     self->split_count = game->split_count;
 
     self->split_rows = calloc(self->split_count, sizeof(GtkWidget*));
-    if (!self->split_rows)
+    if (!self->split_rows) {
+        // nothing has been allocated but call free_all
+        // for consistency and to set split_count back to 0
+        free_all(self);
         return;
+    }
 
     self->split_titles = calloc(self->split_count, sizeof(GtkWidget*));
     if (!self->split_titles) {
@@ -310,28 +319,23 @@ static void splits_show_game(LSComponent* self_, const ls_game* game,
         gtk_widget_set_halign(self->split_titles[i], GTK_ALIGN_START);
         gtk_widget_set_hexpand(self->split_titles[i], TRUE);
 
-        if (game->split_titles[i]
-            && strlen(game->split_titles[i])) {
-            char* c = &str[12];
-            strcpy(str, "split-title-");
-            strcpy(c, game->split_titles[i]);
+        gchar* split_title_class = NULL;
+        if (game->split_titles[i] && game->split_titles[i][0] != '\0') {
+            split_title_class = g_strdup_printf("split-title-%s", game->split_titles[i]);
+            gchar* c = split_title_class + strlen("split-title-");
+
             do {
-                if (!isalnum(*c)) {
-                    *c = '-';
-                } else {
-                    *c = tolower(*c);
-                }
+                *c = g_ascii_isalnum(*c) ? g_ascii_tolower(*c) : '-';
             } while (*++c != '\0');
-            {
-                add_class(self->split_rows[i], str);
-            }
+
+            add_class(self->split_rows[i], split_title_class);
         }
 
         if (game->contains_icons) {
-            if (game->split_icon_paths[i]) {
+            if (game->split_icon_paths[i] && split_title_class) {
                 char* icon = split_icon_uri(game, game->split_icon_paths[i]);
                 if (icon) {
-                    g_string_append_printf(icons_css_src, ".%s .split-icon { background-image: url(", str);
+                    g_string_append_printf(icons_css_src, ".%s .split-icon { background-image: url(", split_title_class);
                     append_quoted_uri(icons_css_src, icon);
                     g_string_append(icons_css_src, "); }");
                     g_free(icon);
@@ -343,6 +347,8 @@ static void splits_show_game(LSComponent* self_, const ls_game* game,
             gtk_widget_set_size_request(self->split_icons[i], 20, 20);
             gtk_box_append(GTK_BOX(self->split_rows[i]), self->split_icons[i]);
         }
+
+        g_free(split_title_class);
         gtk_box_append(GTK_BOX(self->split_rows[i]), self->split_titles[i]);
 
         self->split_deltas[i] = gtk_label_new(NULL);

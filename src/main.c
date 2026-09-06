@@ -123,11 +123,12 @@ int main(int argc, char* argv[])
     pthread_t t3; // Logging Thread
     pthread_create(&t3, NULL, &loggingThread, NULL);
 
-    g_application_run(G_APPLICATION(g_app), argc, argv);
+    int status = g_application_run(G_APPLICATION(g_app), argc, argv);
 
     pthread_join(t1, NULL);
     pthread_join(t2, NULL);
     pthread_join(t3, NULL);
 
-    return 0;
+    g_clear_object(&g_app);
+    return status;
 }
