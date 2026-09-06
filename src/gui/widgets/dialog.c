@@ -650,6 +650,7 @@ static gboolean file_picker_present(gpointer user_data)
         return G_SOURCE_REMOVE;
     }
 
+    const gsize filters_count = request->filters_count;
     set_main_window_keep_above(FALSE);
 
     GtkFileDialog* dialog = gtk_file_dialog_new();
@@ -660,11 +661,11 @@ static gboolean file_picker_present(gpointer user_data)
     GListStore* filters = NULL;
     GtkFileFilter* default_filter = NULL;
 
-    if (request->filters_count > 0) {
-        allocated_filters = g_new0(GtkFileFilter*, request->filters_count);
+    if (filters_count > 0) {
+        allocated_filters = g_new0(GtkFileFilter*, filters_count);
         filters = g_list_store_new(GTK_TYPE_FILE_FILTER);
 
-        for (gsize i = 0; i < request->filters_count; i++) {
+        for (gsize i = 0; i < filters_count; i++) {
             GtkFileFilter* filter = gtk_file_filter_new();
             gtk_file_filter_set_name(filter, request->filters[i].name);
             gtk_file_filter_add_pattern(filter, request->filters[i].pattern);
@@ -690,8 +691,8 @@ static gboolean file_picker_present(gpointer user_data)
 
     gtk_file_dialog_open(dialog, parent, NULL, file_picker_finish, file_picker_request_ref(request));
 
-    if (request->filters_count > 0) {
-        for (gsize i = 0; i < request->filters_count; i++) {
+    if (filters_count > 0) {
+        for (gsize i = 0; i < filters_count; i++) {
             g_object_unref(allocated_filters[i]);
         }
 
@@ -727,6 +728,7 @@ gboolean ls_file_picker_open(GtkWindow* parent, const LSFilePickerOptions* optio
         return FALSE;
     }
 
+    const gsize filters_count = options->filters_count;
     if (options->title == NULL || options->title[0] == '\0') {
         LOG_ERR("Invalid ls_file_picker_open usage: title was null or empty");
         return FALSE;
@@ -748,18 +750,18 @@ gboolean ls_file_picker_open(GtkWindow* parent, const LSFilePickerOptions* optio
         return FALSE;
     }
 
-    if (options->filters_count < 0 || options->filters_count > FILE_PICKER_MAX_FILTERS) {
+    if (filters_count < 0 || filters_count > FILE_PICKER_MAX_FILTERS) {
         LOG_ERR("Invalid ls_file_picker_open usage: number of filters out of bounds");
         return FALSE;
     }
 
-    if (options->filters == NULL && options->filters_count != 0) {
+    if (options->filters == NULL && filters_count != 0) {
         LOG_ERR("Invalid ls_file_picker_open usage: filters was NULL with a positive filters_count");
         return FALSE;
     }
 
     bool has_default = false;
-    for (gsize i = 0; i < options->filters_count; i++) {
+    for (gsize i = 0; i < filters_count; i++) {
         LSFilePickerFilter filter = options->filters[i];
         if (filter.name == NULL || filter.name[0] == '\0') {
             LOG_ERRF("Invalid ls_file_picker_open usage: filter[%zu].name was null or empty", i);
@@ -787,10 +789,10 @@ gboolean ls_file_picker_open(GtkWindow* parent, const LSFilePickerOptions* optio
     request->title = g_strdup(options->title);
     request->path = g_strdup(options->path);
     request->callback = callback;
-    request->filters = options->filters_count > 0 ? g_new(LSFilePickerFilter, options->filters_count) : NULL;
-    request->filters_count = options->filters_count;
+    request->filters = filters_count > 0 ? g_new(LSFilePickerFilter, filters_count) : NULL;
+    request->filters_count = filters_count;
 
-    for (gsize i = 0; i < options->filters_count; i++) {
+    for (gsize i = 0; i < filters_count; i++) {
         LSFilePickerFilter filter = options->filters[i];
         request->filters[i].name = g_strdup(filter.name);
         request->filters[i].pattern = g_strdup(filter.pattern);
