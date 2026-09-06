@@ -216,9 +216,16 @@ static gpointer save_game_thread(gpointer data)
     return NULL;
 }
 
+/**
+ * @brief Atomically saves the ls_game struct to the user's splits file.
+ * This function rejects new saves while another save is already running.
+ * It creates a snapshot of the current save, then runs the save on the snapshot
+ * via a worker thread.
+ *
+ * @param game The current ls_game struct to save
+ */
 void save_game(ls_game* game)
 {
-    // reject saves if we're already saving
     if (!game || atomic_exchange(&saving, true)) {
         return;
     }
