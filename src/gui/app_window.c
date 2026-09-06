@@ -348,6 +348,7 @@ void ls_app_window_destroy(GtkWidget* widget, gpointer data)
 {
     LOG_INFO("Exiting LibreSplit. GG!");
     LSAppWindow* win = (LSAppWindow*)widget;
+    save_game_join();
     if (win->timer) {
         ls_timer_release(win->timer);
         win->timer = 0;
