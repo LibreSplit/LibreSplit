@@ -628,7 +628,7 @@ void keybinder_dispose(void)
         xevent_handler_id = 0;
     }
 
-    GList* old_bindings = g_steal_pointer(&bindings);
+    GSList* old_bindings = g_steal_pointer(&bindings);
     for (GSList* iter = old_bindings; iter != NULL; iter = iter->next) {
         struct Binding* binding = iter->data;
         do_ungrab_key(binding);
@@ -640,7 +640,7 @@ void keybinder_dispose(void)
         g_free(binding);
     }
 
-    g_list_free(old_bindings);
+    g_slist_free(old_bindings);
     g_clear_object(&keybinder_display);
     processing_event = FALSE;
     last_event_time = 0;
