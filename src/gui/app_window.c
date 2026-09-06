@@ -283,13 +283,13 @@ static void ls_app_window_dispose(GObject* object)
     g_clear_pointer(&win->welcome_box, welcome_box_destroy);
 
     if (win->style != NULL) {
-        gtk_style_context_remove_provider_for_display(win->display, GTK_STYLE_PROVIDER(&win->style));
+        gtk_style_context_remove_provider_for_display(win->display, GTK_STYLE_PROVIDER(win->style));
         g_clear_object(&win->style);
     }
 
     if (win->reset_style != NULL) {
-        gtk_style_context_remove_provider_for_display(win->display, GTK_STYLE_PROVIDER(&win->reset_style));
-        g_clear_object(&win->style);
+        gtk_style_context_remove_provider_for_display(win->display, GTK_STYLE_PROVIDER(win->reset_style));
+        g_clear_object(&win->reset_style);
     }
 
     G_OBJECT_CLASS(ls_app_window_parent_class)->dispose(object);
