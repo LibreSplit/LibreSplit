@@ -304,10 +304,6 @@ void close_activated(GSimpleAction* action,
 static void perform_quit(gpointer window)
 {
     LSAppWindow* win = LS_APP_WINDOW(window);
-    if (win->welcome_box) {
-        welcome_box_destroy(win->welcome_box);
-    }
-
     gtk_window_destroy(GTK_WINDOW(win));
 }
 
