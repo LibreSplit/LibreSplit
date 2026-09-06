@@ -228,30 +228,25 @@ static void splits_show_game(LSComponent* self_, const ls_game* game,
         gtk_widget_set_halign(self->split_titles[i], GTK_ALIGN_START);
         gtk_widget_set_hexpand(self->split_titles[i], TRUE);
 
-        if (game->split_titles[i]
-            && strlen(game->split_titles[i])) {
-            char* c = &str[12];
-            strcpy(str, "split-title-");
-            strcpy(c, game->split_titles[i]);
+        gchar* split_title_class = NULL;
+        if (game->split_titles[i] && game->split_titles[i][0] != '\0') {
+            split_title_class = g_strdup_printf("split-title-%s", game->split_titles[i]);
+            gchar* c = split_title_class + strlen("split-title-");
+
             do {
-                if (!isalnum(*c)) {
-                    *c = '-';
-                } else {
-                    *c = tolower(*c);
-                }
+                *c = g_ascii_isalnum(*c) ? g_ascii_tolower(*c) : '-';
             } while (*++c != '\0');
-            {
-                add_class(self->split_rows[i], str);
-            }
+
+            add_class(self->split_rows[i], split_title_class);
         }
 
         if (game->contains_icons) {
-            if (game->split_icon_paths[i]) {
+            if (game->split_icon_paths[i] && split_title_class) {
                 // g_string_append_printf(icons_css_src, ".split:nth-child(%d) .split-icon { background-image: url('%s'); }", i+1, game->split_icon_paths[i]);
                 g_string_append_printf(
                     icons_css_src,
                     ".%s .split-icon { background-image: url('%s'); }",
-                    str, game->split_icon_paths[i]);
+                    split_title_class, game->split_icon_paths[i]);
             }
             self->split_icons[i] = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
             add_class(self->split_icons[i], "split-icon");
@@ -259,6 +254,8 @@ static void splits_show_game(LSComponent* self_, const ls_game* game,
             gtk_widget_set_size_request(self->split_icons[i], 20, 20);
             gtk_box_append(GTK_BOX(self->split_rows[i]), self->split_icons[i]);
         }
+
+        g_free(split_title_class);
         gtk_box_append(GTK_BOX(self->split_rows[i]), self->split_titles[i]);
 
         self->split_deltas[i] = gtk_label_new(NULL);
