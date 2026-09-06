@@ -35,6 +35,13 @@ typedef enum ls_time_method {
     LS_GAME_TIME = 1, /*!< LS_GAME_TIME corresponds to ls_time.game_time */
 } ls_time_method;
 
+/**
+ * @brief The game struct representing a user's loaded splits file.
+ * When splits are saved, a snapshot of this struct is created for the
+ * save operation. So if this struct is modified, then the equivalent change
+ * must be added to the snapshot function in ./src/gui/game.c `create_snapshot`
+ * as well as any memory releasing in `ls_game_release`
+ */
 typedef struct ls_game {
     char path[PATH_MAX];
     char* title;

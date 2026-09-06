@@ -346,6 +346,10 @@ void ls_delta_string(char* string, long long time)
  */
 void ls_game_release(ls_game* game)
 {
+    if (game == NULL) {
+        return;
+    }
+
     LOG_DEBUG("Releasing game...");
     if (game->title) {
         free(game->title);
