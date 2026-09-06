@@ -299,8 +299,9 @@ static gboolean build_settings_dialog(gpointer data)
                         GtkWidget* lbl_str = new_setting_label(entry.desc);
                         gtk_grid_attach(GTK_GRID(grid), lbl_str, 0, row, 1, 1);
 
-                        gui_settings[settings_idx].entry_buffer = gtk_entry_buffer_new(entry.value.s, sizeof(entry.value.s));
+                        gui_settings[settings_idx].entry_buffer = gtk_entry_buffer_new(entry.value.s, -1);
                         gui_settings[settings_idx].widget = gtk_entry_new_with_buffer(gui_settings[settings_idx].entry_buffer);
+                        g_object_unref(gui_settings[settings_idx].entry_buffer);
                         gtk_entry_set_icon_from_icon_name(GTK_ENTRY(gui_settings[settings_idx].widget), GTK_ENTRY_ICON_SECONDARY, "edit-clear");
                         g_signal_connect(gui_settings[settings_idx].widget, "icon-press", G_CALLBACK(on_entry_clear_press), NULL);
                         gtk_widget_set_hexpand(gui_settings[settings_idx].widget, TRUE);
@@ -315,6 +316,7 @@ static gboolean build_settings_dialog(gpointer data)
 
                         gui_settings[settings_idx].entry_buffer = gtk_entry_buffer_new(entry.value.s, -1);
                         gui_settings[settings_idx].widget = gtk_entry_new_with_buffer(gui_settings[settings_idx].entry_buffer);
+                        g_object_unref(gui_settings[settings_idx].entry_buffer);
                         gtk_entry_set_icon_from_icon_name(GTK_ENTRY(gui_settings[settings_idx].widget), GTK_ENTRY_ICON_SECONDARY, "edit-clear");
                         GtkEventController* key_controller = gtk_event_controller_key_new();
                         gtk_event_controller_set_propagation_phase(key_controller, GTK_PHASE_CAPTURE);
@@ -342,6 +344,7 @@ static gboolean build_settings_dialog(gpointer data)
 
                         gui_settings[settings_idx].entry_buffer = gtk_entry_buffer_new(setting_as_str, -1);
                         gui_settings[settings_idx].widget = gtk_entry_new_with_buffer(gui_settings[settings_idx].entry_buffer);
+                        g_object_unref(gui_settings[settings_idx].entry_buffer);
                         gtk_widget_set_hexpand(gui_settings[settings_idx].widget, TRUE);
                         gtk_grid_attach(GTK_GRID(grid), gui_settings[settings_idx].widget, 1, row, 1, 1);
                         break;
