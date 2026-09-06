@@ -546,6 +546,7 @@ static void ls_app_window_init(LSAppWindow* win)
     } else {
         LOG_DEBUG("Global Hotkeys Disabled, binding hotkeys only to the main window...");
         GtkEventController* key_controller = gtk_event_controller_key_new();
+        gtk_event_controller_set_propagation_phase(key_controller, GTK_PHASE_CAPTURE);
         g_signal_connect(key_controller, "key-pressed", G_CALLBACK(ls_app_window_keypress), win);
         gtk_widget_add_controller(GTK_WIDGET(win), key_controller);
     }

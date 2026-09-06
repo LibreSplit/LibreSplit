@@ -51,6 +51,16 @@ static int keybind_match(Keybind kb, guint keyval, GdkModifierType state)
     return keyval == kb.key && kb.mods == (state & gtk_accelerator_get_default_mod_mask());
 }
 
+/**
+ * @brief Handles user hotkeys when the window is focussed.
+ *
+ * @param controller The key event controller that received the event.
+ * @param keyval The GDK keyval representing the pressed key.
+ * @param keycode The actual keycode of the pressed key.
+ * @param state The active keyboard modifier flags.
+ * @param data The main LSAppWindow.
+ * @return gboolean Whether or not we handled the keypress event. Returning FALSE allows GTK to continue regular handling propagation.
+ */
 gboolean ls_app_window_keypress(GtkEventControllerKey* controller,
     guint keyval,
     guint keycode,
@@ -72,7 +82,10 @@ gboolean ls_app_window_keypress(GtkEventControllerKey* controller,
         toggle_decorations(win);
     } else if (keybind_match(win->keybinds.toggle_win_on_top, keyval, state)) {
         toggle_win_on_top(win);
+    } else {
+        return FALSE;
     }
+
     return TRUE;
 }
 
