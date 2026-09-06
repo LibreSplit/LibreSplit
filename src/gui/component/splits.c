@@ -187,8 +187,12 @@ static void splits_show_game(LSComponent* self_, const ls_game* game,
     self->split_count = game->split_count;
 
     self->split_rows = calloc(self->split_count, sizeof(GtkWidget*));
-    if (!self->split_rows)
+    if (!self->split_rows) {
+        // nothing has been allocated but call free_all
+        // for consistency and to set split_count back to 0
+        free_all(self);
         return;
+    }
 
     self->split_titles = calloc(self->split_count, sizeof(GtkWidget*));
     if (!self->split_titles) {
