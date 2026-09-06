@@ -31,6 +31,7 @@ G_BEGIN_DECLS
 typedef void (*KeybinderHandler)(const char* keystring, void* user_data);
 
 void keybinder_init(void);
+void keybinder_dispose(void);
 
 gboolean keybinder_bind(const char* keystring,
     KeybinderHandler handler,

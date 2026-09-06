@@ -160,6 +160,11 @@ static void save_gui_settings(GtkButton* button, gpointer app)
             case CFG_KEYBIND:
                 {
                     const char* str_value = gtk_entry_buffer_get_text(setting_to_save.entry_buffer);
+                    if (strlen(str_value) >= sizeof(setting_to_save.settings_entry->value.s)) {
+                        LOG_WARNF("%s was longer than the max size %zu", str_value, sizeof(setting_to_save.settings_entry->value.s));
+                        break;
+                    }
+
                     strcpy(setting_to_save.settings_entry->value.s, str_value);
                     break;
                 }
@@ -308,7 +313,7 @@ static gboolean build_settings_dialog(gpointer data)
                         GtkWidget* lbl_kb = new_setting_label(entry.desc);
                         gtk_grid_attach(GTK_GRID(grid), lbl_kb, 0, row, 1, 1);
 
-                        gui_settings[settings_idx].entry_buffer = gtk_entry_buffer_new(entry.value.s, sizeof(entry.value.s));
+                        gui_settings[settings_idx].entry_buffer = gtk_entry_buffer_new(entry.value.s, -1);
                         gui_settings[settings_idx].widget = gtk_entry_new_with_buffer(gui_settings[settings_idx].entry_buffer);
                         gtk_entry_set_icon_from_icon_name(GTK_ENTRY(gui_settings[settings_idx].widget), GTK_ENTRY_ICON_SECONDARY, "edit-clear");
                         GtkEventController* key_controller = gtk_event_controller_key_new();
@@ -335,7 +340,7 @@ static gboolean build_settings_dialog(gpointer data)
                         char setting_as_str[64];
                         sprintf(setting_as_str, "%d", entry.value.i);
 
-                        gui_settings[settings_idx].entry_buffer = gtk_entry_buffer_new(setting_as_str, sizeof(setting_as_str));
+                        gui_settings[settings_idx].entry_buffer = gtk_entry_buffer_new(setting_as_str, -1);
                         gui_settings[settings_idx].widget = gtk_entry_new_with_buffer(gui_settings[settings_idx].entry_buffer);
                         gtk_widget_set_hexpand(gui_settings[settings_idx].widget, TRUE);
                         gtk_grid_attach(GTK_GRID(grid), gui_settings[settings_idx].widget, 1, row, 1, 1);

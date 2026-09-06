@@ -52,6 +52,9 @@ typedef struct _LSAppWindow {
     GtkWidget* footer;
     GtkCssProvider* reset_style; /*!< The "reset rules" provider, will remove desktop theme rules */
     GtkCssProvider* style; /*!< Current style provider, there can be only one */
+    guint step_source_id; /*!< Source ID for the run clock callback */
+    guint draw_source_id; /*!< Source ID for the gui draw callback */
+    bool global_hotkeys_initialized; /*!< Whether global hotkeys have been binded */
     LSKeybinds keybinds; /*!< The keybinds related to this application window */
     LSOpts opts; /*!< The window options */
 } LSAppWindow;
