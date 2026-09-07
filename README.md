@@ -286,6 +286,7 @@ For more information, check the [Themes documentation](docs/themes.md).
   .split-icon {
     min-width: 24px;
     min-height: 24px;
+    background-size: 24px;
   }
   ```
 
