@@ -130,7 +130,7 @@ void open_activated(GSimpleAction* action,
         // We have no saved path or the path no longer exists, go to the default splits path and eventually create it
         strcpy(splits_path, win->data_path);
         strcat(splits_path, "/splits");
-        if (!create_default_directory("Splits", splits_path, 0700, GTK_WINDOW(win))) {
+        if (!create_default_directory("Splits", splits_path, 0755, GTK_WINDOW(win))) {
             return;
         }
     }
@@ -452,7 +452,7 @@ void open_auto_splitter(GSimpleAction* action,
     if (use_default_path) {
         strcpy(auto_splitters_path, win->data_path);
         strcat(auto_splitters_path, "/auto-splitters");
-        if (!create_default_directory("Auto Splitters", auto_splitters_path, 0700, GTK_WINDOW(win))) {
+        if (!create_default_directory("Auto Splitters", auto_splitters_path, 0755, GTK_WINDOW(win))) {
             return;
         }
     }
