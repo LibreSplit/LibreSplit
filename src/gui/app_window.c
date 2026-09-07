@@ -126,6 +126,17 @@ void ls_app_window_open(LSAppWindow* win, const char* file)
     }
 }
 
+static void activate_gestures(GApplication* app, LSAppWindow* win)
+{
+    GtkGesture* click = gtk_gesture_click_new();
+    gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(click), 0);
+    gtk_event_controller_set_propagation_phase(GTK_EVENT_CONTROLLER(click),
+        GTK_PHASE_CAPTURE);
+
+    g_signal_connect(click, "pressed", G_CALLBACK(handle_button_pressed), app);
+    gtk_widget_add_controller(GTK_WIDGET(win), GTK_EVENT_CONTROLLER(click));
+}
+
 /**
  * Starts LibreSplit, loading the last splits and auto splitter.
  * Eventually opens some dialogs if there are no last splits or auto-splitters.
@@ -171,13 +182,7 @@ void ls_app_activate(GApplication* app)
         }
     }
     atomic_store(&auto_splitter_enabled, cfg.libresplit.auto_splitter_enabled.value.b);
-
-    GtkGesture* click = gtk_gesture_click_new();
-    gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(click), 0);
-    gtk_event_controller_set_propagation_phase(GTK_EVENT_CONTROLLER(click),
-        GTK_PHASE_CAPTURE);
-    g_signal_connect(click, "pressed", G_CALLBACK(handle_button_pressed), app);
-    gtk_widget_add_controller(GTK_WIDGET(win), GTK_EVENT_CONTROLLER(click));
+    activate_gestures(app, win);
 }
 
 void ls_app_open(GApplication* app,
@@ -200,6 +205,7 @@ void ls_app_open(GApplication* app,
         }
     }
 
+    activate_gestures(app, win);
     gtk_window_present(GTK_WINDOW(win));
 }
 

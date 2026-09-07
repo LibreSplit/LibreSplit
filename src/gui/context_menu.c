@@ -230,12 +230,17 @@ void button_right_click(GtkGestureClick* gesture, double x, double y, gpointer a
  */
 void handle_button_pressed(GtkGestureClick* gesture, int n_press, double x, double y, gpointer app)
 {
+    GtkEventController* controller = GTK_EVENT_CONTROLLER(gesture);
+    GdkEvent* event = gtk_event_controller_get_current_event(controller);
+
+    if (event != NULL && gdk_event_triggers_context_menu(event)) {
+        button_right_click(gesture, x, y, app);
+        return;
+    }
+
     switch (gtk_gesture_single_get_current_button(GTK_GESTURE_SINGLE(gesture))) {
         case GDK_BUTTON_PRIMARY:
             button_left_click(gesture, x, y);
-            break;
-        case GDK_BUTTON_SECONDARY:
-            button_right_click(gesture, x, y, app);
             break;
     }
 }
