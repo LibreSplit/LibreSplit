@@ -10,6 +10,8 @@
 #define LS_INFO_BEST_SPLIT (1 << 2)
 #define LS_INFO_BEST_SEGMENT (1 << 3) // Gold split
 
+#define MAX_TIMESTAMP_LENGTH 256
+
 extern AppConfig cfg;
 
 /**
@@ -33,6 +35,13 @@ typedef enum ls_time_method {
     LS_GAME_TIME = 1, /*!< LS_GAME_TIME corresponds to ls_time.game_time */
 } ls_time_method;
 
+/**
+ * @brief The game struct representing a user's loaded splits file.
+ * When splits are saved, a snapshot of this struct is created for the
+ * save operation. So if this struct is modified, then the equivalent change
+ * must be added to the snapshot function in ./src/gui/game.c `create_snapshot`
+ * as well as any memory releasing in `ls_game_release`
+ */
 typedef struct ls_game {
     char path[PATH_MAX];
     char* title;
@@ -145,7 +154,7 @@ void ls_timer_stop(ls_timer* timer);
 
 int ls_timer_reset(ls_timer* timer, ls_game* game);
 
-int ls_timer_cancel(ls_timer* timer);
+void ls_timer_cancel(ls_timer* timer);
 
 void json_time_get(const json_t* ref, ls_time* time);
 

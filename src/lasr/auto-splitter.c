@@ -541,6 +541,7 @@ void run_auto_splitter(void)
         fprintf(stderr, "Lua syntax error: %s\n", error_msg);
         lua_pop(L, 1); // Remove the error message from the stack
         lua_close(L);
+        maps_clearCache();
         atomic_store(&auto_splitter_enabled, false);
         return;
     }
@@ -556,6 +557,7 @@ void run_auto_splitter(void)
         }
         lua_pop(L, 1);
         lua_close(L);
+        maps_clearCache();
         atomic_store(&auto_splitter_enabled, false);
         return;
     }
@@ -654,4 +656,5 @@ void run_auto_splitter(void)
     }
 
     lua_close(L);
+    maps_clearCache();
 }

@@ -1,7 +1,9 @@
 #include "timer.h"
 #include "game.h"
 #include "src/gui/component/components.h"
+#include "src/gui/dialogs.h"
 #include "src/lasr/utils.h"
+#include "src/logging.h"
 #include "src/timer.h"
 
 /**
@@ -115,21 +117,30 @@ void timer_stop_or_reset(LSAppWindow* win)
 }
 
 /**
- * @brief Cancels the current run, resetting the timer and game state and saving the cancelled run to history if enabled.
+ * @brief Performs the actual cancellation of a run when it should be cancelled.
+ * This maybe be called from the affirmitive action of a run reset warning dialog.
  *
- * @param win The LibreSplit window
+ * @param window A pointer to the main LSAppWindow of the app.
  */
-void timer_cancel_run(LSAppWindow* win)
+static void perform_cancel_run(gpointer window)
 {
+    LSAppWindow* win = window;
 
-    if (!win->timer)
+    // autosplitter/global hotkey start sanity checks
+    if (!win->timer) {
+        LOG_WARN("Timer became null after confirm, cannot cancel run.");
         return;
-
-    if (ls_timer_cancel(win->timer)) {
-        ls_app_window_clear_game(win);
-        ls_app_window_show_game(win);
-        save_game(win->game);
     }
+
+    if (win->timer->running) {
+        LOG_WARN("Timer started running after confirm, cannot cancel run.");
+        return;
+    }
+
+    ls_timer_cancel(win->timer);
+    ls_app_window_clear_game(win);
+    ls_app_window_show_game(win);
+    save_game(win->game);
 
     for (GList* l = win->components; l != NULL; l = l->next) {
         LSComponent* component = l->data;
@@ -137,6 +148,33 @@ void timer_cancel_run(LSAppWindow* win)
             component->ops->cancel_run(component, win->timer);
         }
     }
+}
+
+/**
+ * @brief Cancels the current run, resetting the timer and game state and saving the cancelled run to history if enabled.
+ *
+ * @param win The LibreSplit window
+ */
+void timer_cancel_run(LSAppWindow* win)
+{
+    if (!win->timer)
+        return;
+
+    // Disallow resets while running
+    if (win->timer->running) {
+        LOG_DEBUG("Timer is running, cannot cancel run.");
+        return;
+    }
+
+    // Warn if the reset will lose a gold split, and allow the user to cancel the reset if they want to keep it
+    if (ls_timer_has_gold_split(win->timer) || ls_timer_has_rainbow_split(win->timer)) {
+        if (cfg.libresplit.ask_on_gold.value.b) {
+            display_confirm_reset_dialog(perform_cancel_run, win);
+            return;
+        }
+    }
+
+    perform_cancel_run(win);
 }
 
 /**

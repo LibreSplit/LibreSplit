@@ -2,7 +2,7 @@
 #include "shared.h"
 
 #include <arpa/inet.h>
-#include <gtk/gtk.h>
+#include <glib.h>
 #include <linux/limits.h>
 #include <stdatomic.h>
 #include <stdio.h>

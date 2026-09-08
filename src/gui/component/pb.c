@@ -33,20 +33,17 @@ LSComponent* ls_component_pb_new(void)
     self->container = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
     add_class(self->container, "footer"); /* hack */
     add_class(self->container, "personal-best-container");
-    gtk_widget_show(self->container);
 
     label = gtk_label_new(PERSONAL_BEST);
     add_class(label, "personal-best-label");
     gtk_widget_set_halign(label, GTK_ALIGN_START);
     gtk_widget_set_hexpand(label, TRUE);
-    gtk_container_add(GTK_CONTAINER(self->container), label);
-    gtk_widget_show(label);
+    gtk_box_append(GTK_BOX(self->container), label);
 
     self->personal_best = gtk_label_new(NULL);
     add_class(self->personal_best, "personal-best");
     gtk_widget_set_halign(self->personal_best, GTK_ALIGN_END);
-    gtk_container_add(GTK_CONTAINER(self->container), self->personal_best);
-    gtk_widget_show(self->personal_best);
+    gtk_box_append(GTK_BOX(self->container), self->personal_best);
 
     return (LSComponent*)self;
 }

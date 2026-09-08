@@ -8,6 +8,8 @@ project(
 
 add_project_arguments('-DAPP_VERSION="@0@"'.format(meson.project_version()), language: 'c')
 add_project_arguments('-D_GNU_SOURCE=1 ', language: 'c')
+add_project_arguments('-DGDK_VERSION_MIN_REQUIRED=GDK_VERSION_4_16', language: 'c')
+add_project_arguments('-DGDK_VERSION_MAX_ALLOWED=GDK_VERSION_4_16', language: 'c')
 
 if get_option('buildtype') == 'debug'
     add_project_arguments('-DDEBUG', language: 'c')
@@ -24,71 +26,74 @@ if ioctl_maps.enabled()
 endif
 
 threads = dependency('threads')
-gtk = dependency('gtk+-3.0')
+gtk = dependency('gtk4', version: '>= 4.16', include_type: 'system')
+gtk_x11 = dependency('gtk4-x11', version: '>= 4.16', include_type: 'system')
 luajit = dependency('luajit')
 x11 = dependency('x11')
 jansson = dependency('jansson')
 openssl = dependency('openssl')
 
 libresplit_sources = files(
-    'src/main.c',
-    'src/keybinds/bind.c',
-    'src/server.c',
-    'src/shared.c',
-    'src/timer.c',
-    'src/logging.c',
-
-    # Settings
-    'src/settings/definitions.c',
-    'src/settings/settings.c',
-    'src/settings/utils.c',
-
-    # LASR
-    'src/lasr/auto-splitter.c',
-    'src/lasr/utils.c',
-    'src/lasr/maps/maps.c',
-    'src/lasr/functions/bitwise.c',
-    'src/lasr/functions/getBaseAddress.c',
-    'src/lasr/functions/getModuleSize.c',
-    'src/lasr/functions/getPID.c',
-    'src/lasr/functions/getMaps.c',
-    'src/lasr/functions/print_tbl.c',
-    'src/lasr/functions/process.c',
-    'src/lasr/functions/readAddress.c',
-    'src/lasr/functions/strtoida.c',
-    'src/lasr/functions/shallow_copy_tbl.c',
-    'src/lasr/functions/signature.c',
-    'src/lasr/functions/sizeOf.c',
-    'src/lasr/functions/md5.c',
-
-    # Keybinds
-    'src/keybinds/keybinds.c',
-    'src/keybinds/keybinds_callbacks.c',
-    'src/keybinds/delayed_handlers.c',
-
-    # GUI
-    'src/gui/utils.c',
     'src/gui/actions.c',
-    'src/gui/context_menu.c',
-    'src/gui/welcome_box.c',
-    'src/gui/dialogs.c',
-    'src/gui/theming.c',
-    'src/gui/timer.c',
-    'src/gui/game.c',
     'src/gui/app_window.c',
-    'src/gui/help_dialog.c',
-    'src/gui/settings_dialog.c',
+    'src/gui/backends/x11.c',
 
     # Components
     'src/gui/component/best-sum.c',
     'src/gui/component/clock.c',
     'src/gui/component/components.c',
+    'src/gui/component/detailed-timer.c',
     'src/gui/component/pb.c',
     'src/gui/component/prev-segment.c',
     'src/gui/component/splits.c',
     'src/gui/component/title.c',
     'src/gui/component/wr.c',
-    'src/gui/component/detailed-timer.c',
+    'src/gui/context_menu.c',
+    'src/gui/dialogs.c',
+    'src/gui/game.c',
+    'src/gui/theming.c',
+    'src/gui/timer.c',
+
+    # GUI
+    'src/gui/utils.c',
+    'src/gui/welcome_box.c',
+    'src/gui/widgets/alert.c',
+    'src/gui/widgets/dialog.c',
+    'src/gui/widgets/help_dialog.c',
+    'src/gui/widgets/settings_dialog.c',
+    'src/keybinds/bind.c',
+
+    # Keybinds
+    'src/keybinds/keybinds.c',
+    'src/keybinds/keybinds_callbacks.c',
+
+    # LASR
+    'src/lasr/auto-splitter.c',
+    'src/lasr/functions/bitwise.c',
+    'src/lasr/functions/getBaseAddress.c',
+    'src/lasr/functions/getMaps.c',
+    'src/lasr/functions/getModuleSize.c',
+    'src/lasr/functions/getPID.c',
+    'src/lasr/functions/md5.c',
+    'src/lasr/functions/print_tbl.c',
+    'src/lasr/functions/process.c',
+    'src/lasr/functions/readAddress.c',
+    'src/lasr/functions/shallow_copy_tbl.c',
+    'src/lasr/functions/signature.c',
+    'src/lasr/functions/sizeOf.c',
+    'src/lasr/functions/strtoida.c',
+    'src/lasr/maps/maps.c',
+    'src/lasr/utils.c',
+    'src/logging.c',
+    'src/main.c',
+    'src/server.c',
+
+    # Settings
+    'src/settings/definitions.c',
+    'src/settings/settings.c',
+    'src/settings/utils.c',
+    'src/shared.c',
+    'src/timer.c',
 )
 
 libresplit_ctl_sources = files(
@@ -119,7 +124,7 @@ executable(
     'libresplit',
     libresplit_sources,
     objects: [css_o],
-    dependencies: [threads, gtk, luajit, x11, jansson, openssl],
+    dependencies: [threads, gtk, gtk_x11, luajit, x11, jansson, openssl],
     c_args: shared_c_flags,
     install: true,
 )
@@ -137,7 +142,7 @@ message('buildtype: ' + get_option('buildtype'))
 message('ioctl_maps: ' + ioctl_maps.enabled().to_string())
 
 install_data(
-    'assets/libresplit.desktop',
+    'assets/org.libresplit.LibreSplit.desktop',
     install_dir: get_option('prefix') / get_option('datadir') / 'applications',
 )
 install_data(
@@ -161,7 +166,7 @@ endforeach
 install_data(
     'assets/libresplit.svg',
     install_dir: get_option('prefix') / get_option('datadir') / 'icons/hicolor/scalable/apps/',
-    rename: 'libresplit.png',
+    rename: 'libresplit.svg',
     install_mode: 'rw-r--r--',
 )
 
@@ -174,8 +179,7 @@ if clang_format.found()
         clang_format,
         args: [
             '--dry-run',
-            '--Werror',
-            libresplit_sources,
+            '--Werror', libresplit_sources,
         ],
         suite: 'format',
     )
@@ -185,8 +189,7 @@ if clang_format.found()
         clang_format,
         args: [
             '--dry-run',
-            '--Werror',
-            libresplit_ctl_sources,
+            '--Werror', libresplit_ctl_sources,
         ],
         suite: 'format',
     )

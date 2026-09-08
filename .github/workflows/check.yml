@@ -2,11 +2,22 @@ on: [push, pull_request]
 
 jobs:
     format-check:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04
 
         steps:
             - name: Checkout repository
-              uses: actions/checkout@v4
+              uses: actions/checkout@v7
+
+            # To install a specific clang-format version
+            - name: Setup Python
+              uses: actions/setup-python@v7
+              with:
+                python-version: "3.13"
+
+            - name: Install clang-format
+              run: |
+                python -m pip install "clang-format==22.1.8"
+                clang-format --version | grep -F "clang-format version 22.1.8"
 
             - name: Format files
               run: |
@@ -23,18 +34,18 @@ jobs:
                   fi
 
     linter-check:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-26.04
 
         steps:
             - name: Checkout repository
-              uses: actions/checkout@v4
+              uses: actions/checkout@v7
 
             - name: Install and cache dependencies
               uses: awalsh128/cache-apt-pkgs-action@latest
               with:
                   packages: >
                     meson
-                    libgtk-3-dev
+                    libgtk-4-dev
                     libx11-dev
                     libjansson-dev
                     libluajit-5.1-dev

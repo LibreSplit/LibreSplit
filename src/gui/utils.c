@@ -8,7 +8,7 @@
  */
 void add_class(GtkWidget* widget, const char* class)
 {
-    gtk_style_context_add_class(gtk_widget_get_style_context(widget), class);
+    gtk_widget_add_css_class(widget, class);
 }
 
 /**
@@ -19,5 +19,5 @@ void add_class(GtkWidget* widget, const char* class)
  */
 void remove_class(GtkWidget* widget, const char* class)
 {
-    gtk_style_context_remove_class(gtk_widget_get_style_context(widget), class);
+    gtk_widget_remove_css_class(widget, class);
 }

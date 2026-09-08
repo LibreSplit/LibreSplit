@@ -32,29 +32,24 @@ LSComponent* ls_component_timer_new(void)
     self->time = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
     add_class(self->time, "timer");
     add_class(self->time, "time");
-    gtk_widget_show(self->time);
 
     spacer = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
     gtk_widget_set_hexpand(spacer, TRUE);
-    gtk_container_add(GTK_CONTAINER(self->time), spacer);
-    gtk_widget_show(spacer);
+    gtk_box_append(GTK_BOX(self->time), spacer);
 
     self->time_seconds = gtk_label_new(NULL);
     add_class(self->time_seconds, "timer-seconds");
-    gtk_widget_set_valign(self->time_seconds, GTK_ALIGN_BASELINE);
-    gtk_container_add(GTK_CONTAINER(self->time), self->time_seconds);
-    gtk_widget_show(self->time_seconds);
+    gtk_widget_set_valign(self->time_seconds, GTK_ALIGN_BASELINE_FILL);
+    gtk_box_append(GTK_BOX(self->time), self->time_seconds);
 
     spacer = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     gtk_widget_set_valign(spacer, GTK_ALIGN_END);
-    gtk_container_add(GTK_CONTAINER(self->time), spacer);
-    gtk_widget_show(spacer);
+    gtk_box_append(GTK_BOX(self->time), spacer);
 
     self->time_millis = gtk_label_new(NULL);
     add_class(self->time_millis, "timer-millis");
-    gtk_widget_set_valign(self->time_millis, GTK_ALIGN_BASELINE);
-    gtk_container_add(GTK_CONTAINER(spacer), self->time_millis);
-    gtk_widget_show(self->time_millis);
+    gtk_widget_set_valign(self->time_millis, GTK_ALIGN_BASELINE_FILL);
+    gtk_box_append(GTK_BOX(spacer), self->time_millis);
 
     return (LSComponent*)self;
 }

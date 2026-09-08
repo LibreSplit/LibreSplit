@@ -34,22 +34,19 @@ LSComponent* ls_component_prev_segment_new(void)
     self->container = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
     add_class(self->container, "footer");
     add_class(self->container, "prev-segment-container");
-    gtk_widget_show(self->container);
 
     self->previous_segment_label = gtk_label_new(PREVIOUS_SEGMENT);
     add_class(self->previous_segment_label, "prev-segment-label");
     gtk_widget_set_halign(self->previous_segment_label,
         GTK_ALIGN_START);
     gtk_widget_set_hexpand(self->previous_segment_label, TRUE);
-    gtk_container_add(GTK_CONTAINER(self->container),
+    gtk_box_append(GTK_BOX(self->container),
         self->previous_segment_label);
-    gtk_widget_show(self->previous_segment_label);
 
     self->previous_segment = gtk_label_new(NULL);
     add_class(self->previous_segment, "prev-segment");
     gtk_widget_set_halign(self->previous_segment, GTK_ALIGN_END);
-    gtk_container_add(GTK_CONTAINER(self->container), self->previous_segment);
-    gtk_widget_show(self->previous_segment);
+    gtk_box_append(GTK_BOX(self->container), self->previous_segment);
 
     return (LSComponent*)self;
 }

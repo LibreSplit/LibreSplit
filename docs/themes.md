@@ -14,12 +14,13 @@ Also each split JSON file can apply their own themes by specifying a `theme` key
 2. Place the stylesheet under the `~/.config/libresplit/themes/<name>/<name>.css`directory where `name` is the name of your theme. If you have your `XDG_CONFIG_HOME` env var pointing somewhere else, you may need to change the directory accordingly.
 3. Theme variants should follow the pattern `<name>-<variant>.css`.
 
-See the [GtkCssProvider documentation](https://docs.gtk.org/gtk3/css-properties.html) for a list of supported CSS properties. Note that you can also modify the default font-family.
+See the [GTK 4 CSS properties documentation](https://docs.gtk.org/gtk4/css-properties.html) for a list of supported CSS properties. Note that you can also modify the default font-family.
 
 | LibreSplit CSS classes        | Explanation Where needed                                                                                                                                 |
 | ----------------------------- | -----------------------------------------------                                                                                                          |
-| `.window`                     | Any window of LibreSplit (editing this class might affect other LibreSplit windows)                                                                      |
-| `.window.main-window`         | LibreSplit's main timer window (this won't influence other LibreSplit windows)                                                                           |
+| `window`                      | Any window of LibreSplit (editing this class might affect other LibreSplit windows)                                                                      |
+| `.window.main-window`         | LibreSplit's main timer window - think of this like the main `<body>` of a standard webpage                                                              |
+| `.libresplit-content`         | LibreSplit's timer content container - this is like the top level `<div>` element who's parent is `<body>` that all the components are a descendant of   |
 | `.header`                     | The header, containing title and attempt counters                                                                                                        |
 | `.title`                      | The title of the category (set in the splits json file)                                                                                                  |
 | `.attempt-count`              | Counter for attempts in top right corner (#attempts_finished / attempts_total)                                                                           |
@@ -76,7 +77,7 @@ A more complex example: if your split is named "Space Station (Part 1)", the CSS
 
 ### How do I hide a section of LibreSplit?
 
-GTK does not have a built-in way of hiding pieces of the interface, but you can hide most items by setting the font-size to zero. For instance:
+GTK CSS does not have a built-in way of hiding pieces of the interface, but you can hide most items by setting the font-size to zero. For instance:
 
 ```css
 .segment-pb, .segment-best{
@@ -119,6 +120,6 @@ Yes! But you'll need to first erase all your desktop theme's (and LibreSplit's) 
 
 **WARNING:** If you use this rule without setting any others, LibreSplit won't look like a GTK (or an application) at all, and will be next to unusable.
 
-With the help of GTK's [CSS Overview](https://docs.gtk.org/gtk3/css-overview.html) you'll be able to customize everything, including Context Menus, The Help and Settings screens (to an extent).
+With the help of GTK's [CSS Overview](https://docs.gtk.org/gtk4/css-overview.html) you'll be able to customize everything, including Context Menus, The Help and Settings screens (to an extent).
 
 This is very advanced wizardry, so be careful!

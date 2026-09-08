@@ -9,15 +9,12 @@ void keybind_start_split(GtkWidget* widget, LSAppWindow* win)
 
 void keybind_stop_reset(const char* str, LSAppWindow* win)
 {
-    // NOTE: [Penaz] [2026-02-02] This needs to be put as a "delayed handler",
-    // ^ since it shows a dialog, such dialog would stop the event processing,
-    // ^ locking up LibreSplit or potentially the entire DE when global_hotkeys is enabled.
-    win->delayed_handlers.stop_reset = true;
+    timer_stop_or_reset(win);
 }
 
 void keybind_cancel(const char* str, LSAppWindow* win)
 {
-    win->delayed_handlers.cancel = true;
+    timer_cancel_run(win);
 }
 
 void keybind_skip(const char* str, LSAppWindow* win)
@@ -44,35 +41,51 @@ void keybind_toggle_win_on_top(const char* str, LSAppWindow* win)
  * Matches a Gdk key press event with a Keybind.
  *
  * @param kb The keybind to compare against.
- * @param key The Gdk event key that needs to be compared.
+ * @param keyval The key value that needs to be compared.
+ * @param state The active keyboard modifiers.
  *
  * @return Zero if the keybinds don't match, a non-zero value otherwise.
  */
-static int keybind_match(Keybind kb, GdkEventKey key)
+static int keybind_match(Keybind kb, guint keyval, GdkModifierType state)
 {
-    return key.keyval == kb.key && kb.mods == (key.state & gtk_accelerator_get_default_mod_mask());
+    return keyval == kb.key && kb.mods == (state & gtk_accelerator_get_default_mod_mask());
 }
 
-gboolean ls_app_window_keypress(GtkWidget* widget,
-    GdkEvent* event,
+/**
+ * @brief Handles user hotkeys when the window is focussed.
+ *
+ * @param controller The key event controller that received the event.
+ * @param keyval The GDK keyval representing the pressed key.
+ * @param keycode The actual keycode of the pressed key.
+ * @param state The active keyboard modifier flags.
+ * @param data The main LSAppWindow.
+ * @return gboolean Whether or not we handled the keypress event. Returning FALSE allows GTK to continue regular handling propagation.
+ */
+gboolean ls_app_window_keypress(GtkEventControllerKey* controller,
+    guint keyval,
+    guint keycode,
+    GdkModifierType state,
     gpointer data)
 {
     LSAppWindow* win = (LSAppWindow*)data;
-    if (keybind_match(win->keybinds.start_split, event->key)) {
+    if (keybind_match(win->keybinds.start_split, keyval, state)) {
         timer_start_split(win);
-    } else if (keybind_match(win->keybinds.stop_reset, event->key)) {
+    } else if (keybind_match(win->keybinds.stop_reset, keyval, state)) {
         timer_stop_or_reset(win);
-    } else if (keybind_match(win->keybinds.cancel, event->key)) {
+    } else if (keybind_match(win->keybinds.cancel, keyval, state)) {
         timer_cancel_run(win);
-    } else if (keybind_match(win->keybinds.unsplit, event->key)) {
+    } else if (keybind_match(win->keybinds.unsplit, keyval, state)) {
         timer_unsplit(win);
-    } else if (keybind_match(win->keybinds.skip_split, event->key)) {
+    } else if (keybind_match(win->keybinds.skip_split, keyval, state)) {
         timer_skip(win);
-    } else if (keybind_match(win->keybinds.toggle_decorations, event->key)) {
+    } else if (keybind_match(win->keybinds.toggle_decorations, keyval, state)) {
         toggle_decorations(win);
-    } else if (keybind_match(win->keybinds.toggle_win_on_top, event->key)) {
+    } else if (keybind_match(win->keybinds.toggle_win_on_top, keyval, state)) {
         toggle_win_on_top(win);
+    } else {
+        return FALSE;
     }
+
     return TRUE;
 }
 

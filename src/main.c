@@ -1,14 +1,12 @@
 #include "gui/app_window.h"
 #include "gui/dialogs.h"
 #include "gui/timer.h"
-#include "keybinds/keybinds_callbacks.h"
 #include "lasr/auto-splitter.h"
 #include "logging.h"
 #include "server.h"
 #include "settings/utils.h"
 #include "shared.h"
 #include "src/gui/dialogs.h"
-#include "src/keybinds/delayed_callbacks.h"
 
 #include <gtk/gtk.h>
 #include <jansson.h>
@@ -28,18 +26,13 @@ static LSApp* g_app = NULL;
 // Function to handle CTL commands from the server thread
 void handle_ctl_command(CTLCommand command)
 {
-    GList* windows;
-    LSAppWindow* win;
-
     if (!g_app) {
         LOG_INFO("No application instance available to handle commands");
         return;
     }
 
-    windows = gtk_application_get_windows(GTK_APPLICATION(g_app));
-    if (windows) {
-        win = LS_APP_WINDOW(windows->data);
-    } else {
+    LSAppWindow* win = ls_get_main_app_window(GTK_APPLICATION(g_app));
+    if (!win) {
         LOG_INFO("No window available to handle commands");
         return;
     }
@@ -67,7 +60,7 @@ void handle_ctl_command(CTLCommand command)
             break;
         case CTL_CMD_EXIT:
             LOG_DEBUG("Exit requested via Server Command");
-            exit(0);
+            gtk_window_destroy(GTK_WINDOW(win));
             break;
         default:
             LOG_INFOF("Unknown CTL command: %d", command);
@@ -108,7 +101,7 @@ int main(int argc, char* argv[])
 {
     // Check if app is running as root.
     if (geteuid() == 0 && !bypass_root_protection()) {
-        gtk_init(&argc, &argv);
+        gtk_init();
         display_root_warning_dialog();
         return 1;
     }
@@ -130,11 +123,12 @@ int main(int argc, char* argv[])
     pthread_t t3; // Logging Thread
     pthread_create(&t3, NULL, &loggingThread, NULL);
 
-    g_application_run(G_APPLICATION(g_app), argc, argv);
+    int status = g_application_run(G_APPLICATION(g_app), argc, argv);
 
     pthread_join(t1, NULL);
     pthread_join(t2, NULL);
     pthread_join(t3, NULL);
 
-    return 0;
+    g_clear_object(&g_app);
+    return status;
 }

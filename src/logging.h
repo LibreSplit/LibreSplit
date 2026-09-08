@@ -74,7 +74,7 @@ void* loggingThread(void* arg);
 #define LOG_WARNF(fmt, ...) LOGF([Warn], fmt, __VA_ARGS__);
 #else
 #define LOG_WARN(message)
-#define LOG_WARNF(message)
+#define LOG_WARNF(fmt, ...)
 #endif
 
 #if LOG_LEVEL <= LOG_LEVEL_ERR
@@ -82,5 +82,5 @@ void* loggingThread(void* arg);
 #define LOG_ERRF(fmt, ...) LOGF([ERR], fmt, __VA_ARGS__);
 #else
 #define LOG_ERR(message)
-#define LOG_ERRF(message)
+#define LOG_ERRF(fmt, ...)
 #endif
