@@ -1,6 +1,6 @@
-#include "help_dialog.h"
+#include "gui/help_dialog.h"
 #include "gdk-pixbuf/gdk-pixbuf.h"
-#include "src/logging.h"
+#include "logging.h"
 #include <gtk/gtk.h>
 #include <stdio.h>
 

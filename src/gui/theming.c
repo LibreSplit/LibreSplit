@@ -1,5 +1,5 @@
-#include "theming.h"
-#include "src/gui/app_window.h"
+#include "gui/theming.h"
+#include "gui/app_window.h"
 #include <linux/limits.h>
 #include <string.h>
 #include <sys/stat.h>

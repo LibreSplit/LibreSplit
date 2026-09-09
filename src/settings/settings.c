@@ -2,10 +2,9 @@
  *
  * Implementation of the settings management
  */
-#include "settings.h"
-
-#include "definitions.h"
-#include "utils.h"
+#include "settings/settings.h"
+#include "settings/definitions.h"
+#include "settings/utils.h"
 
 #include <linux/limits.h>
 #include <pwd.h>

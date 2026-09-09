@@ -2,7 +2,7 @@
  *
  * Implementation of the title component
  */
-#include "components.h"
+#include "gui/component/components.h"
 
 /**
  * @brief The component representing the title.

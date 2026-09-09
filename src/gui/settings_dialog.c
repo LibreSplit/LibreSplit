@@ -1,8 +1,8 @@
-#include "settings_dialog.h"
-#include "app_window.h"
-#include "src/logging.h"
-#include "src/settings/definitions.h"
-#include "src/settings/settings.h"
+#include "gui/settings_dialog.h"
+#include "gui/app_window.h"
+#include "logging.h"
+#include "settings/definitions.h"
+#include "settings/settings.h"
 
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #include <gdk/gdk.h>

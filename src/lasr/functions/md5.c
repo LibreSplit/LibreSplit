@@ -1,6 +1,6 @@
-#include "src/lasr/functions/md5.h"
+#include "lasr/functions/md5.h"
+#include "logging.h"
 #include "lua.h"
-#include "src/logging.h"
 #include <openssl/evp.h>
 #include <stdio.h>
 

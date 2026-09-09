@@ -93,6 +93,7 @@ void check_directories(void)
     char themes_directory[PATH_MAX];
     char splits_directory[PATH_MAX];
     char runs_directory[PATH_MAX];
+    char plugins_directory[PATH_MAX];
 
     strcpy(auto_splitters_directory, libresplit_directory);
     strcat(auto_splitters_directory, "/auto-splitters");
@@ -105,6 +106,9 @@ void check_directories(void)
 
     strcpy(runs_directory, libresplit_directory);
     strcat(runs_directory, "/runs");
+
+    strcpy(plugins_directory, libresplit_data_directory);
+    strcat(plugins_directory, "/plugins");
 
     // Make the libresplit data directory if it doesn't exist
     mkdir_p(libresplit_data_directory, 0755);
@@ -129,6 +133,11 @@ void check_directories(void)
 
     // Make the runs directory if it doesn't exist
     if (mkdir(runs_directory, 0755) == -1) {
+        // Directory already exists or there was an error
+    }
+
+    // Make the plugins directory if it doesn't exist
+    if (mkdir(plugins_directory, 0755) == -1) {
         // Directory already exists or there was an error
     }
 }

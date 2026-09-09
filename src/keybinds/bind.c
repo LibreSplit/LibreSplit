@@ -31,7 +31,7 @@
 #include <gdk/gdkx.h>
 #include <gtk/gtk.h>
 
-#include "bind.h"
+#include "keybinds/bind.h"
 
 /* Uncomment the next line to print a debug trace. */
 /* #define DEBUG */
