@@ -396,6 +396,18 @@ gboolean ls_app_window_step(gpointer data)
     }
 
     if (win->timer) {
+        if (atomic_load(&auto_splitter_enabled)) {
+            if (atomic_load(&run_using_game_time_call)) {
+                win->timer->usingGameTime = atomic_load(&run_using_game_time);
+                atomic_store(&run_using_game_time_call, false);
+            }
+            if (atomic_load(&update_game_time)) {
+                // Update the timer with the game time from auto-splitter
+                win->timer->gameTime = atomic_load(&game_time_value);
+                atomic_store(&update_game_time, false);
+            }
+        }
+
         ls_timer_step(win->timer);
 
         // printf("RTA: %llu; LT: %llu; LRT: %llu; GT: %llu; GT?: %d\n",
@@ -406,10 +418,6 @@ gboolean ls_app_window_step(gpointer data)
         //     win->timer->usingGameTime);
 
         if (atomic_load(&auto_splitter_enabled)) {
-            if (atomic_load(&run_using_game_time_call)) {
-                win->timer->usingGameTime = atomic_load(&run_using_game_time);
-                atomic_store(&run_using_game_time_call, false);
-            }
             if (atomic_load(&call_start)) {
                 timer_start(win);
                 atomic_store(&call_start, 0);
@@ -430,14 +438,8 @@ gboolean ls_app_window_step(gpointer data)
                 }
                 atomic_store(&toggle_loading, 0);
             }
-            if (atomic_load(&update_game_time)) {
-                // Update the timer with the game time from auto-splitter
-                win->timer->gameTime = atomic_load(&game_time_value);
-                atomic_store(&update_game_time, false);
-            }
             if (atomic_load(&call_reset)) {
                 timer_stop_and_reset(win);
-                atomic_store(&run_using_game_time_call, true);
                 atomic_store(&call_reset, 0);
             }
         }

@@ -1049,6 +1049,7 @@ static void reset_timer(ls_timer* timer)
     timer->realTime = -timer->game->start_delay; // Start delay only applies to real time only
     timer->gameTime = 0;
     timer->usingGameTime = false;
+    atomic_store(&run_using_game_time_call, true);
     timer->loading = false;
     timer->loadingTime = 0;
     timer->last_tick = 0;
