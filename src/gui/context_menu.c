@@ -135,6 +135,27 @@ void button_left_click(GtkGestureClick* gesture, double x, double y)
 }
 
 /**
+ * @brief Adds a styling class to the context menu and default styles.
+ * In particular, some themes that apply fractional scaling seem to clip
+ * the viewport. So we apply a 1px padding to the viewport as a workaround.
+ *
+ * @param menu The context menu widget.
+ */
+static void context_menu_style(GtkWidget* menu)
+{
+    gtk_widget_add_css_class(menu, "libresplit-context-menu");
+    GdkDisplay* display = gtk_widget_get_display(menu);
+    if (g_object_get_data(G_OBJECT(display), "libresplit-context-menu-style") != NULL) {
+        return;
+    }
+
+    GtkCssProvider* provider = gtk_css_provider_new();
+    gtk_css_provider_load_from_string(provider, "popover.libresplit-context-menu viewport { padding: 1px; }");
+    gtk_style_context_add_provider_for_display(display, GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+    g_object_set_data_full(G_OBJECT(display), "libresplit-context-menu-style", provider, g_object_unref);
+}
+
+/**
  * Creates the context menu and its window-scoped actions.
  *
  * @param win The application window that owns the menu
@@ -180,8 +201,10 @@ static void create_context_menu(LSAppWindow* win, gpointer app)
     g_object_unref(section);
 
     win->context_menu = gtk_popover_menu_new_from_model(G_MENU_MODEL(menu));
+    gtk_widget_set_halign(win->context_menu, GTK_ALIGN_START);
     gtk_popover_set_has_arrow(GTK_POPOVER(win->context_menu), FALSE);
     gtk_widget_set_parent(win->context_menu, GTK_WIDGET(win));
+    context_menu_style(win->context_menu);
     g_object_unref(menu);
 }
 

@@ -394,7 +394,7 @@ static gboolean dialog_present(gpointer user_data)
 
     GtkWidget* icon = new_icon_widget(request->icon);
     if (icon != NULL) {
-        gtk_image_set_icon_size(GTK_IMAGE(icon), GTK_ICON_SIZE_LARGE);
+        gtk_image_set_pixel_size(GTK_IMAGE(icon), DIALOG_ICON_SIZE);
         gtk_widget_set_valign(icon, GTK_ALIGN_START);
         gtk_box_append(GTK_BOX(body), icon);
     }

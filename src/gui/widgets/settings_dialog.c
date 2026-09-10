@@ -245,7 +245,7 @@ static gboolean build_settings_dialog(gpointer data)
     gtk_window_set_application(window, app);
     gtk_window_set_modal(window, TRUE);
     gtk_window_set_resizable(window, FALSE);
-    gtk_window_set_default_size(window, 500, 500);
+    gtk_window_set_default_size(window, 500, -1);
     gtk_window_set_transient_for(window, parent);
     gtk_window_set_destroy_with_parent(window, TRUE);
 
@@ -275,6 +275,8 @@ static gboolean build_settings_dialog(gpointer data)
 
         GtkWidget* page = gtk_scrolled_window_new();
         gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(page), GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
+        gtk_scrolled_window_set_propagate_natural_height(GTK_SCROLLED_WINDOW(page), TRUE);
+        gtk_scrolled_window_set_max_content_height(GTK_SCROLLED_WINDOW(page), 600);
         gtk_widget_set_hexpand(page, TRUE);
         gtk_widget_set_vexpand(page, TRUE);
 
