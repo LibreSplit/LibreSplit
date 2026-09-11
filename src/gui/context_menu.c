@@ -135,9 +135,17 @@ void button_left_click(GtkGestureClick* gesture, double x, double y)
 }
 
 /**
+ * @brief Style overrides for the context menu.
+ * Applies a 1px padding to the viewport to fix highlight clipping with fractional scaling themes.
+ * Applies default no hover stylings when nothing is hovered.
+ * Applies default unchecked checkbox border.
+ */
+static const char context_menu_styles[] = "popover.libresplit-context-menu viewport { padding: 1px; }\n"
+                                          ".libresplit-context-menu modelbutton:selected:not(:hover):not(:focus-visible):not(:disabled) { background-color: transparent; }\n"
+                                          ".libresplit-context-menu check:not(:checked):not(:indeterminate) { border-color: alpha(currentColor, 0.5); }";
+
+/**
  * @brief Adds a styling class to the context menu and default styles.
- * In particular, some themes that apply fractional scaling seem to clip
- * the viewport. So we apply a 1px padding to the viewport as a workaround.
  *
  * @param menu The context menu widget.
  */
@@ -150,7 +158,7 @@ static void context_menu_style(GtkWidget* menu)
     }
 
     GtkCssProvider* provider = gtk_css_provider_new();
-    gtk_css_provider_load_from_string(provider, "popover.libresplit-context-menu viewport { padding: 1px; }");
+    gtk_css_provider_load_from_string(provider, context_menu_styles);
     gtk_style_context_add_provider_for_display(display, GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
     g_object_set_data_full(G_OBJECT(display), "libresplit-context-menu-style", provider, g_object_unref);
 }
@@ -236,6 +244,7 @@ void button_right_click(GtkGestureClick* gesture, double x, double y, gpointer a
 
     gtk_gesture_set_state(GTK_GESTURE(gesture), GTK_EVENT_SEQUENCE_CLAIMED);
     gtk_popover_set_pointing_to(GTK_POPOVER(win->context_menu), &pointing_to);
+    gtk_window_set_focus_visible(GTK_WINDOW(win), FALSE);
     gtk_popover_popup(GTK_POPOVER(win->context_menu));
 }
 
