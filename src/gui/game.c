@@ -198,6 +198,7 @@ void ls_app_window_show_game(LSAppWindow* win)
         }
     }
 
+    ls_app_window_draw(win);
     gtk_widget_set_visible(win->box, TRUE);
     gtk_widget_set_visible(win->welcome_box->box, FALSE);
 }
