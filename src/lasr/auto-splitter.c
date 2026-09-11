@@ -372,6 +372,10 @@ void startup(lua_State* L)
 {
     call_va(L, "startup", "");
 
+    if (!atomic_load(&auto_splitter_enabled)) {
+        return;
+    }
+
     lua_getglobal(L, "refreshRate");
     if (lua_isnumber(L, -1)) {
         refresh_rate = lua_tointeger(L, -1);
