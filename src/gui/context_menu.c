@@ -141,8 +141,9 @@ void button_left_click(GtkGestureClick* gesture, double x, double y)
  * Applies default unchecked checkbox border.
  */
 static const char context_menu_styles[] = "popover.libresplit-context-menu viewport { padding: 1px; }\n"
+                                          ".libresplit-context-menu > contents { padding: 4px }\n"
                                           ".libresplit-context-menu modelbutton:selected:not(:hover):not(:focus-visible):not(:disabled) { background-color: transparent; color: inherit; }\n"
-                                          ".libresplit-context-menu check:not(:checked):not(:indeterminate) { border-color: alpha(currentColor, 0.5); }";
+                                          ".libresplit-context-menu check:not(:checked):not(:indeterminate) { border: 1px solid alpha(currentColor, 0.5); }";
 
 /**
  * @brief Adds a styling class to the context menu and default styles.
