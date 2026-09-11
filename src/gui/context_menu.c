@@ -137,6 +137,7 @@ void button_left_click(GtkGestureClick* gesture, double x, double y)
 /**
  * @brief Style overrides for the context menu.
  * Applies a 1px padding to the viewport to fix highlight clipping with fractional scaling themes.
+ * Applies a smaller padding to the context menu than gtk's default.
  * Applies default no hover stylings when nothing is hovered.
  * Applies default unchecked checkbox border.
  */
