@@ -1,4 +1,12 @@
 #include "definitions.h"
+#include "src/gui/theming.h"
+
+static const char* const appearance_choices[] = {
+    [APPEARANCE_SYSTEM] = "System",
+    [APPEARANCE_LIGHT] = "Light",
+    [APPEARANCE_DARK] = "Dark",
+    NULL,
+};
 
 /**
  * Main configuration structure with default values.
@@ -36,6 +44,13 @@ AppConfig cfg = {
             .type = CFG_BOOL,
             .value.b = false,
             .desc = "Enable Global Hotkeys",
+        },
+        .appearance = {
+            .key = "appearance",
+            .type = CFG_CHOICE,
+            .value.i = APPEARANCE_SYSTEM,
+            .desc = "Appearance",
+            .choices = appearance_choices,
         },
         .theme = {
             .key = "theme",

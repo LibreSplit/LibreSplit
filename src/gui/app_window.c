@@ -133,6 +133,18 @@ void ls_app_window_open(LSAppWindow* win, const char* file)
     }
 }
 
+void ls_app_startup(GApplication* app)
+{
+    G_APPLICATION_CLASS(ls_app_parent_class)->startup(app);
+
+    LOG_DEBUG("Initializing configuration");
+    if (!config_init()) {
+        LOG_WARN("Configuration failed to load, will use defaults");
+    }
+
+    ls_app_set_appearance(cfg.libresplit.appearance.value.i);
+}
+
 /**
  * Starts LibreSplit, loading the last splits and auto splitter.
  * Eventually opens some dialogs if there are no last splits or auto-splitters.
@@ -141,11 +153,6 @@ void ls_app_window_open(LSAppWindow* win, const char* file)
  */
 void ls_app_activate(GApplication* app)
 {
-    LOG_DEBUG("Initializing configuration");
-    if (!config_init()) {
-        LOG_WARN("Configuration failed to load, will use defaults");
-    }
-
     LSAppWindow* win;
     win = ls_app_window_new(LS_APP(app));
     gtk_window_present(GTK_WINDOW(win));
@@ -215,6 +222,7 @@ LSApp* ls_app_new(void)
 
 static void ls_app_class_init(LSAppClass* class)
 {
+    G_APPLICATION_CLASS(class)->startup = ls_app_startup;
     G_APPLICATION_CLASS(class)->activate = ls_app_activate;
     G_APPLICATION_CLASS(class)->open = ls_app_open;
 }

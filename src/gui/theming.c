@@ -195,3 +195,21 @@ void ls_app_load_theme_with_fallback(LSAppWindow* win, const char* name, const c
         }
     }
 }
+
+/**
+ * @brief Sets dark theme preference based on user settings.
+ * This doesn't do anything on systems with more advanced users stylings like
+ * KDE Plasma which provide overrides but can help for systems
+ * with no theming.
+ *
+ * @param appearance The user's appearance preference.
+ */
+void ls_app_set_appearance(Appearance appearance)
+{
+    GtkSettings* settings = gtk_settings_get_default();
+    if (appearance == APPEARANCE_SYSTEM) {
+        gtk_settings_reset_property(settings, "gtk-application-prefer-dark-theme");
+    } else {
+        g_object_set(settings, "gtk-application-prefer-dark-theme", appearance == APPEARANCE_DARK, NULL);
+    }
+}

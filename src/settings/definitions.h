@@ -8,7 +8,8 @@ typedef enum ConfigType {
     CFG_BOOL,
     CFG_INT,
     CFG_STRING,
-    CFG_KEYBIND
+    CFG_KEYBIND,
+    CFG_CHOICE
 } ConfigType;
 
 typedef union ConfigValue {
@@ -23,6 +24,7 @@ typedef struct ConfigEntry {
     const ConfigType type;
     ConfigValue value; // Serves as default value unless explicitly changed by user configuration
     const char* const desc;
+    const char* const* choices; // Config choice labels indexed by value.i
 } ConfigEntry;
 
 typedef struct LibreSplitConfig {
@@ -31,6 +33,7 @@ typedef struct LibreSplitConfig {
     ConfigEntry hide_cursor;
     ConfigEntry auto_splitter_enabled;
     ConfigEntry global_hotkeys;
+    ConfigEntry appearance;
     ConfigEntry theme;
     ConfigEntry theme_variant;
     ConfigEntry decimals;

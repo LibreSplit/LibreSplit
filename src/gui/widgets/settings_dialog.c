@@ -1,6 +1,7 @@
 #include "settings_dialog.h"
 #include "alert.h"
 #include "src/gui/app_window.h"
+#include "src/gui/theming.h"
 #include "src/logging.h"
 #include "src/settings/definitions.h"
 #include "src/settings/settings.h"
@@ -174,6 +175,14 @@ static void save_gui_settings(GtkButton* button, gpointer app)
                     setting_to_save.settings_entry->value.b = bool_value;
                     break;
                 }
+            case CFG_CHOICE:
+                {
+                    guint selected = gtk_drop_down_get_selected(GTK_DROP_DOWN(setting_to_save.widget));
+                    if (selected != GTK_INVALID_LIST_POSITION) {
+                        setting_to_save.settings_entry->value.i = (int)selected;
+                    }
+                    break;
+                }
             case CFG_INT:
                 {
                     const char* int_str_value = gtk_entry_buffer_get_text(setting_to_save.entry_buffer);
@@ -190,6 +199,7 @@ static void save_gui_settings(GtkButton* button, gpointer app)
         LSAppWindow* win = LS_APP_WINDOW(app);
         win->opts.decorated = cfg.libresplit.start_decorated.value.b;
         set_window_decorations(win);
+        ls_app_set_appearance(cfg.libresplit.appearance.value.i);
     }
 }
 
@@ -335,6 +345,19 @@ static gboolean build_settings_dialog(gpointer data)
                         gtk_check_button_set_active(GTK_CHECK_BUTTON(gui_settings[settings_idx].widget), entry.value.b);
                         gtk_widget_set_halign(gui_settings[settings_idx].widget, GTK_ALIGN_START);
                         gtk_grid_attach(GTK_GRID(grid), gui_settings[settings_idx].widget, 0, row, 2, 1);
+                        break;
+                    }
+                case CFG_CHOICE:
+                    {
+                        GtkWidget* label = new_setting_label(entry.desc);
+                        gtk_grid_attach(GTK_GRID(grid), label, 0, row, 1, 1);
+
+                        GtkWidget* dropdown = gtk_drop_down_new_from_strings(entry.choices);
+                        gtk_drop_down_set_selected(GTK_DROP_DOWN(dropdown), entry.value.i);
+                        gtk_accessible_update_relation(GTK_ACCESSIBLE(dropdown), GTK_ACCESSIBLE_RELATION_LABELLED_BY, label, NULL, -1);
+                        gtk_widget_set_hexpand(dropdown, TRUE);
+                        gtk_grid_attach(GTK_GRID(grid), dropdown, 1, row, 1, 1);
+                        gui_settings[settings_idx].widget = dropdown;
                         break;
                     }
                 case CFG_INT:
