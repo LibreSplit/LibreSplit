@@ -2,6 +2,8 @@
 
 #include "src/gui/app_window.h"
 
+#define GTK_STYLE_PROVIDER_PRIORITY_USER_THEME 900
+
 typedef enum Appearance {
     APPEARANCE_SYSTEM,
     APPEARANCE_LIGHT,
