@@ -6,6 +6,8 @@
 #include <gtk/gtk.h>
 #include <limits.h>
 
+#define SCROLL_TOLERANCE 0.5
+
 /**
  * @brief The component containing all the splits for the game.
  */
@@ -206,8 +208,6 @@ static GtkWidget* splits_widget(LSComponent* self)
 {
     return ((LSSplits*)self)->container;
 }
-
-#define SCROLL_TOLERANCE 0.5
 
 static void scroll_to_bottom(GtkAdjustment* adjustment, gpointer data)
 {
