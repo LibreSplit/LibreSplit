@@ -25,6 +25,7 @@ typedef struct ConfigEntry {
     ConfigValue value; // Serves as default value unless explicitly changed by user configuration
     const char* const desc;
     const char* const* choices; // Config choice labels indexed by value.i
+    bool hide; // Option to hide a config option from settings
 } ConfigEntry;
 
 typedef struct LibreSplitConfig {

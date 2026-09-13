@@ -1,5 +1,6 @@
 #include "src/gui/actions.h"
 #include "src/gui/app_window.h"
+#include "src/gui/backends/x11.h"
 #include "src/gui/widgets/help_dialog.h"
 #include "src/gui/widgets/settings_dialog.h"
 #include "src/lasr/auto-splitter.h"
@@ -203,7 +204,10 @@ static void create_context_menu(LSAppWindow* win, gpointer app)
     g_object_unref(section);
 
     section = g_menu_new();
-    g_menu_append(section, "Always on Top", "win.always-on-top");
+    if (is_x11_display()) {
+        g_menu_append(section, "Always on Top", "win.always-on-top");
+    }
+
     g_menu_append(section, "Settings", "win.settings");
     g_menu_append(section, "About and help", "win.about-and-help");
     g_menu_append_section(menu, NULL, G_MENU_MODEL(section));

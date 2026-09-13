@@ -157,7 +157,7 @@ void ls_app_load_theme_with_fallback(LSAppWindow* win, const char* name, const c
         gtk_style_context_add_provider_for_display(
             win->display,
             GTK_STYLE_PROVIDER(win->style),
-            GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+            GTK_STYLE_PROVIDER_PRIORITY_USER_THEME);
     }
 
     const bool found = ls_app_window_find_theme(win, name, variant, path);

@@ -305,6 +305,10 @@ static gboolean build_settings_dialog(gpointer data)
         for (size_t i = 0; i < section_info.count; ++i) {
             ConfigEntry entry = ((ConfigEntry*)section_info.entries)[i];
             gui_settings[settings_idx].settings_entry = &((ConfigEntry*)section_info.entries)[i];
+            if (entry.hide) {
+                continue;
+            }
+
             switch (entry.type) {
                 case CFG_STRING:
                     {

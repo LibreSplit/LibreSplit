@@ -6,9 +6,9 @@
 
 #include "./maps/maps.h"
 #include "functions.h"
+#include "src/logging.h"
 #include "utils.h"
 
-#include <assert.h>
 #include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
@@ -211,16 +211,28 @@ static int traceback(lua_State* L)
  */
 static void pcall_fix_traceback(lua_State* L, const char* func)
 {
-    if (!lua_isstring(L, -1))
+    if (!lua_isstring(L, -1)) {
         return;
+    }
+
     const char* trace = lua_tostring(L, -1);
     const char* last_line = strrchr(trace, '\n');
-    assert(last_line != NULL && "all stacktraces have at least one newline: the one following the error message");
-    // "\t/path/to/script.lua:line: in function </path/to/script.lua:line>"
-    assert(strlen(last_line) > strlen(auto_splitter_file) + 1);
-    const char* path = strchr(last_line + 1 + strlen(auto_splitter_file), '<'); // auto splitter path may contain a `<` character
-    if (path == NULL)
+    if (last_line == NULL) {
+        LOG_WARN("lua traceback: invalid trace, traceback should have at least one new line");
         return;
+    }
+
+    // "\t/path/to/script.lua:line: in function </path/to/script.lua:line>"
+    if (strlen(last_line) <= strlen(auto_splitter_file) + 1) {
+        // the trace should include the path and therefore be bigger.
+        return;
+    }
+
+    const char* path = strchr(last_line + 1 + strlen(auto_splitter_file), '<'); // auto splitter path may contain a `<` character
+    if (path == NULL) {
+        return;
+    }
+
     lua_pushlstring(L, trace, path - trace);
     lua_pushfstring(L, "'%s'", func);
     lua_concat(L, 2);

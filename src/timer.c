@@ -12,7 +12,6 @@
 
 #include "lasr/auto-splitter.h"
 
-#include <assert.h>
 #include <glib/gstdio.h>
 #include <limits.h>
 #include <stdatomic.h>
@@ -236,7 +235,12 @@ bool ls_time_lte_zero(ls_time time)
  */
 void ls_time_clear(ls_time* time)
 {
-    assert(time != NULL);
+    if (time == NULL) {
+        // This should never happen. If we ever receive a report of this we can add debug info to this warning.
+        LOG_WARN("NULL time passed to `ls_time_clear`");
+        return;
+    }
+
     time->game_time = 0;
     time->real_time = 0;
 }
@@ -1488,7 +1492,12 @@ void ls_timer_cancel(ls_timer* timer)
  */
 void json_time_get(const json_t* ref, ls_time* time)
 {
-    assert(time && ref);
+    if (ref == NULL || time == NULL) {
+        // This should never happen. If we ever receive a report of this we can add debug info to this warning.
+        LOG_WARN("NULL ref or time passed to `json_time_get`");
+        return;
+    }
+
     time->game_time = 0;
     time->real_time = 0;
     if (!json_is_object(ref)) {
@@ -1517,7 +1526,12 @@ void json_time_get(const json_t* ref, ls_time* time)
  */
 void json_time_set(json_t* ref, const ls_time* time)
 {
-    assert(time && ref);
+    if (ref == NULL || time == NULL) {
+        // This should never happen. If we ever receive a report of this we can add debug info to this warning.
+        LOG_WARN("NULL ref or time passed to `json_time_set`");
+        return;
+    }
+
     char str[256];
     ls_time_string_serialized(str, time->real_time);
     json_object_set_new(ref, "real_time", json_string(str));

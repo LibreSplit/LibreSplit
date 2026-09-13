@@ -1,4 +1,4 @@
-#include "src/gui/backends/x11.h"
+#include "x11.h"
 
 #include <gdk/x11/gdkx.h>
 
