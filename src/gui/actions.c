@@ -147,13 +147,21 @@ void open_activated(GSimpleAction* action,
     ls_file_picker_open(GTK_WINDOW(win), &options, open_splits_selected);
 }
 
+/**
+ * @brief Performs the actual save operation after split when run completes.
+ * This function returns gboolean for LSDialogCallback and GSourceFunc
+ * compatibility, but is effectively a void function in practice.
+ *
+ * @param window Pointer to the main LSAppWindow instance.
+ * @return gboolean Always G_SOURCE_REMOVE
+ */
 static gboolean perform_save_splits(gpointer window)
 {
     LSAppWindow* win = LS_APP_WINDOW(window);
 
     // don't allow saving while we're in some invalid state or we're in the middle of a run.
     if (win == NULL || win->game == NULL || win->timer == NULL || win->timer->started) {
-        return;
+        return G_SOURCE_REMOVE;
     }
 
     ls_game_update_splits(win->game, win->timer);

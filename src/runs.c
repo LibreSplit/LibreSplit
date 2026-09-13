@@ -1,6 +1,5 @@
 #include "runs.h"
 #include "logging.h"
-#include "src/gui/app_window.h"
 #include "src/settings/utils.h"
 #include <string.h>
 #include <sys/stat.h>
@@ -295,7 +294,7 @@ ls_runs_new_attempt_failed:
     return NULL;
 }
 
-static json_t* get_or_create_runs_history(const ls_game* game, const char* date, char* path, const GtkWindow* win, json_error_t* json_error)
+static json_t* get_or_create_runs_history(const ls_game* game, const char* date, char* path, GtkWindow* win, json_error_t* json_error)
 {
     const char* name = strrchr(game->path, '/');
     name = name ? name + 1 : game->path;
@@ -364,7 +363,7 @@ static json_t* get_or_create_runs_history(const ls_game* game, const char* date,
  * @param win The current gtk window instance.
  * @return int Any error code while saving.
  */
-int ls_runs_save(const ls_runs* snapshot, const ls_game* game, const GtkWindow* win)
+int ls_runs_save(const ls_runs* snapshot, const ls_game* game, GtkWindow* win)
 {
     LOG_DEBUG("Saving attempts history...");
 

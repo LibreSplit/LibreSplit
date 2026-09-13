@@ -222,7 +222,7 @@ static GtkWidget* new_setting_label(const char* text)
  * Builds the settings dialog.
  *
  * @param data The LibreSplit GTK Application
- * @return Whether or not to remove this function from the queue
+ * @return gboolean Whether or not to remove this function from the queue
  */
 static gboolean build_settings_dialog(gpointer data)
 {

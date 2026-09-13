@@ -45,7 +45,7 @@ static gboolean close_help_window_on_escape(GtkEventControllerKey* controller, g
  * Builds the help window
  *
  * @param data The LibreSplit GTK Application
- * @return Whether or not to remove this function from the queue
+ * @return gboolean Whether or not to remove this function from the queue
  */
 static gboolean build_help_dialog(gpointer data)
 {

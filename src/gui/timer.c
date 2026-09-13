@@ -123,9 +123,11 @@ void timer_stop_or_reset(LSAppWindow* win)
 /**
  * @brief Performs the actual cancellation of a run when it should be cancelled.
  * This maybe be called from the affirmitive action of a run reset warning dialog.
+ * This function returns gboolean for LSDialogCallback and GSourceFunc
+ * compatibility, but is effectively a void function in practice.
  *
  * @param window A pointer to the main LSAppWindow of the app.
- * @param bool always G_SOURCE_REMOVE
+ * @param gboolean always G_SOURCE_REMOVE
  */
 static gboolean perform_cancel_run(gpointer window)
 {
@@ -134,12 +136,12 @@ static gboolean perform_cancel_run(gpointer window)
     // autosplitter/global hotkey start sanity checks
     if (!win->timer) {
         LOG_WARN("Timer became null after confirm, cannot cancel run.");
-        return;
+        return G_SOURCE_REMOVE;
     }
 
     if (win->timer->running) {
         LOG_WARN("Timer started running after confirm, cannot cancel run.");
-        return;
+        return G_SOURCE_REMOVE;
     }
 
     ls_timer_cancel(win->timer);

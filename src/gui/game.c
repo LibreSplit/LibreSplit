@@ -217,7 +217,7 @@ void ls_app_window_show_game(LSAppWindow* win)
  * to close LibreSplit.
  *
  * @param data unused
- * @param bool always G_SOURCE_REMOVE
+ * @param gboolean always G_SOURCE_REMOVE
  */
 static gboolean ls_runs_clear_failure(gpointer data)
 {

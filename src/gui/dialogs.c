@@ -23,7 +23,7 @@ static void open_troubleshoot_page_finished(GObject* launcher_ref, GAsyncResult*
  * Opens the default browser on the LibreSplit troubleshooting documentation.
  *
  * @param user_data The parent window.
- * @return bool Always G_SOURCE_REMOVE
+ * @return gboolean Always G_SOURCE_REMOVE
  */
 static gboolean open_troubleshoot_page(gpointer user_data)
 {
