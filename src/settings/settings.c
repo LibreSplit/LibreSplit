@@ -3,6 +3,7 @@
  * Implementation of the settings management
  */
 #include "settings.h"
+#include "src/gui/backends/x11.h"
 
 #include "definitions.h"
 #include "utils.h"
@@ -97,6 +98,14 @@ static json_t* json_from_entry(const ConfigEntry* e)
 }
 
 /**
+ * @brief Perform actions on the cfg after initialization successfully completes.
+ */
+static void post_init(void)
+{
+    cfg.libresplit.start_on_top.hide = !is_x11_display();
+}
+
+/**
  * Loads settings.json and merge values with defaults.
  *
  * Loads JSON into `cfg` merging with defaults: defaults are already set,
@@ -142,6 +151,7 @@ bool config_init(void)
     }
 
     json_decref(root);
+    post_init();
     return true;
 }
 
