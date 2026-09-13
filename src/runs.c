@@ -15,15 +15,18 @@ static bool set_date(char* date)
 {
     time_t now = time(NULL);
     if (now == (time_t)-1) {
+        LOG_WARNF("failed to set time: %s", g_strerror(errno));
         return false;
     }
 
     struct tm local_time;
     if (localtime_r(&now, &local_time) == NULL) {
+        LOG_WARN("failed to format time in the user's locale");
         return false;
     }
 
     if (strftime(date, 16, "%Y-%m-%d", &local_time) == 0) {
+        LOG_WARN("failed to store the formatted time in the date buffer, the result might be longer than date's size");
         return false;
     }
 
@@ -43,6 +46,7 @@ int ls_runs_create(ls_runs** runs)
     ls_runs* self = calloc(1, sizeof(ls_runs));
     if (self == NULL) {
         error = 1;
+        LOG_WARN("failed to allocate memory for `ls_runs`");
         goto ls_runs_create_error;
     }
 
@@ -54,6 +58,7 @@ int ls_runs_create(ls_runs** runs)
     self->attempts = calloc(INITIAL_ATTEMPTS_ARRAY_SIZE, sizeof(ls_attempt*));
     if (self->attempts == NULL) {
         error = 1;
+        LOG_WARN("failed to allocate memory for the `ls_runs` attempts array");
         goto ls_runs_create_error;
     }
 

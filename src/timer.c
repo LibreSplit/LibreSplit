@@ -760,6 +760,17 @@ bool ls_timer_has_rainbow_split(const ls_timer* timer)
     return false;
 }
 
+/**
+ * @brief Returns whether or not there is some achievement that
+ * has not yet been saved. An achievement would be defined as
+ *
+ * * A PB
+ * * A new gold split
+ * * A new rainbow split
+ *
+ * @param timer The current timer instance.
+ * @return bool whether or not there is any unsaved achievement.
+ */
 bool ls_game_has_achievement(const ls_timer* timer)
 {
     if (!timer || !timer->game) {
@@ -930,6 +941,15 @@ int ls_game_save(const ls_game* game)
     return error;
 }
 
+/**
+ * @brief An event to indicate that the game has been saved.
+ * This could be used for a plugin system to handle post-save events
+ * via some hook.
+ *
+ * Once called, the unsaved bools get reset to false.
+ *
+ * @param game The current game instance.
+ */
 void ls_game_saved(ls_game* game)
 {
     if (!game) {
@@ -1153,6 +1173,7 @@ int ls_timer_start(ls_timer* timer)
 {
     // Don't allow starts while save operations are happening.
     if (is_saving()) {
+        LOG_DEBUG("Rejecting timer start while save operation is still happening");
         return false;
     }
 

@@ -291,6 +291,7 @@ void save_game(ls_game* game)
 
     save_data* snapshot = calloc(1, sizeof(save_data));
     if (snapshot == NULL) {
+        LOG_WARN("unable to allocate memory for the save_data wrapper struct");
         atomic_store(&saving, false);
         g_mutex_unlock(&save_mutex);
         return;
