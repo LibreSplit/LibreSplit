@@ -139,7 +139,7 @@ static bool ls_attempts_grow(ls_runs* self)
         LSAppWindow* win = ls_get_main_app_window();
         if (win && win->game) {
             // TODO: If this fails we don't handle it and then throw away attemp
-            ls_runs_save(self, win->game);
+            ls_runs_save(self, win->game, GTK_WINDOW(win));
         }
 
         return ls_runs_clear(self);
@@ -295,7 +295,7 @@ ls_runs_new_attempt_failed:
     return NULL;
 }
 
-static json_t* get_or_create_runs_history(const ls_game* game, const char* date, char* path, json_error_t* json_error)
+static json_t* get_or_create_runs_history(const ls_game* game, const char* date, char* path, const GtkWindow* win, json_error_t* json_error)
 {
     const char* name = strrchr(game->path, '/');
     name = name ? name + 1 : game->path;
@@ -328,8 +328,7 @@ static json_t* get_or_create_runs_history(const ls_game* game, const char* date,
     }
 
     len = (size_t)written;
-    LSAppWindow* win = ls_get_main_app_window();
-    if (!create_default_directory(game->title ? game->title : "runs history directory", path, 0755, win ? GTK_WINDOW(win) : NULL)) {
+    if (!create_default_directory(game->title ? game->title : "runs history directory", path, 0755, win)) {
         return NULL;
     }
 
@@ -361,15 +360,17 @@ static json_t* get_or_create_runs_history(const ls_game* game, const char* date,
  * Saves the current runs history snapshot to today's runs file.
  *
  * @param snapshot The runs snapshot to save.
+ * @param game The current game instance.
+ * @param win The current gtk window instance.
  * @return int Any error code while saving.
  */
-int ls_runs_save(const ls_runs* snapshot, const ls_game* game)
+int ls_runs_save(const ls_runs* snapshot, const ls_game* game, const GtkWindow* win)
 {
     LOG_DEBUG("Saving attempts history...");
 
     char path[PATH_MAX];
     json_error_t json_error = { 0 };
-    json_t* runs = get_or_create_runs_history(game, snapshot->date, path, &json_error);
+    json_t* runs = get_or_create_runs_history(game, snapshot->date, path, win, &json_error);
     if (!runs) {
         if (json_error.line) {
             LOG_ERRF("%s (%d:%d)", json_error.text, json_error.line, json_error.column);

@@ -46,4 +46,4 @@ void ls_runs_release(ls_runs* attempts);
 bool ls_runs_append(ls_runs* self, ls_attempt* attempt);
 bool ls_runs_clear(ls_runs* self);
 ls_attempt* ls_runs_new_attempt(ls_timer* timer, const char* reason);
-int ls_runs_save(const ls_runs* snapshot, const ls_game* game);
+int ls_runs_save(const ls_runs* snapshot, const ls_game* game, const GtkWindow* win);

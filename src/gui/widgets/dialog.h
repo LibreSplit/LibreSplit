@@ -25,9 +25,9 @@ G_BEGIN_DECLS
  * Null means that nothing needs to be notified and no action must be taken.
  *
  * @param user_data Pointer to user supplied data pass to ls_dialog_open
- *
+ * @return unused but makes functions compatible with GSourceFunc
  */
-typedef void (*LSDialogCallback)(gpointer user_data);
+typedef gboolean (*LSDialogCallback)(gpointer user_data);
 
 /**
  * Callback for handling a file picker selection.

@@ -23,12 +23,14 @@ static void open_troubleshoot_page_finished(GObject* launcher_ref, GAsyncResult*
  * Opens the default browser on the LibreSplit troubleshooting documentation.
  *
  * @param user_data The parent window.
+ * @return bool Always G_SOURCE_REMOVE
  */
-static void open_troubleshoot_page(gpointer user_data)
+static gboolean open_troubleshoot_page(gpointer user_data)
 {
     GtkWindow* parent = GTK_WINDOW(user_data);
     GtkUriLauncher* launcher = gtk_uri_launcher_new("https://github.com/LibreSplit/LibreSplit/wiki/troubleshooting");
     gtk_uri_launcher_launch(launcher, parent, NULL, open_troubleshoot_page_finished, NULL);
+    return G_SOURCE_REMOVE;
 }
 
 /**

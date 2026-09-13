@@ -1201,10 +1201,12 @@ int ls_timer_start(ls_timer* timer)
  * if user requests from a dialog option.
  *
  * @param data The `ls_game`
+ * @return bool always G_SOURCE_REMOVE
  */
-static void ls_dialog_save_game(gpointer data)
+static gboolean ls_dialog_save_game(gpointer data)
 {
     save_game((ls_game*)data);
+    return G_SOURCE_REMOVE;
 }
 
 static void ls_run_record(ls_timer* timer, const char* reason)

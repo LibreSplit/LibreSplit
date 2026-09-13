@@ -147,7 +147,7 @@ void open_activated(GSimpleAction* action,
     ls_file_picker_open(GTK_WINDOW(win), &options, open_splits_selected);
 }
 
-static void perform_save_splits(gpointer window)
+static gboolean perform_save_splits(gpointer window)
 {
     LSAppWindow* win = LS_APP_WINDOW(window);
 
@@ -158,6 +158,7 @@ static void perform_save_splits(gpointer window)
 
     ls_game_update_splits(win->game, win->timer);
     save_game(win->game);
+    return G_SOURCE_REMOVE;
 }
 
 /**
@@ -296,11 +297,13 @@ void close_activated(GSimpleAction* action,
  * @brief Perform the quit operation after agreeable checks.
  *
  * @param window pointer to the main application window
+ * @param bool always G_SOURCE_REMOVE
  */
-static void perform_quit(gpointer window)
+static gboolean perform_quit(gpointer window)
 {
     LSAppWindow* win = LS_APP_WINDOW(window);
     gtk_window_destroy(GTK_WINDOW(win));
+    return G_SOURCE_REMOVE;
 }
 
 /**

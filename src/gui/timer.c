@@ -125,8 +125,9 @@ void timer_stop_or_reset(LSAppWindow* win)
  * This maybe be called from the affirmitive action of a run reset warning dialog.
  *
  * @param window A pointer to the main LSAppWindow of the app.
+ * @param bool always G_SOURCE_REMOVE
  */
-static void perform_cancel_run(gpointer window)
+static gboolean perform_cancel_run(gpointer window)
 {
     LSAppWindow* win = window;
 
@@ -154,6 +155,8 @@ static void perform_cancel_run(gpointer window)
             component->ops->cancel_run(component, win->timer);
         }
     }
+
+    return G_SOURCE_REMOVE;
 }
 
 /**

@@ -343,10 +343,12 @@ static void ls_app_window_class_init(LSAppWindowClass* class)
  * This function performs the close operation after user confirmation.
  *
  * @param window The main application window
+ * @param bool always G_SOURCE_REMOVE
  */
 static void destroy_window_after_confirmation(gpointer window)
 {
     gtk_window_destroy(GTK_WINDOW(window));
+    return G_SOURCE_REMOVE;
 }
 
 /**

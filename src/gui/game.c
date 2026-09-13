@@ -217,10 +217,12 @@ void ls_app_window_show_game(LSAppWindow* win)
  * to close LibreSplit.
  *
  * @param data unused
+ * @param bool always G_SOURCE_REMOVE
  */
-static void ls_runs_clear_failure(gpointer data)
+static gboolean ls_runs_clear_failure(gpointer data)
 {
     gtk_window_destroy(GTK_WINDOW(ls_get_main_app_window()));
+    return G_SOURCE_REMOVE;
 }
 
 /**
@@ -243,13 +245,14 @@ static gpointer save_game_thread(gpointer data)
     }
 
     if (snapshot->runs) {
-        if (ls_runs_save(snapshot->runs, snapshot->game)) {
+        if (ls_runs_save(snapshot->runs, snapshot->game, win)) {
             ls_alert_warning(win, "Save Failed", "Save Failed", "We were unable to save your runs history.\nIf this continues check your logs for errors.");
             goto save_game_thread_finished;
         }
 
         // This should not be possible to fail, if it does we end up with a broken state so close LibreSplit
         if (!ls_runs_clear(snapshot->runs)) {
+            LOG_WARN("Runs history creation failed after clear - Closing LibreSplit");
             const LSDialogIcon icon = {
                 .source = "dialog-warning",
                 .type = LS_DIALOG_ICON_NAME,
@@ -265,12 +268,15 @@ static gpointer save_game_thread(gpointer data)
                 }
             };
 
-            ls_dialog_open(win,
+            if (!ls_dialog_open(win,
                 "LibreSplit",
                 "Unable to initialize new run history",
                 "Your run history saved successfully however we were unable to prepare LibreSplit for new runs.\n"
                 "LibreSplit will now close to prevent any corruption.",
-                &icon, options, G_N_ELEMENTS(options), NULL, NULL);
+                &icon, options, G_N_ELEMENTS(options), NULL, NULL)) {
+                // We couldn't even create a dialog, so just close.
+                g_idle_add_full(G_PRIORITY_HIGH, ls_runs_clear_failure, NULL, NULL);
+            }
         }
     }
 
