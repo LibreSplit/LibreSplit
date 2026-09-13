@@ -269,11 +269,11 @@ static gpointer save_game_thread(gpointer data)
             };
 
             if (!ls_dialog_open(win,
-                "LibreSplit",
-                "Unable to initialize new run history",
-                "Your run history saved successfully however we were unable to prepare LibreSplit for new runs.\n"
-                "LibreSplit will now close to prevent any corruption.",
-                &icon, options, G_N_ELEMENTS(options), NULL, NULL)) {
+                    "LibreSplit",
+                    "Unable to initialize new run history",
+                    "Your run history saved successfully however we were unable to prepare LibreSplit for new runs.\n"
+                    "LibreSplit will now close to prevent any corruption.",
+                    &icon, options, G_N_ELEMENTS(options), NULL, NULL)) {
                 // We couldn't even create a dialog, so just close.
                 g_idle_add_full(G_PRIORITY_HIGH, ls_runs_clear_failure, NULL, NULL);
             }
