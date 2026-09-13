@@ -63,16 +63,11 @@ static bool mkdir_p(const char* dir, mode_t permissions, const char* name)
  */
 void get_libresplit_data_folder_path(char* out_path)
 {
-    struct passwd* pw = getpwuid(getuid());
-    char* XDG_DATA_HOME = getenv("XDG_DATA_HOME");
-    char* base_dir = strcat(pw->pw_dir, "/.local/share/libresplit");
-    if (XDG_DATA_HOME != NULL) {
-        char config_dir[PATH_MAX] = { 0 };
-        strcpy(config_dir, XDG_DATA_HOME);
-        strcat(config_dir, "/libresplit");
-        strcpy(base_dir, config_dir);
+    int written = snprintf(out_path, PATH_MAX, "%s/libresplit", g_get_user_data_dir());
+    if (written < 0 || written >= PATH_MAX) {
+        LOG_WARN("LibreSplit data path is too long");
+        out_path[0] = '\0';
     }
-    strcpy(out_path, base_dir);
 }
 
 /**
@@ -82,16 +77,11 @@ void get_libresplit_data_folder_path(char* out_path)
  */
 void get_libresplit_folder_path(char* out_path)
 {
-    struct passwd* pw = getpwuid(getuid());
-    char* XDG_CONFIG_HOME = getenv("XDG_CONFIG_HOME");
-    char* base_dir = strcat(pw->pw_dir, "/.config/libresplit");
-    if (XDG_CONFIG_HOME != NULL) {
-        char config_dir[PATH_MAX] = { 0 };
-        strcpy(config_dir, XDG_CONFIG_HOME);
-        strcat(config_dir, "/libresplit");
-        strcpy(base_dir, config_dir);
+    int written = snprintf(out_path, PATH_MAX, "%s/libresplit", g_get_user_config_dir());
+    if (written < 0 || written >= PATH_MAX) {
+        LOG_WARN("LibreSplit config path is too long");
+        out_path[0] = '\0';
     }
-    strcpy(out_path, base_dir);
 }
 
 /**
