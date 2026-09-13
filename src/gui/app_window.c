@@ -114,6 +114,7 @@ LSAppWindow* ls_get_main_app_window(void)
 LSAppWindow* ls_app_window_get_default(LSApp* app)
 {
     if (main_win != NULL) {
+        LOG_INFO("LSAppWindow already initialized, returning singleton");
         return main_win;
     }
 
