@@ -634,6 +634,11 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
             }
         }
     }
+
+    atomic_init(&game->has_unsaved_pb, false);
+    atomic_init(&game->has_unsaved_gold, false);
+    atomic_init(&game->has_unsaved_rainbow, false);
+
 game_create_error:
     if (json) {
         json_decref(json);
@@ -680,7 +685,7 @@ void ls_game_update_splits(ls_game* game, const ls_timer* timer)
             if (split_time && split_time < pb_time) {
                 memcpy(game->split_times, timer->split_times, size);
                 memcpy(game->segment_times, timer->segment_times, size);
-                game->has_unsaved_pb = true;
+                atomic_store(&game->has_unsaved_pb, true);
             }
         }
 
@@ -694,28 +699,28 @@ void ls_game_update_splits(ls_game* game, const ls_timer* timer)
             if (split_time->game_time && split_time->game_time < best_split_time->game_time) {
                 best_split_time->game_time = split_time->game_time;
                 if (game->comparison_method == LS_GAME_TIME) {
-                    game->has_unsaved_rainbow = true;
+                    atomic_store(&game->has_unsaved_rainbow, true);
                 }
             }
             // update best real time splits
             if (split_time->real_time && split_time->real_time < best_split_time->real_time) {
                 best_split_time->real_time = split_time->real_time;
                 if (game->comparison_method == LS_REAL_TIME) {
-                    game->has_unsaved_rainbow = true;
+                    atomic_store(&game->has_unsaved_rainbow, true);
                 }
             }
             // update best game time segments
             if (segment_time->game_time && segment_time->game_time < best_segment_time->game_time) {
                 best_segment_time->game_time = segment_time->game_time;
                 if (game->comparison_method == LS_GAME_TIME) {
-                    game->has_unsaved_gold = true;
+                    atomic_store(&game->has_unsaved_gold, true);
                 }
             }
             // update best real time segments
             if (segment_time->real_time && segment_time->real_time < best_segment_time->real_time) {
                 best_segment_time->real_time = segment_time->real_time;
                 if (game->comparison_method == LS_REAL_TIME) {
-                    game->has_unsaved_gold = true;
+                    atomic_store(&game->has_unsaved_gold, true);
                 }
             }
         }
@@ -785,7 +790,7 @@ bool ls_game_has_achievement(const ls_timer* timer)
         return true;
     }
 
-    if (timer->game->has_unsaved_pb || timer->game->has_unsaved_gold || timer->game->has_unsaved_rainbow) {
+    if (atomic_load(&timer->game->has_unsaved_pb) || atomic_load(&timer->game->has_unsaved_gold) || atomic_load(&timer->game->has_unsaved_rainbow)) {
         return true;
     }
 
@@ -960,9 +965,9 @@ void ls_game_saved(ls_game* game)
         return;
     }
 
-    game->has_unsaved_pb = false;
-    game->has_unsaved_gold = false;
-    game->has_unsaved_rainbow = false;
+    atomic_store(&game->has_unsaved_pb, false);
+    atomic_store(&game->has_unsaved_gold, false);
+    atomic_store(&game->has_unsaved_rainbow, false);
 }
 
 /**

@@ -62,9 +62,9 @@ typedef struct ls_game {
     ls_time* segment_times;
     ls_time* best_splits;
     ls_time* best_segments;
-    bool has_unsaved_pb;
-    bool has_unsaved_gold;
-    bool has_unsaved_rainbow;
+    atomic_bool has_unsaved_pb;
+    atomic_bool has_unsaved_gold;
+    atomic_bool has_unsaved_rainbow;
 } ls_game;
 
 /**
