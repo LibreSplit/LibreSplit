@@ -69,6 +69,7 @@ typedef struct {
     LSDialogCallback callback; /**< Action to run on click, or NULL to do nothing/cancel */
     gboolean is_cancel; /**< Whether escape or window close selects this option */
     gboolean is_default; /**< Whether or not this option is the default focus */
+    gint priority; /**< Priority override, defaults to G_PRIORITY_DEFAULT (since that priority is 0) */
 } LSDialogOption;
 
 typedef struct {

@@ -565,7 +565,7 @@ gboolean ls_dialog_open(GtkWindow* parent,
     }
 
     dialog_count_inc();
-    g_idle_add_full(G_PRIORITY_DEFAULT, dialog_present, g_steal_pointer(&request), dialog_request_unref);
+    g_idle_add_full(options->priority, dialog_present, g_steal_pointer(&request), dialog_request_unref);
     return TRUE;
 }
 
