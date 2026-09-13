@@ -107,7 +107,7 @@ void open_activated(GSimpleAction* action,
         app = parameter;
     }
 
-    win = ls_app_window_new(LS_APP(app));
+    win = ls_app_window_get_default(LS_APP(app));
     if (win->timer && win->timer->running) {
         ls_alert_info(GTK_WINDOW(win), "LibreSplit", "The timer is currently running", "Please stop the run before changing splits.");
         return;
@@ -176,7 +176,7 @@ void save_activated(GSimpleAction* action,
         app = parameter;
     }
 
-    win = ls_app_window_new(LS_APP(app));
+    win = ls_app_window_get_default(LS_APP(app));
     if (win->game && win->timer) {
         int width, height;
         gtk_window_get_default_size(GTK_WINDOW(win), &width, &height);
@@ -242,7 +242,7 @@ void reload_activated(GSimpleAction* action,
         app = parameter;
     }
 
-    win = ls_app_window_new(LS_APP(app));
+    win = ls_app_window_get_default(LS_APP(app));
     if (win->game) {
         path = strdup(win->game->path);
         if (!path) {
@@ -270,7 +270,7 @@ void close_activated(GSimpleAction* action,
         app = parameter;
     }
 
-    win = ls_app_window_new(LS_APP(app));
+    win = ls_app_window_get_default(LS_APP(app));
     timer_stop_and_reset(win);
     save_game_join(false);
 
@@ -322,7 +322,7 @@ void quit_activated(GSimpleAction* action,
 
     atomic_store(&exit_requested, 1);
     LOG_DEBUG("Exit request sent to threads");
-    win = ls_app_window_new(LS_APP(app));
+    win = ls_app_window_get_default(LS_APP(app));
 
     // Warn if the quit will lose an achievement, and allow the user to cancel the quit if they want to keep it
     if (ls_game_has_achievement(win->timer)) {
@@ -361,7 +361,7 @@ void toggle_auto_splitter(GSimpleAction* action, GVariant* value, gpointer user_
 void menu_toggle_win_on_top(GSimpleAction* action, GVariant* value, gpointer app)
 {
     gboolean active = g_variant_get_boolean(value);
-    LSAppWindow* win = ls_app_window_new(LS_APP(app));
+    LSAppWindow* win = ls_app_window_get_default(LS_APP(app));
     x11_set_keep_above(GTK_WINDOW(win), active);
     win->opts.win_on_top = active;
     g_simple_action_set_state(action, value);
@@ -418,7 +418,7 @@ void open_auto_splitter(GSimpleAction* action,
         app = parameter;
     }
 
-    win = ls_app_window_new(LS_APP(app));
+    win = ls_app_window_get_default(LS_APP(app));
     if (win->timer && win->timer->running) {
         ls_alert_info(GTK_WINDOW(win), "LibreSplit", "The timer is currently running", "Please stop the run before changing the auto splitter.");
         return;

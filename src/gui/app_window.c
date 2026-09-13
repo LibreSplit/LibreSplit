@@ -92,7 +92,26 @@ static void ls_app_window_map(GtkWidget* widget, gpointer data)
     x11_set_keep_above(GTK_WINDOW(widget), win->opts.win_on_top);
 }
 
-LSAppWindow* ls_app_window_new(LSApp* app)
+/**
+ * @brief Returns the LibreSplit main app window.
+ * Use this when you don't want to initialize the main window
+ * if it has not already been and/or you don't have the main G_APP instance.
+ *
+ * @return LSAppWindow* The main application window or NULL if none exists.
+ */
+LSAppWindow* ls_get_main_app_window(void)
+{
+    return main_win;
+}
+
+/**
+ * @brief Creates and initializes the main window singleton.
+ * If it already exists, returns the existing singleton instead.
+ *
+ * @param app The main LSApp instance.
+ * @return LSAppWindow* The main app window instance.
+ */
+LSAppWindow* ls_app_window_get_default(LSApp* app)
 {
     if (main_win != NULL) {
         return main_win;
@@ -165,7 +184,7 @@ void ls_app_startup(GApplication* app)
  */
 void ls_app_activate(GApplication* app)
 {
-    LSAppWindow* win = ls_app_window_new(LS_APP(app));
+    LSAppWindow* win = ls_app_window_get_default(LS_APP(app));
     gtk_window_present(GTK_WINDOW(win));
 
     if (cfg.history.split_file.value.s[0] != '\0') {
@@ -206,7 +225,7 @@ void ls_app_open(GApplication* app,
     const gchar* hint)
 {
     LOG_DEBUG("Starting LibreSplit App");
-    LSAppWindow* win = ls_app_window_new(LS_APP(app));
+    LSAppWindow* win = ls_app_window_get_default(LS_APP(app));
 
     for (gint i = 0; i < n_files; i++) {
         gchar* path = g_file_get_path(files[i]);
@@ -523,16 +542,6 @@ gboolean ls_app_window_draw(gpointer data)
     }
 
     return TRUE;
-}
-
-/**
- * @brief Returns the LibreSplit main app window.
- *
- * @return LSAppWindow* The main application window or NULL if none exists.
- */
-LSAppWindow* ls_get_main_app_window(void)
-{
-    return main_win;
 }
 
 static void ls_app_window_init(LSAppWindow* win)

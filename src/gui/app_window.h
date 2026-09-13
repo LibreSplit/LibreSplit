@@ -68,7 +68,7 @@ void toggle_decorations(LSAppWindow* win);
 void toggle_win_on_top(LSAppWindow* win);
 
 LSAppWindow* ls_get_main_app_window(void);
-LSAppWindow* ls_app_window_new(LSApp* app);
+LSAppWindow* ls_app_window_get_default(LSApp* app);
 void ls_app_startup(GApplication* app);
 void ls_app_activate(GApplication* app);
 void ls_app_open(GApplication* app, GFile** files, gint n_files, const gchar* hint);
