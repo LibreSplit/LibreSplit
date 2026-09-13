@@ -238,18 +238,18 @@ static gpointer save_game_thread(gpointer data)
     GtkWindow* win = main_win ? GTK_WINDOW(main_win) : NULL;
     int result = ls_game_save(snapshot->game);
     if (result) {
-        ls_alert_warning(win, "Save Failed", "Save Failed", "We were unable to save your game.\n If this continues check your logs for errors.");
+        ls_alert_warning(win, "Save Failed", "Save Failed", "We were unable to save your game.\nIf this continues check your logs for errors.");
         goto save_game_thread_finished;
     }
 
     if (snapshot->runs) {
         if (ls_runs_save(snapshot->runs, snapshot->game)) {
-            ls_alert_warning(win, "Save Failed", "Save Failed", "We were unable to save your runs history.\n If this continues check your logs for errors.");
+            ls_alert_warning(win, "Save Failed", "Save Failed", "We were unable to save your runs history.\nIf this continues check your logs for errors.");
             goto save_game_thread_finished;
         }
 
         // This should not be possible to fail, if it does we end up with a broken state so close LibreSplit
-        if (!ls_runs_clear(snapshot->runs) || true) {
+        if (!ls_runs_clear(snapshot->runs)) {
             const LSDialogIcon icon = {
                 .source = "dialog-warning",
                 .type = LS_DIALOG_ICON_NAME,
