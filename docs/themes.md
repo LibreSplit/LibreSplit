@@ -78,6 +78,8 @@ A more complex example: if your split is named "Space Station (Part 1)", the CSS
 As hinted at above, themes can also supply variants in your themes directory by providing another css file named `<theme>-<variant>.css`.
 The theming system applies your base theme css, and then your variant on top of it taking precedence so you can apply overrides to anything
 your variant needs to provide the slightly different look/feel over the base theme without having to redefine the entire theme for each variant.
+A theme variant must supplement a base theme. Which means a base `<theme>.css` file must exist alongside your `<theme>-<variant>.css` so that
+the variant works alongside the theme.
 
 ## FAQ
 
