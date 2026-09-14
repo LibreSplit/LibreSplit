@@ -189,6 +189,8 @@ void ls_app_window_show_game(LSAppWindow* win)
     // set game theme (if it is set)
     if (win->game->theme) {
         ls_app_load_theme_with_fallback(win, win->game->theme, win->game->theme_variant);
+    } else {
+        ls_app_load_theme_with_fallback(win, cfg.libresplit.theme.value.s, cfg.libresplit.theme_variant.value.s);
     }
 
     for (l = win->components; l != NULL; l = l->next) {

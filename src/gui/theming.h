@@ -3,6 +3,7 @@
 #include "src/gui/app_window.h"
 
 #define GTK_STYLE_PROVIDER_PRIORITY_USER_THEME 900
+#define GTK_STYLE_PROVIDER_PRIORITY_USER_THEME_VARIANT 1000
 
 typedef enum Appearance {
     APPEARANCE_SYSTEM,
