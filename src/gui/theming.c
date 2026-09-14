@@ -150,8 +150,8 @@ static bool load_theme_css(const LSAppWindow* win, GtkCssProvider* provider, con
     g_signal_handler_disconnect(provider, error_handler);
     if (error != NULL) {
         const char* msg = variant
-                        ? "Your main theme was applied but your variant had an error which prevented it from loading"
-                        : "Your main theme had an error which prevented it from loading";
+            ? "Your main theme was applied but your variant had an error which prevented it from loading"
+            : "Your main theme had an error which prevented it from loading";
 
         ls_alert_info(GTK_WINDOW(win), "LibreSplit", "Theme Not Found", msg);
         LOG_ERRF("Error loading custom theme \"%s\" (variant: \"%s\"): %s", name ? name : "", variant ? variant : "", error->message);
