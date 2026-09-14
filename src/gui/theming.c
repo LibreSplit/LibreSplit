@@ -1,6 +1,6 @@
 #include "theming.h"
-#include "src/logging.h"
 #include "src/gui/app_window.h"
+#include "src/logging.h"
 #include <linux/limits.h>
 #include <string.h>
 #include <sys/stat.h>
