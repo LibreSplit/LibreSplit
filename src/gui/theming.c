@@ -1,4 +1,5 @@
 #include "theming.h"
+#include "src/logging.h"
 #include "src/gui/app_window.h"
 #include <linux/limits.h>
 #include <string.h>
@@ -136,7 +137,7 @@ static bool load_theme_css(const LSAppWindow* win, GtkCssProvider* provider, con
 {
     char path[PATH_MAX];
     if (!ls_app_window_find_theme(win, name, variant, path)) {
-        g_printerr("Theme not found: \"%s\" (variant: \"%s\")\n", name ? name : "", variant ? variant : "");
+        LOG_ERRF("Theme not found: \"%s\" (variant: \"%s\")", name ? name : "", variant ? variant : "");
         return false;
     }
 
@@ -145,7 +146,7 @@ static bool load_theme_css(const LSAppWindow* win, GtkCssProvider* provider, con
     gtk_css_provider_load_from_path(provider, path);
     g_signal_handler_disconnect(provider, error_handler);
     if (error != NULL) {
-        g_printerr("Error loading custom theme \"%s\" (variant: \"%s\"): %s\n", name ? name : "", variant ? variant : "", error->message);
+        LOG_ERRF("Error loading custom theme \"%s\" (variant: \"%s\"): %s", name ? name : "", variant ? variant : "", error->message);
         g_error_free(error);
         return false;
     }
