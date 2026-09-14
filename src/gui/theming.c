@@ -1,5 +1,6 @@
 #include "theming.h"
 #include "src/gui/app_window.h"
+#include "src/gui/widgets/alert.h"
 #include "src/logging.h"
 #include <linux/limits.h>
 #include <string.h>
@@ -137,7 +138,9 @@ static bool load_theme_css(const LSAppWindow* win, GtkCssProvider* provider, con
 {
     char path[PATH_MAX];
     if (!ls_app_window_find_theme(win, name, variant, path)) {
-        LOG_ERRF("Theme not found: \"%s\" (variant: \"%s\")", name ? name : "", variant ? variant : "");
+        const char* msg = variant ? "Your main theme was applied but we could not find your variant" : "Your main theme was not found";
+        ls_alert_info(GTK_WINDOW(win), "LibreSplit", "Theme Not Found", msg);
+        LOG_WARNF("Theme not found: \"%s\" (variant: \"%s\")", name ? name : "", variant ? variant : "");
         return false;
     }
 
@@ -146,6 +149,11 @@ static bool load_theme_css(const LSAppWindow* win, GtkCssProvider* provider, con
     gtk_css_provider_load_from_path(provider, path);
     g_signal_handler_disconnect(provider, error_handler);
     if (error != NULL) {
+        const char* msg = variant
+                        ? "Your main theme was applied but your variant had an error which prevented it from loading"
+                        : "Your main theme had an error which prevented it from loading";
+
+        ls_alert_info(GTK_WINDOW(win), "LibreSplit", "Theme Not Found", msg);
         LOG_ERRF("Error loading custom theme \"%s\" (variant: \"%s\"): %s", name ? name : "", variant ? variant : "", error->message);
         g_error_free(error);
         return false;
