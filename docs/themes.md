@@ -73,6 +73,12 @@ For instance, if your split is titled "First split", it can be styled by targeti
 
 A more complex example: if your split is named "Space Station (Part 1)", the CSS class will be `.split-title-space-station--part-1-` (because the parentheses will become hyphens).
 
+## Theme Variants
+
+As hinted at above, themes can also supply variants in your themes directory by providing another css file named `<theme>-<variant>.css`.
+The theming system applies your base theme css, and then your variant on top of it taking precedence so you can apply overrides to anything
+your variant needs to provide the slightly different look/feel over the base theme without having to redefine the entire theme for each variant.
+
 ## FAQ
 
 ### How do I hide a section of LibreSplit?
