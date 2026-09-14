@@ -200,7 +200,7 @@ static void save_gui_settings(GtkButton* button, gpointer app)
         win->opts.decorated = cfg.libresplit.start_decorated.value.b;
         set_window_decorations(win);
         ls_app_set_appearance(cfg.libresplit.appearance.value.i);
-        if (!win->game->theme) {
+        if (!win->game || !win->game->theme) {
             ls_app_load_theme_with_fallback(win, cfg.libresplit.theme.value.s, cfg.libresplit.theme_variant.value.s);
         }
     }
