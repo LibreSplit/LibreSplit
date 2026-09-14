@@ -44,7 +44,8 @@ typedef struct ls_runs {
 
 int ls_runs_create(ls_runs** attempts);
 void ls_runs_release(ls_runs* attempts);
-bool ls_runs_append(ls_runs* self, ls_attempt* attempt);
+void ls_runs_append(ls_runs* self, ls_attempt* attempt, GtkWindow* win);
 bool ls_runs_clear(ls_runs* self);
 ls_attempt* ls_runs_new_attempt(ls_timer* timer, const char* reason);
 int ls_runs_save(const ls_runs* snapshot, const ls_game* game, GtkWindow* win);
+void ls_runs_clear_failed(GtkWindow* win);

@@ -1252,8 +1252,7 @@ static void ls_run_record(ls_timer* timer, const char* reason)
         return;
     }
 
-    // TODO: Should we close LibreSplit if this hypothetically fails?
-    ls_runs_append(win->runs, attempt);
+    ls_runs_append(win->runs, attempt, GTK_WINDOW(win));
 }
 
 /**

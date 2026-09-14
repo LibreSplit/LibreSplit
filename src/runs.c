@@ -1,8 +1,17 @@
 #include "runs.h"
 #include "logging.h"
+#include "src/gui/widgets/alert.h"
 #include "src/settings/utils.h"
 #include <string.h>
 #include <sys/stat.h>
+
+typedef enum LSGrowResult {
+    LS_GROW_SUCCEEDED,
+    LS_GROW_AT_MAX_CAPACITY,
+    LS_GROW_REALLOC_FAILED,
+} LSGrowResult;
+
+static void ls_runs_clear_failure_show(ls_runs* self, GtkWindow* win);
 
 /**
  * @brief Sets today's date to the date buffer in YYYY-MM-DD format.
@@ -132,16 +141,10 @@ void ls_runs_release(ls_runs* self)
  * @param self The runs instance
  * @return bool Whether or not the reallocation succeeded
  */
-static bool ls_attempts_grow(ls_runs* self)
+static LSGrowResult ls_attempts_grow(ls_runs* self)
 {
     if (self->size >= MAX_ATTEMPTS_ARRAY_CAPACITTY) {
-        LSAppWindow* win = ls_get_main_app_window();
-        if (win && win->game) {
-            // TODO: If this fails we don't handle it and then throw away attemp
-            ls_runs_save(self, win->game, GTK_WINDOW(win));
-        }
-
-        return ls_runs_clear(self);
+        return LS_GROW_AT_MAX_CAPACITY;
     }
 
     size_t new_size = self->size + ((size_t)(self->size / 2));
@@ -153,7 +156,7 @@ static bool ls_attempts_grow(ls_runs* self)
     ls_attempt** new_attempts = realloc(self->attempts, new_size * sizeof(ls_attempt*));
     if (new_attempts == NULL) {
         LOG_WARNF("unable to reallocate runs to new size of: %zu", new_size);
-        return false;
+        return LS_GROW_REALLOC_FAILED;
     }
 
     self->attempts = new_attempts;
@@ -161,7 +164,150 @@ static bool ls_attempts_grow(ls_runs* self)
 
     // NULL new memory block
     memset(self->attempts + old_size, 0, (new_size - old_size) * sizeof(ls_attempt*));
-    return true;
+    return LS_GROW_SUCCEEDED;
+}
+
+/**
+ * @brief Callback handler for the failure alert of `ls_runs_clear`
+ * to close LibreSplit.
+ *
+ * @param data unused
+ * @param gboolean always G_SOURCE_REMOVE
+ */
+static gboolean ls_runs_clear_failure(gpointer data)
+{
+    gtk_window_destroy(GTK_WINDOW(ls_get_main_app_window()));
+    return G_SOURCE_REMOVE;
+}
+
+/**
+ * @brief Wrapper for ls_runs_clear for internal dialog callbacks
+ * with error handling.
+ *
+ * @param data Pointer to self.
+ * @return gboolean void in practice, gboolean for GSourceFunc
+ */
+static gboolean ls_runs_clear_callback(gpointer data)
+{
+    ls_runs* self = data;
+    if (!ls_runs_clear(self)) {
+        // this callback is on the main gtk thread, safe to fetch win singleton
+        ls_runs_clear_failed(GTK_WINDOW(ls_get_main_app_window()));
+    }
+
+    return G_SOURCE_REMOVE;
+}
+
+/**
+ * @brief Wrapper for ls_runs_clear_callback that saves the user's run first.
+ *
+ * @param data Pointer to self.
+ * @return gboolean void in practice, gboolean for GSourceFunc
+ */
+static gboolean ls_runs_clear_callback_with_save(gpointer data)
+{
+    ls_runs* self = data;
+    LSAppWindow* win = ls_get_main_app_window();
+    GtkWindow* window = GTK_WINDOW(win);
+    if (!ls_runs_save(self, win->game, window)) {
+        // this could be a temporary file save error so give the user the chance to recover before throwing their data away.
+        ls_alert_warning(window, "Save Failed", "Save Failed", "We were unable to save your runs history.\nIf this continues check your logs for errors.");
+        ls_runs_clear_failure_show(self, window);
+        return G_SOURCE_REMOVE;
+    }
+
+    ls_runs_clear_callback(self);
+    return G_SOURCE_REMOVE;
+}
+
+/**
+ * @brief On ls_runs_clear failure, shows an error to the user with recovery attempts.
+ *
+ * @param self The runs instance.
+ * @param win The main window, used for parenting any potential error dialogs.
+ */
+static void ls_runs_clear_failure_show(ls_runs* self, GtkWindow* win)
+{
+    const LSDialogIcon icon = {
+        .source = "dialog-warning",
+        .type = LS_DIALOG_ICON_NAME,
+    };
+
+    const LSDialogOption options[] = {
+        {
+            .label = "_Yes",
+            .callback = ls_runs_clear_callback_with_save,
+            .is_cancel = FALSE,
+            .is_default = TRUE,
+        },
+        {
+            .label = "_No",
+            .callback = ls_runs_clear_callback,
+            .is_cancel = TRUE,
+            .is_default = FALSE,
+        }
+    };
+
+    if (!ls_dialog_open(win,
+            "LibreSplit",
+            "Warning: Runs at Capacity",
+            "You have reached the maximum capacity of attempts we store in memory (that's... impressive...)\n"
+            "To prevent unnecessary RAM usage we will now clear your attempts and any unsaved data will be lost.\n"
+            "Would you like us to save your splits now first?",
+            &icon,
+            options,
+            G_N_ELEMENTS(options), self, NULL)) {
+        // We don't even have memory for a dialog, sorry your data is gone
+        if (!ls_runs_clear(self)) {
+            g_idle_add_full(G_PRIORITY_HIGH, ls_runs_clear_failure, NULL, NULL);
+        }
+    }
+}
+
+/**
+ * @brief On ls_attempts_grow reallocation failure, shows an error to the user with recovery attempts.
+ * This should be an exceedingly rare occurance under extreme circumstances.
+ * Recovery is best effort but can not be guaranteed at this point.
+ *
+ * @param self The runs instance.
+ * @param win The main window, used for parenting any potential error dialogs.
+ */
+static void ls_attempts_realloc_failure_show(ls_runs* self, GtkWindow* win)
+{
+    const LSDialogIcon icon = {
+        .source = "dialog-warning",
+        .type = LS_DIALOG_ICON_NAME,
+    };
+
+    const LSDialogOption options[] = {
+        {
+            .label = "_Yes",
+            .callback = ls_runs_clear_callback_with_save,
+            .is_cancel = FALSE,
+            .is_default = TRUE,
+        },
+        {
+            .label = "_No",
+            .callback = ls_runs_clear_callback,
+            .is_cancel = TRUE,
+            .is_default = FALSE,
+        }
+    };
+
+    if (!ls_dialog_open(win,
+            "LibreSplit",
+            "Warning: Unable to Store New Attempts",
+            "We're currently unable to store any new unsaved attempts and need to clear your current unsaved attempts.\n"
+            "Would you like to save your splits first?",
+            &icon,
+            options,
+            G_N_ELEMENTS(options), self, NULL)) {
+        // We don't even have memory for a dialog, let's try to save and clear.
+        if (!ls_runs_save(self, LS_APP_WINDOW(win)->game, win) || !ls_runs_clear(self)) {
+            // Well, we tried.
+            g_idle_add_full(G_PRIORITY_HIGH, ls_runs_clear_failure, NULL, NULL);
+        }
+    }
 }
 
 /**
@@ -175,16 +321,25 @@ static bool ls_attempts_grow(ls_runs* self)
  *
  * @param self The runs instance.
  * @param attempt The attempt instance to append to runs.
- * @return Whether or not the array grew successfully. When no growth is needed, always true.
+ * @param win The main window, used for parenting any potential error dialogs.
  */
-bool ls_runs_append(ls_runs* self, ls_attempt* attempt)
+void ls_runs_append(ls_runs* self, ls_attempt* attempt, GtkWindow* win)
 {
     self->attempts[self->count++] = attempt;
-    if (self->count == self->size) {
-        return ls_attempts_grow(self);
+    if (self->count == self->size || true) {
+        LSGrowResult result = ls_attempts_grow(self);
+        result = LS_GROW_AT_MAX_CAPACITY;
+        switch (result) {
+            case LS_GROW_SUCCEEDED:
+                break;
+            case LS_GROW_AT_MAX_CAPACITY:
+                ls_runs_clear_failure_show(self, win);
+                break;
+            case LS_GROW_REALLOC_FAILED:
+                ls_attempts_realloc_failure_show(self, win);
+                break;
+        }
     }
-
-    return true;
 }
 
 /**
@@ -431,4 +586,39 @@ int ls_runs_save(const ls_runs* snapshot, const ls_game* game, GtkWindow* win)
 
     json_decref(runs);
     return error;
+}
+
+/**
+ * @brief Handles a run clear failure by informing the user what happened
+ * and then closing the app.
+ *
+ * @param win The current window instance.
+ */
+void ls_runs_clear_failed(GtkWindow* win)
+{
+    LOG_WARN("Runs history creation failed after clear - Closing LibreSplit");
+    const LSDialogIcon icon = {
+        .source = "dialog-warning",
+        .type = LS_DIALOG_ICON_NAME,
+    };
+
+    const LSDialogOption options[] = {
+        {
+            .label = "_OK",
+            .callback = ls_runs_clear_failure,
+            .is_cancel = FALSE,
+            .is_default = TRUE,
+            .priority = G_PRIORITY_HIGH,
+        }
+    };
+
+    if (!ls_dialog_open(win,
+            "LibreSplit",
+            "Unable to initialize new run history",
+            "Your run history saved successfully however we were unable to prepare LibreSplit for new runs.\n"
+            "LibreSplit will now close to prevent any corruption.",
+            &icon, options, G_N_ELEMENTS(options), NULL, NULL)) {
+        // We couldn't even create a dialog, so just close.
+        g_idle_add_full(G_PRIORITY_HIGH, ls_runs_clear_failure, NULL, NULL);
+    }
 }
