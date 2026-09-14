@@ -57,7 +57,7 @@ static bool mkdir_p(const char* dir, mode_t permissions, const char* name)
 }
 
 /**
- * Copies the user's livesplit data path in a given string.
+ * Copies the user's LibreSplit data path in a given string.
  *
  * @param out_path The string to copy the data path into.
  */
@@ -71,7 +71,7 @@ void get_libresplit_data_folder_path(char* out_path)
 }
 
 /**
- * Copies the user's livesplit configuration path in a given string.
+ * Copies the user's LibreSplit configuration path in a given string.
  *
  * @param out_path The string to copy the configuration path into.
  */
