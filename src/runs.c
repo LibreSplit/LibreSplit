@@ -177,8 +177,7 @@ static LSGrowResult ls_attempts_grow(ls_runs* self)
  */
 static gboolean ls_runs_clear_failure(gpointer data)
 {
-    gtk_window_destroy(GTK_WINDOW(ls_get_main_app_window()));
-    return G_SOURCE_REMOVE;
+    return ls_app_window_quit(ls_get_main_app_window());
 }
 
 /**

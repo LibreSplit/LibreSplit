@@ -77,6 +77,7 @@ LSApp* ls_app_new(void);
 void ls_app_window_open(LSAppWindow* win, const char* file);
 
 gboolean ls_app_window_step(gpointer data);
+gboolean ls_app_window_quit(gpointer window);
 void ls_app_window_destroy(GtkWidget* widget, gpointer data);
 void ls_app_window_set_blocked(gboolean block_window);
 gboolean ls_app_window_draw(gpointer data);

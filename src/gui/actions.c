@@ -311,8 +311,7 @@ static gboolean perform_quit(gpointer window)
 {
     atomic_store(&exit_requested, 1);
     LSAppWindow* win = LS_APP_WINDOW(window);
-    gtk_window_destroy(GTK_WINDOW(win));
-    return G_SOURCE_REMOVE;
+    return ls_app_window_quit(win);
 }
 
 /**

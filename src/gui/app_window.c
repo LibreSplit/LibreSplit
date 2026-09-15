@@ -339,14 +339,15 @@ static void ls_app_window_class_init(LSAppWindowClass* class)
 }
 
 /**
- * @brief The user was presented a confirm reset dialog while closing the app and chose yes.
- * This function performs the close operation after user confirmation.
+ * @brief Quit LibreSplit after any save operation completes.
+ * Usable by callbacks and gtk thread queues.
  *
  * @param window The main application window
  * @param gboolean always G_SOURCE_REMOVE
  */
-static gboolean destroy_window_after_confirmation(gpointer window)
+gboolean ls_app_window_quit(gpointer window)
 {
+    save_game_join(true);
     gtk_window_destroy(GTK_WINDOW(window));
     return G_SOURCE_REMOVE;
 }
@@ -369,11 +370,12 @@ gboolean ls_app_window_delete(GtkWindow* window, gpointer data)
     // Warn if the quit will lose an achievement, and allow the user to cancel the quit if they want to keep it
     if (ls_game_has_achievement(win->timer)) {
         if (cfg.libresplit.ask_on_achievement.value.b) {
-            display_confirm_reset_dialog(destroy_window_after_confirmation, win);
+            display_confirm_reset_dialog(ls_app_window_quit, win);
             return TRUE;
         }
     }
 
+    save_game_join(true);
     return FALSE;
 }
 
