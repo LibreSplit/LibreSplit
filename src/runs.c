@@ -303,7 +303,7 @@ static void ls_attempts_realloc_failure_show(ls_runs* self, GtkWindow* win)
             options,
             G_N_ELEMENTS(options), self, NULL)) {
         // We don't even have memory for a dialog, let's try to save and clear.
-        if (!ls_runs_save(self, LS_APP_WINDOW(win)->game, win) || !ls_runs_clear(self)) {
+        if (!ls_runs_save(self, LS_APP_WINDOW(win)->game, win) != 0 || !ls_runs_clear(self)) {
             // Well, we tried.
             g_idle_add_full(G_PRIORITY_HIGH, ls_runs_clear_failure, NULL, NULL);
         }
@@ -326,9 +326,8 @@ static void ls_attempts_realloc_failure_show(ls_runs* self, GtkWindow* win)
 void ls_runs_append(ls_runs* self, ls_attempt* attempt, GtkWindow* win)
 {
     self->attempts[self->count++] = attempt;
-    if (self->count == self->size || true) {
+    if (self->count == self->size) {
         LSGrowResult result = ls_attempts_grow(self);
-        result = LS_GROW_AT_MAX_CAPACITY;
         switch (result) {
             case LS_GROW_SUCCEEDED:
                 break;
@@ -516,9 +515,9 @@ static json_t* get_or_create_runs_history(const ls_game* game, const char* date,
  * @param snapshot The runs snapshot to save.
  * @param game The current game instance.
  * @param win The current gtk window instance.
- * @return int Any error code while saving.
+ * @return bool Whether or not the save succeeded.
  */
-int ls_runs_save(const ls_runs* snapshot, const ls_game* game, GtkWindow* win)
+bool ls_runs_save(const ls_runs* snapshot, const ls_game* game, GtkWindow* win)
 {
     LOG_DEBUG("Saving attempts history...");
 
@@ -530,39 +529,95 @@ int ls_runs_save(const ls_runs* snapshot, const ls_game* game, GtkWindow* win)
             LOG_ERRF("%s (%d:%d)", json_error.text, json_error.line, json_error.column);
         }
 
-        return 1;
+        return false;
     }
 
-    int error = 0;
+    json_t* json = NULL;
+    json_t* splits = NULL;
+    json_t* split = NULL;
+    bool success = false;
     for (size_t i = 0; i < snapshot->count; ++i) {
         ls_attempt* attempt = snapshot->attempts[i];
 
         // Root JSON Object
-        json_t* json = json_object();
+        json = json_object();
+        if (json == NULL) {
+            LOG_ERR("unable to allocate attempt object");
+            goto ls_runs_save_cleanup;
+        }
+
         json_t* final = json_object();
+        if (final == NULL) {
+            LOG_ERR("unable to allocate final time object");
+            goto ls_runs_save_cleanup;
+        }
+
         json_time_set(final, &attempt->final_time);
-        json_object_set_new(json, "start_time", json_string(attempt->start_time));
-        json_object_set_new(json, "end_time", json_string(attempt->end_time));
         json_object_set_new(json, "final_time", final);
+        json_t* str = json_string(attempt->start_time);
+        if (str == NULL) {
+            LOG_ERR("unable to allocate start time object");
+            goto ls_runs_save_cleanup;
+        }
+
+        json_object_set_new(json, "start_time", str);
+        str = json_string(attempt->end_time);
+        if (str == NULL) {
+            LOG_ERR("unable to allocate end time object");
+            goto ls_runs_save_cleanup;
+        }
+
+        json_object_set_new(json, "end_time", str);
+        str = json_string(attempt->reason);
+        if (str == NULL) {
+            LOG_ERR("unable to allocate reason string");
+            goto ls_runs_save_cleanup;
+        }
+
         json_object_set_new(json, "reason", json_string(attempt->reason));
 
         // Splits Array
-        json_t* splits = json_array();
+        splits = json_array();
+        if (str == NULL) {
+            LOG_ERR("unable to allocate splits array");
+            goto ls_runs_save_cleanup;
+        }
 
         for (size_t j = 0; j < attempt->curr_split; ++j) {
-            json_t* split = json_object();
+            split = json_object();
+            if (split == NULL) {
+                LOG_ERR("unable to allocate split object");
+                goto ls_runs_save_cleanup;
+            }
 
             // Title
-            json_object_set_new(split, "title", json_string(attempt->split_titles[j]));
+            str = json_string(attempt->split_titles[j]);
+            if (str == NULL) {
+                LOG_ERR("unable to allocate title string");
+                goto ls_runs_save_cleanup;
+            }
+
+            json_object_set_new(split, "title", str);
 
             // Check if time is valid, avoids saving time on skipped splits
             if (is_time_valid(attempt->split_times[j].game_time) && is_time_valid(attempt->split_times[j].real_time)) {
                 json_t* time = json_object();
+                if (time == NULL) {
+                    LOG_ERR("unable to allocate time object");
+                    goto ls_runs_save_cleanup;
+                }
+
                 json_time_set(time, &attempt->split_times[j]);
                 json_object_set_new(split, "time", time);
+
                 // Check if segment time is valid, avoids saving segment time AFTER skipped split
                 if (is_time_valid(attempt->segment_times[j].game_time) && is_time_valid(attempt->segment_times[j].real_time)) {
                     json_t* segment = json_object();
+                    if (segment == NULL) {
+                        LOG_ERR("unable to allocate segment object");
+                        goto ls_runs_save_cleanup;
+                    }
+
                     json_time_set(segment, &attempt->segment_times[j]);
                     json_object_set_new(split, "segment", segment);
                 } else {
@@ -574,18 +629,34 @@ int ls_runs_save(const ls_runs* snapshot, const ls_game* game, GtkWindow* win)
             }
 
             json_array_append_new(splits, split);
+            split = NULL;
         }
 
         json_object_set_new(json, "splits", splits);
+        splits = NULL;
+
         json_array_append_new(runs, json);
+        json = NULL;
     }
 
-    if (!ls_write_save(runs, path)) {
-        error = 1;
+    // if we made it here we must have succeeded, the final test is the write itself.
+    success = ls_write_save(runs, path);
+
+ls_runs_save_cleanup:
+    if (split) {
+        json_decref(split);
+    }
+
+    if (splits) {
+        json_decref(splits);
+    }
+
+    if (json) {
+        json_decref(json);
     }
 
     json_decref(runs);
-    return error;
+    return success;
 }
 
 /**

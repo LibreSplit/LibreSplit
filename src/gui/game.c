@@ -232,7 +232,7 @@ static gpointer save_game_thread(gpointer data)
     }
 
     if (snapshot->runs) {
-        if (ls_runs_save(snapshot->runs, snapshot->game, win)) {
+        if (!ls_runs_save(snapshot->runs, snapshot->game, win)) {
             ls_alert_warning(win, "Save Failed", "Save Failed", "We were unable to save your runs history.\nIf this continues check your logs for errors.");
             goto save_game_thread_finished;
         }
