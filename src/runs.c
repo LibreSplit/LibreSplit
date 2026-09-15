@@ -1,5 +1,6 @@
 #include "runs.h"
 #include "logging.h"
+#include "src/gui/game.h"
 #include "src/gui/widgets/dialog.h"
 #include "src/settings/utils.h"
 #include <string.h>
@@ -10,8 +11,6 @@ typedef enum LSGrowResult {
     LS_GROW_AT_MAX_CAPACITY,
     LS_GROW_REALLOC_FAILED,
 } LSGrowResult;
-
-static void ls_runs_clear_failure_show(ls_runs* self, GtkWindow* win);
 
 /**
  * @brief Sets today's date to the date buffer in YYYY-MM-DD format.
@@ -199,63 +198,17 @@ static gboolean ls_runs_clear_callback(gpointer data)
 }
 
 /**
- * @brief Wrapper function to redo `ls_runs_clear_failure_show`
- * if runs save fails.
- *
- * @param data ls_runs self
- * @return gboolean void in practice, gboolean for GSourceFunc
- */
-static gboolean ls_runs_redo_clear_failure(gpointer data)
-{
-    ls_runs* self = data;
-    ls_runs_clear_failure_show(self, GTK_WINDOW(ls_get_main_app_window()));
-    return G_SOURCE_REMOVE;
-}
-
-/**
  * @brief Wrapper for ls_runs_clear_callback that saves the user's run first.
  *
- * @param data Pointer to self.
+ * @param data Pointer to self
  * @return gboolean void in practice, gboolean for GSourceFunc
  */
 static gboolean ls_runs_clear_callback_with_save(gpointer data)
 {
     ls_runs* self = data;
     LSAppWindow* win = ls_get_main_app_window();
-    GtkWindow* window = GTK_WINDOW(win);
-    if (!ls_runs_save(self, win->game, window)) {
-        // this could be a temporary file save error so give the user the chance to recover before throwing their data away.
-        const LSDialogIcon icon = {
-            .source = "dialog-warning",
-            .type = LS_DIALOG_ICON_NAME,
-        };
-
-        const LSDialogOption options[] = {
-            {
-                .label = "_OK",
-                .callback = ls_runs_redo_clear_failure,
-                .is_cancel = TRUE,
-                .is_default = TRUE,
-            }
-        };
-
-        if (!ls_dialog_open(window,
-                "Save Failed",
-                "Save Failed",
-                "We were unable to save your runs history.\n"
-                "If this continues check your logs for errors.",
-                &icon,
-                options,
-                G_N_ELEMENTS(options), self, NULL)) {
-            // We don't even have memory for a dialog, sorry your data is gone
-            if (!ls_runs_clear(self)) {
-                g_idle_add_full(G_PRIORITY_HIGH, ls_runs_clear_failure, NULL, NULL);
-            }
-        }
-
-        return G_SOURCE_REMOVE;
-    }
-
+    save_game(win->game);
+    save_game_join(false);
     ls_runs_clear_callback(self);
     return G_SOURCE_REMOVE;
 }
@@ -305,6 +258,27 @@ static void ls_runs_clear_failure_show(ls_runs* self, GtkWindow* win)
 }
 
 /**
+ * @brief We couldn't show the user the dialog so err on the side of saving their data if we can.
+ * This function is called through the GTK main thread.
+ *
+ * @param data Pointer to self.
+ * @return gboolean void in practice, gboolean for GSourceFunc
+ */
+static gboolean ls_runs_save_and_clear(gpointer data)
+{
+    ls_runs* self = data;
+    save_game(ls_get_main_app_window()->game);
+    save_game_join(false);
+
+    if (!ls_runs_clear(self)) {
+        // Well, we tried.
+        g_idle_add_full(G_PRIORITY_HIGH, ls_runs_clear_failure, NULL, NULL);
+    }
+
+    return G_SOURCE_REMOVE;
+}
+
+/**
  * @brief On ls_attempts_grow reallocation failure, shows an error to the user with recovery attempts.
  * This should be an exceedingly rare occurance under extreme circumstances.
  * Recovery is best effort but can not be guaranteed at this point.
@@ -343,10 +317,7 @@ static void ls_attempts_realloc_failure_show(ls_runs* self, GtkWindow* win)
             options,
             G_N_ELEMENTS(options), self, NULL)) {
         // We don't even have memory for a dialog, let's try to save and clear.
-        if (!ls_runs_save(self, LS_APP_WINDOW(win)->game, win) || !ls_runs_clear(self)) {
-            // Well, we tried.
-            g_idle_add_full(G_PRIORITY_HIGH, ls_runs_clear_failure, NULL, NULL);
-        }
+        g_idle_add_full(G_PRIORITY_HIGH, ls_runs_save_and_clear, self, NULL);
     }
 }
 
