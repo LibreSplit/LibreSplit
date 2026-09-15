@@ -309,6 +309,7 @@ void close_activated(GSimpleAction* action,
  */
 static gboolean perform_quit(gpointer window)
 {
+    atomic_store(&exit_requested, 1);
     LSAppWindow* win = LS_APP_WINDOW(window);
     gtk_window_destroy(GTK_WINDOW(win));
     return G_SOURCE_REMOVE;
@@ -331,7 +332,6 @@ void quit_activated(GSimpleAction* action,
         app = parameter;
     }
 
-    atomic_store(&exit_requested, 1);
     LOG_DEBUG("Exit request sent to threads");
     win = ls_app_window_get_default(LS_APP(app));
 

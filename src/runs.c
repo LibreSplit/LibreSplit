@@ -365,6 +365,9 @@ bool ls_runs_clear(ls_runs* self)
     }
 
     free(self->attempts);
+    self->size = 0;
+    self->count = 0;
+
     self->attempts = calloc(INITIAL_ATTEMPTS_ARRAY_SIZE, sizeof(ls_attempt*));
     if (self->attempts == NULL) {
         // This should never happens since we should have freed more memory than we're requesting.
