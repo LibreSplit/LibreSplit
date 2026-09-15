@@ -530,3 +530,19 @@ Usage:
 ```lua
 local md5_to_compare = md5sum("path/to/my/awesome/game")
 ```
+
+## Reactive Functions
+
+The following functions are event handlers that will be called on certain events, whether such events happen due to auto-splitter commands or are done manually.
+
+- `onStart()`
+- `onSplit()`
+- `onStop()`
+- `onReset()`
+- `onCancel()`
+- `onSkip()`
+- `onUnsplit()`
+- `onPause()`
+- `onUnpause()`
+
+These functions are run at the end of each Lua runtime loop, if the related event has been triggered.
