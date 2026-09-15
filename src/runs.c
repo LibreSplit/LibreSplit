@@ -538,15 +538,16 @@ static json_t* get_or_create_runs_history(const ls_game* game, const char* date,
 
     struct stat st = { 0 };
     if (stat(path, &st) == -1) {
-        GError* error = NULL;
-        if (!g_file_set_contents_full(path, "[]", -1, G_FILE_SET_CONTENTS_CONSISTENT | G_FILE_SET_CONTENTS_DURABLE, 0666, &error)) {
-            LOG_ERRF("save game: failed to create run history file at '%s': %s", path, error->message);
-            g_clear_error(&error);
-            return NULL;
-        }
+        return json_array();
     }
 
-    return json_load_file(path, 0, json_error);
+    json_t* json = json_load_file(path, 0, json_error);
+    if (!json_is_array(json)) {
+        json_decref(json);
+        return json_array();
+    }
+
+    return json;
 }
 
 /**
