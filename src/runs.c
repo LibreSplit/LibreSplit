@@ -326,9 +326,8 @@ static void ls_attempts_realloc_failure_show(ls_runs* self, GtkWindow* win)
 void ls_runs_append(ls_runs* self, ls_attempt* attempt, GtkWindow* win)
 {
     self->attempts[self->count++] = attempt;
-    if (self->count == self->size || true) {
+    if (self->count == self->size) {
         LSGrowResult result = ls_attempts_grow(self);
-        result = LS_GROW_AT_MAX_CAPACITY;
         switch (result) {
             case LS_GROW_SUCCEEDED:
                 break;
