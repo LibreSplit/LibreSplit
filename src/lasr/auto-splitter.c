@@ -24,7 +24,7 @@ char auto_splitter_file[PATH_MAX]; /*!< The loaded auto splitter file path */
 int refresh_rate = 60; /*!< The Auto Splitter's refresh rate applied */
 bool use_game_time = false; /*!< Enables IGT */
 atomic_bool update_game_time = false; /*!< True if the auto splitter is requesting the game time to be updated */
-atomic_llong game_time_value = 0; /*!< The in-game time value, in milliseconds */
+atomic_llong game_time_value = 0; /*!< The in-game time value, in microseconds */
 
 /**
  * Defines the behaviour of the map cache.

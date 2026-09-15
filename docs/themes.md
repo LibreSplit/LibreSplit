@@ -30,7 +30,7 @@ See the [GTK 4 CSS properties documentation](https://docs.gtk.org/gtk4/css-prope
 | `.timer-container`            | Container for both the detailed and normal timer                                                                                                         |
 | `.detailed-timer`             | Container for the `segment-pb` and `segment-best` classes                                                                                                |
 | `.timer-seconds`              | Large main timer seconds                                                                                                                                 |
-| `.timer-millis`               | Large main timer milli(seconds)                                                                                                                          |
+| `.timer-millis`               | Large main timer fractional seconds                                                                                                                      |
 | `.delay`                      | Timer not running/in negative time                                                                                                                       |
 | `.splits`                     | Container of the splits                                                                                                                                  |
 | `.split`                      | The splits themselves                                                                                                                                    |
@@ -57,7 +57,7 @@ See the [GTK 4 CSS properties documentation](https://docs.gtk.org/gtk4/css-prope
 | `.segment-best`               | Best text within .detailed-timer                                                                                                                         |
 | `.segment-pb`                 | PB text within .detailed-timer                                                                                                                           |
 | `.segment-seconds`            | Smaller detailed timer seconds                                                                                                                           |
-| `.segment-millis`             | Smaller detailed timer milli(seconds)                                                                                                                    |
+| `.segment-millis`             | Smaller detailed timer fractional seconds                                                                                                                |
 | `.sum-of-bests-label`         | Text that says "Sum of Bests"                                                                                                                            |
 | `.sum-of-bests`               | Time for Sum of Bests                                                                                                                                    |
 | `.personal-best-label`        | Text that says "Personal Best"                                                                                                                           |

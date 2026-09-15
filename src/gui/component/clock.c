@@ -11,7 +11,7 @@ typedef struct LSTimer {
     LSComponent base; /*!< The base struct that is extended. */
     GtkWidget* time; /*!< The timer container */
     GtkWidget* time_seconds; /*!< The label representing the seconds part of the timer */
-    GtkWidget* time_millis; /*!< The label representing the milliseconds part of the timer */
+    GtkWidget* time_millis; /*!< The label representing the fractional seconds part of the timer */
 } LSTimer;
 extern LSComponentOps ls_timer_operations;
 
