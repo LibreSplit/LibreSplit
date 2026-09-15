@@ -1,6 +1,6 @@
 #include "runs.h"
 #include "logging.h"
-#include "src/gui/widgets/alert.h"
+#include "src/gui/widgets/dialog.h"
 #include "src/settings/utils.h"
 #include <string.h>
 #include <sys/stat.h>
@@ -199,6 +199,20 @@ static gboolean ls_runs_clear_callback(gpointer data)
 }
 
 /**
+ * @brief Wrapper function to redo `ls_runs_clear_failure_show`
+ * if runs save fails.
+ *
+ * @param data ls_runs self
+ * @return gboolean void in practice, gboolean for GSourceFunc
+ */
+static gboolean ls_runs_redo_clear_failure(gpointer data)
+{
+    ls_runs* self = data;
+    ls_runs_clear_failure_show(self, GTK_WINDOW(ls_get_main_app_window()));
+    return G_SOURCE_REMOVE;
+}
+
+/**
  * @brief Wrapper for ls_runs_clear_callback that saves the user's run first.
  *
  * @param data Pointer to self.
@@ -211,8 +225,34 @@ static gboolean ls_runs_clear_callback_with_save(gpointer data)
     GtkWindow* window = GTK_WINDOW(win);
     if (!ls_runs_save(self, win->game, window)) {
         // this could be a temporary file save error so give the user the chance to recover before throwing their data away.
-        ls_alert_warning(window, "Save Failed", "Save Failed", "We were unable to save your runs history.\nIf this continues check your logs for errors.");
-        ls_runs_clear_failure_show(self, window);
+        const LSDialogIcon icon = {
+            .source = "dialog-warning",
+            .type = LS_DIALOG_ICON_NAME,
+        };
+
+        const LSDialogOption options[] = {
+            {
+                .label = "_OK",
+                .callback = ls_runs_redo_clear_failure,
+                .is_cancel = TRUE,
+                .is_default = TRUE,
+            }
+        };
+
+        if (!ls_dialog_open(window,
+                "Save Failed",
+                "Save Failed",
+                "We were unable to save your runs history.\n"
+                "If this continues check your logs for errors.",
+                &icon,
+                options,
+                G_N_ELEMENTS(options), self, NULL)) {
+            // We don't even have memory for a dialog, sorry your data is gone
+            if (!ls_runs_clear(self)) {
+                g_idle_add_full(G_PRIORITY_HIGH, ls_runs_clear_failure, NULL, NULL);
+            }
+        }
+
         return G_SOURCE_REMOVE;
     }
 
