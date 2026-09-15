@@ -95,8 +95,18 @@ void check_directories(void)
     char libresplit_directory[PATH_MAX] = { 0 };
     get_libresplit_folder_path(libresplit_directory);
 
+    // failsafe
+    if (strlen(libresplit_directory) == 0) {
+        return;
+    }
+
     char libresplit_data_directory[PATH_MAX] = { 0 };
     get_libresplit_data_folder_path(libresplit_data_directory);
+
+    // failsafe
+    if (strlen(libresplit_data_directory) == 0) {
+        return;
+    }
 
     char auto_splitters_directory[PATH_MAX];
     char themes_directory[PATH_MAX];
