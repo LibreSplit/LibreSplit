@@ -74,7 +74,7 @@ void set_main_window_keep_above(gboolean setting)
         return;
     }
 
-    LSAppWindow* win = ls_get_main_app_window(GTK_APPLICATION(app));
+    LSAppWindow* win = ls_get_main_app_window();
     if (win != NULL && win->opts.win_on_top) {
         x11_set_keep_above(GTK_WINDOW(win), setting);
     }
@@ -565,7 +565,7 @@ gboolean ls_dialog_open(GtkWindow* parent,
     }
 
     dialog_count_inc();
-    g_idle_add_full(G_PRIORITY_DEFAULT, dialog_present, g_steal_pointer(&request), dialog_request_unref);
+    g_idle_add_full(options->priority, dialog_present, g_steal_pointer(&request), dialog_request_unref);
     return TRUE;
 }
 

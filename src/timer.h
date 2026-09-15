@@ -62,6 +62,9 @@ typedef struct ls_game {
     ls_time* segment_times;
     ls_time* best_splits;
     ls_time* best_segments;
+    atomic_bool has_unsaved_pb;
+    atomic_bool has_unsaved_gold;
+    atomic_bool has_unsaved_rainbow;
 } ls_game;
 
 /**
@@ -90,6 +93,7 @@ typedef struct ls_timer {
     long long last_tick; // This NEEDS to be here for resetting
     int* attempt_count;
     int* finished_count;
+    char start_time[64];
 } ls_timer;
 
 extern atomic_bool run_started;
@@ -128,7 +132,13 @@ bool ls_timer_has_gold_split(const ls_timer* timer);
 
 bool ls_timer_has_rainbow_split(const ls_timer* timer);
 
+bool ls_game_has_achievement(const ls_timer* timer);
+
+bool ls_write_save(json_t* json, const char* path);
+
 int ls_game_save(const ls_game* game);
+
+void ls_game_saved(ls_game* game);
 
 void ls_game_release(ls_game* game);
 
@@ -159,3 +169,5 @@ void ls_timer_cancel(ls_timer* timer);
 void json_time_get(const json_t* ref, ls_time* time);
 
 void json_time_set(json_t* ref, const ls_time* time);
+
+void ls_run_set_time(char* time_buf);

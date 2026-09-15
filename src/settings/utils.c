@@ -57,41 +57,31 @@ static bool mkdir_p(const char* dir, mode_t permissions, const char* name)
 }
 
 /**
- * Copies the user's livesplit data path in a given string.
+ * Copies the user's LibreSplit data path in a given string.
  *
  * @param out_path The string to copy the data path into.
  */
 void get_libresplit_data_folder_path(char* out_path)
 {
-    struct passwd* pw = getpwuid(getuid());
-    char* XDG_DATA_HOME = getenv("XDG_DATA_HOME");
-    char* base_dir = strcat(pw->pw_dir, "/.local/share/libresplit");
-    if (XDG_DATA_HOME != NULL) {
-        char config_dir[PATH_MAX] = { 0 };
-        strcpy(config_dir, XDG_DATA_HOME);
-        strcat(config_dir, "/libresplit");
-        strcpy(base_dir, config_dir);
+    int written = snprintf(out_path, PATH_MAX, "%s/libresplit", g_get_user_data_dir());
+    if (written < 0 || written >= PATH_MAX) {
+        LOG_WARN("LibreSplit data path is too long");
+        out_path[0] = '\0';
     }
-    strcpy(out_path, base_dir);
 }
 
 /**
- * Copies the user's livesplit configuration path in a given string.
+ * Copies the user's LibreSplit configuration path in a given string.
  *
  * @param out_path The string to copy the configuration path into.
  */
 void get_libresplit_folder_path(char* out_path)
 {
-    struct passwd* pw = getpwuid(getuid());
-    char* XDG_CONFIG_HOME = getenv("XDG_CONFIG_HOME");
-    char* base_dir = strcat(pw->pw_dir, "/.config/libresplit");
-    if (XDG_CONFIG_HOME != NULL) {
-        char config_dir[PATH_MAX] = { 0 };
-        strcpy(config_dir, XDG_CONFIG_HOME);
-        strcat(config_dir, "/libresplit");
-        strcpy(base_dir, config_dir);
+    int written = snprintf(out_path, PATH_MAX, "%s/libresplit", g_get_user_config_dir());
+    if (written < 0 || written >= PATH_MAX) {
+        LOG_WARN("LibreSplit config path is too long");
+        out_path[0] = '\0';
     }
-    strcpy(out_path, base_dir);
 }
 
 /**
@@ -105,8 +95,18 @@ void check_directories(void)
     char libresplit_directory[PATH_MAX] = { 0 };
     get_libresplit_folder_path(libresplit_directory);
 
+    // failsafe
+    if (strlen(libresplit_directory) == 0) {
+        return;
+    }
+
     char libresplit_data_directory[PATH_MAX] = { 0 };
     get_libresplit_data_folder_path(libresplit_data_directory);
+
+    // failsafe
+    if (strlen(libresplit_data_directory) == 0) {
+        return;
+    }
 
     char auto_splitters_directory[PATH_MAX];
     char themes_directory[PATH_MAX];

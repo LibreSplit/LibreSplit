@@ -1,9 +1,12 @@
 #include "game.h"
 #include "src/gui/component/components.h"
 #include "src/gui/theming.h"
+#include "src/gui/widgets/alert.h"
 #include "src/logging.h"
+#include "src/runs.h"
 #include "src/settings/definitions.h"
 #include <gtk/gtk.h>
+#include <unistd.h>
 
 extern AppConfig cfg;
 
@@ -11,6 +14,16 @@ static GThread* save_thread;
 static atomic_bool saving;
 static GMutex save_mutex;
 static bool saving_enabled = true;
+
+// start as true to symbolize there has not yet been any failure
+static atomic_bool last_game_save_result = true;
+static atomic_bool last_runs_save_result = true;
+
+typedef struct save_data {
+    ls_game* game;
+    ls_runs* runs;
+    GWeakRef main_win;
+} save_data;
 
 /**
  * @brief Duplicates the ls_game as snapshot. This is useful
@@ -209,16 +222,68 @@ void ls_app_window_show_game(LSAppWindow* win)
  * @brief saves the game to the user's splits file. This function
  * should be asynchronous and run in its own thread.
  *
- * @param data A valid snapshot from `create_snapshot` of the current game state to save.
+ * @param data save_data containing a valid snapshot from `create_snapshot` of the current game state to save
+ *              along with an optional (live) pointer to unsaved runs history.
  * @return gpointer unused
  */
 static gpointer save_game_thread(gpointer data)
 {
-    ls_game* snapshot = data;
-    ls_game_save(snapshot);
-    ls_game_release(snapshot);
+    save_data* snapshot = data;
+    GObject* main_win = g_weak_ref_get(&snapshot->main_win);
+    GtkWindow* win = main_win ? GTK_WINDOW(main_win) : NULL;
+
+    bool runs_result = true;
+    int result = ls_game_save(snapshot->game);
+    if (result) {
+        ls_alert_warning(win, "Save Failed", "Save Failed", "We were unable to save your game.\nIf this continues check your logs for errors.");
+        goto save_game_thread_finished;
+    }
+
+    if (snapshot->runs) {
+        runs_result = ls_runs_save(snapshot->runs, snapshot->game, win);
+        if (!runs_result) {
+            ls_alert_warning(win, "Save Failed", "Save Failed", "We were unable to save your runs history.\nIf this continues check your logs for errors.");
+            goto save_game_thread_finished;
+        }
+
+        // This should not be possible to fail, if it does we end up with a broken state so close LibreSplit
+        if (!ls_runs_clear(snapshot->runs)) {
+            ls_runs_clear_failed(win);
+        }
+    }
+
+save_game_thread_finished:
+    atomic_store(&last_game_save_result, result == 0);
+    atomic_store(&last_runs_save_result, runs_result);
+
+    // if the game saved successfully, call ls_game_saved event.
+    if (result == 0 && main_win) {
+        ls_game_saved(LS_APP_WINDOW(main_win)->game);
+    }
+
+    g_clear_object(&main_win);
+    g_weak_ref_clear(&snapshot->main_win);
+    ls_game_release(snapshot->game);
+    free(snapshot);
+
     atomic_store(&saving, false);
+    ls_app_window_set_blocked(FALSE);
     return NULL;
+}
+
+bool is_saving(void)
+{
+    return atomic_load(&saving);
+}
+
+bool get_last_game_save_result(void)
+{
+    return atomic_load(&last_game_save_result);
+}
+
+bool get_last_runs_save_result(void)
+{
+    return atomic_load(&last_runs_save_result);
 }
 
 /**
@@ -248,31 +313,51 @@ void save_game(ls_game* game)
         save_thread = NULL;
     }
 
-    ls_game* snapshot = create_snapshot(game);
-    if (!snapshot) {
+    save_data* snapshot = calloc(1, sizeof(save_data));
+    if (snapshot == NULL) {
+        LOG_WARN("unable to allocate memory for the save_data wrapper struct");
         atomic_store(&saving, false);
         g_mutex_unlock(&save_mutex);
         return;
     }
 
+    snapshot->game = create_snapshot(game);
+    if (snapshot->game == NULL) {
+        free(snapshot);
+        atomic_store(&saving, false);
+        g_mutex_unlock(&save_mutex);
+        return;
+    }
+
+    LSAppWindow* win = ls_get_main_app_window();
+    g_weak_ref_init(&snapshot->main_win, win ? G_OBJECT(win) : NULL);
+
+    if (cfg.libresplit.save_run_history.value.b) {
+        snapshot->runs = win->runs;
+    }
+
+    // This should be imperceivable but block on save in case the user's machine is slow.
+    ls_app_window_set_blocked(TRUE);
     save_thread = g_thread_new("save_game", save_game_thread, snapshot);
     g_mutex_unlock(&save_mutex);
 }
 
 /**
- * @brief Join the game save thread on exit.
+ * @brief Join the game save thread.
  */
-void save_game_join(void)
+void save_game_join(bool exiting)
 {
     g_mutex_lock(&save_mutex);
 
-    // once we are exiting, prevent saves.
-    saving_enabled = false;
+    if (exiting) {
+        // once we are exiting, prevent saves.
+        saving_enabled = false;
+    }
+
     if (save_thread) {
         g_thread_join(save_thread);
         save_thread = NULL;
     }
 
-    atomic_store(&saving, false);
     g_mutex_unlock(&save_mutex);
 }

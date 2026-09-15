@@ -87,6 +87,7 @@ libresplit_sources = files(
     'src/lasr/utils.c',
     'src/logging.c',
     'src/main.c',
+    'src/runs.c',
     'src/server.c',
 
     # Settings

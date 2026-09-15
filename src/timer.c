@@ -3,7 +3,11 @@
  * Implementation of the timer
  */
 #include "timer.h"
+#include "gui/app_window.h"
+#include "gui/game.h"
+#include "gui/widgets/dialog.h"
 #include "logging.h"
+#include "runs.h"
 #include "settings/utils.h"
 
 #include "lasr/auto-splitter.h"
@@ -630,6 +634,11 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
             }
         }
     }
+
+    atomic_init(&game->has_unsaved_pb, false);
+    atomic_init(&game->has_unsaved_gold, false);
+    atomic_init(&game->has_unsaved_rainbow, false);
+
 game_create_error:
     if (json) {
         json_decref(json);
@@ -676,6 +685,7 @@ void ls_game_update_splits(ls_game* game, const ls_timer* timer)
             if (split_time && split_time < pb_time) {
                 memcpy(game->split_times, timer->split_times, size);
                 memcpy(game->segment_times, timer->segment_times, size);
+                atomic_store(&game->has_unsaved_pb, true);
             }
         }
 
@@ -688,18 +698,30 @@ void ls_game_update_splits(ls_game* game, const ls_timer* timer)
             // update best game time splits
             if (split_time->game_time && split_time->game_time < best_split_time->game_time) {
                 best_split_time->game_time = split_time->game_time;
+                if (game->comparison_method == LS_GAME_TIME) {
+                    atomic_store(&game->has_unsaved_rainbow, true);
+                }
             }
             // update best real time splits
             if (split_time->real_time && split_time->real_time < best_split_time->real_time) {
                 best_split_time->real_time = split_time->real_time;
+                if (game->comparison_method == LS_REAL_TIME) {
+                    atomic_store(&game->has_unsaved_rainbow, true);
+                }
             }
             // update best game time segments
             if (segment_time->game_time && segment_time->game_time < best_segment_time->game_time) {
                 best_segment_time->game_time = segment_time->game_time;
+                if (game->comparison_method == LS_GAME_TIME) {
+                    atomic_store(&game->has_unsaved_gold, true);
+                }
             }
             // update best real time segments
             if (segment_time->real_time && segment_time->real_time < best_segment_time->real_time) {
                 best_segment_time->real_time = segment_time->real_time;
+                if (game->comparison_method == LS_REAL_TIME) {
+                    atomic_store(&game->has_unsaved_gold, true);
+                }
             }
         }
     }
@@ -748,13 +770,41 @@ bool ls_timer_has_rainbow_split(const ls_timer* timer)
 }
 
 /**
+ * @brief Returns whether or not there is some achievement that
+ * has not yet been saved. An achievement would be defined as
+ *
+ * * A PB
+ * * A new gold split
+ * * A new rainbow split
+ *
+ * @param timer The current timer instance.
+ * @return bool whether or not there is any unsaved achievement.
+ */
+bool ls_game_has_achievement(const ls_timer* timer)
+{
+    if (!timer || !timer->game) {
+        return false;
+    }
+
+    if (timer->started && (ls_timer_has_gold_split(timer) || ls_timer_has_rainbow_split(timer))) {
+        return true;
+    }
+
+    if (atomic_load(&timer->game->has_unsaved_pb) || atomic_load(&timer->game->has_unsaved_gold) || atomic_load(&timer->game->has_unsaved_rainbow)) {
+        return true;
+    }
+
+    return false;
+}
+
+/**
  * @brief Atomically writes the splits file json to disk.
  *
  * @param json The full splits file json root.
  * @param path The path to the splits file.
  * @return bool save result
  */
-static bool ls_write_save(json_t* json, const char* path)
+bool ls_write_save(json_t* json, const char* path)
 {
     char* contents = json_dumps(json, JSON_PRESERVE_ORDER | JSON_INDENT(2));
     if (!contents) {
@@ -901,111 +951,27 @@ int ls_game_save(const ls_game* game)
 }
 
 /**
- * Saves the current timer to a run history file.
+ * @brief An event to indicate that the game has been saved.
+ * This could be used for a plugin system to handle post-save events
+ * via some hook.
  *
- * @param timer The current run's timer
- * @param reason Why the run ended
- * @return int Any error code while saving
+ * Once called, the unsaved bools get reset to false.
+ *
+ * @param game The current game instance.
  */
-int ls_run_save(ls_timer* timer, const char* reason)
+void ls_game_saved(ls_game* game)
 {
-    LOG_DEBUG("Saving historical run file...");
-    ls_time final_time = ls_timer_get_time(timer, true);
-    if (ls_time_lte_zero(final_time))
-        return 0;
-
-    int error = 0;
-
-    // Root JSON Object
-    json_t* json = json_object();
-
-    // Basic Run Info
-    if (timer->game->title) {
-        json_object_set_new(json, "title", json_string(timer->game->title));
-    }
-    if (timer->game->attempt_count) {
-        json_object_set_new(json, "attempt_count", json_integer(timer->game->attempt_count));
-    }
-    if (timer->game->finished_count) {
-        json_object_set_new(json, "finished_count", json_integer(timer->game->finished_count));
-    }
-    json_t* final = json_object();
-    json_time_set(final, &final_time);
-    json_object_set_new(json, "final_time", final);
-    json_object_set_new(json, "reason", json_string(reason));
-
-    // Splits Array
-    json_t* splits = json_array();
-
-    for (unsigned int i = 0; i < timer->game->split_count; i++) {
-        json_t* split = json_object();
-
-        // Title
-        json_object_set_new(split, "title", json_string(timer->game->split_titles[i]));
-
-        // Time
-        if (i < timer->curr_split) {
-            // Check if time is valid, avoids saving time on skipped splits
-            if (is_time_valid(timer->split_times[i].game_time) && is_time_valid(timer->split_times[i].real_time)) {
-                json_t* time = json_object();
-                json_time_set(time, &timer->split_times[i]);
-                json_object_set_new(split, "time", time);
-                // Check if segment time is valid, avoids saving segment time AFTER skipped split
-                if (is_time_valid(timer->segment_times[i].game_time) && is_time_valid(timer->segment_times[i].real_time)) {
-                    json_t* segment = json_object();
-                    json_time_set(segment, &timer->segment_times[i]);
-                    json_object_set_new(split, "segment", segment);
-                } else {
-                    json_object_set_new(split, "segment", json_null());
-                }
-            } else {
-                json_object_set_new(split, "time", json_null());
-                json_object_set_new(split, "segment", json_null());
-            }
-        }
-        json_array_append_new(splits, split);
+    if (!game) {
+        return;
     }
 
-    json_object_set_new(json, "splits", splits);
-
-    char path[PATH_MAX];
-    get_libresplit_folder_path(path);
-    strncat(path, "/runs", sizeof(path) - strlen(path) - 1);
-
-    time_t rawtime;
-    struct tm* timeinfo;
-    char time_buf[64];
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(time_buf, sizeof(time_buf), "%Y-%m-%d_%H-%M-%S", timeinfo);
-
-    char filename[PATH_MAX];
-    int ret = snprintf(filename, sizeof(filename), "%s/run_%s.json", path, time_buf);
-    if (ret < 0 || (size_t)ret >= sizeof(filename)) {
-        LOG_WARN("Error creating run filename. The path may be too long, aborting save.");
-        json_decref(json);
-        return 1;
-    }
-
-    const int json_dump_result = json_dump_file(json, filename, JSON_PRESERVE_ORDER | JSON_INDENT(2));
-    if (json_dump_result) {
-        char* json_dump = json_dumps(json, JSON_PRESERVE_ORDER | JSON_INDENT(2));
-        LOG_WARNF("Error dumping JSON:\n%s", json_dump != NULL ? json_dump : "");
-        LOG_WARNF("Error: '%d'", json_dump_result);
-        LOG_WARNF("Path: %s", filename);
-        error = 1;
-
-        if (json_dump != NULL) {
-            free(json_dump);
-        }
-    }
-
-    json_decref(json);
-    return error;
+    atomic_store(&game->has_unsaved_pb, false);
+    atomic_store(&game->has_unsaved_gold, false);
+    atomic_store(&game->has_unsaved_rainbow, false);
 }
 
 /**
- * Frees all the timer information, but not itself
+ * Frees all the timer information
  *
  * @param timer The timer instance
  */
@@ -1073,7 +1039,7 @@ static void reset_timer(ls_timer* timer)
 /**
  * Creates a timer instance linked to a game instance, allocating necessary memory
  *
- * @param timer_ptr Apointer to where the allocated timer instance should be stored
+ * @param timer_ptr A pointer to where the allocated timer instance should be stored
  * @param game The game instance to link the timer to
  * @return Whether the timer creation had an error or not
  */
@@ -1214,6 +1180,12 @@ void ls_timer_step(ls_timer* timer)
  */
 int ls_timer_start(ls_timer* timer)
 {
+    // Don't allow starts while save operations are happening.
+    if (is_saving()) {
+        LOG_DEBUG("Rejecting timer start while save operation is still happening");
+        return false;
+    }
+
     LOG_DEBUG("Starting timer...");
     // TODO: Allow starting when split_count is 0 for splitless runs, other stuff has to change for this to work (components, timer logic, etc)
     if (timer->curr_split < timer->game->split_count) {
@@ -1221,11 +1193,66 @@ int ls_timer_start(ls_timer* timer)
             ++*timer->attempt_count;
             timer->started = 1;
             atomic_store(&run_started, true);
+            ls_run_set_time(timer->start_time);
         }
         timer->running = true;
         atomic_store(&run_running, true);
     }
     return timer->running;
+}
+
+/**
+ * @brief Callback for saving the game to disk
+ * if user requests from a dialog option.
+ *
+ * @param data The `ls_game`
+ * @return gboolean always G_SOURCE_REMOVE
+ */
+static gboolean ls_dialog_save_game(gpointer data)
+{
+    save_game((ls_game*)data);
+    return G_SOURCE_REMOVE;
+}
+
+static void ls_run_record(ls_timer* timer, const char* reason)
+{
+    ls_time final_time = ls_timer_get_time(timer, true);
+    if (ls_time_lte_zero(final_time)) {
+        return;
+    }
+
+    LSAppWindow* win = ls_get_main_app_window();
+    ls_attempt* attempt = ls_runs_new_attempt(timer, reason);
+    if (attempt == NULL) {
+        const LSDialogOption options[] = {
+            {
+                .label = "_Yes",
+                .callback = ls_dialog_save_game,
+                .is_cancel = FALSE,
+                .is_default = TRUE,
+            },
+            {
+                .label = "_No",
+                .callback = NULL,
+                .is_cancel = TRUE,
+                .is_default = FALSE,
+            }
+        };
+
+        const LSDialogIcon icon = {
+            .source = "dialog-question",
+            .type = LS_DIALOG_ICON_NAME,
+        };
+
+        ls_dialog_open(GTK_WINDOW(win),
+            "LibreSplit",
+            "Save Failed",
+            "We could not record your game in memory, would you like to save your history now?",
+            &icon, options, G_N_ELEMENTS(options), win->game, NULL);
+        return;
+    }
+
+    ls_runs_append(win->runs, attempt, GTK_WINDOW(win));
 }
 
 /**
@@ -1294,10 +1321,15 @@ int ls_timer_split(ls_timer* timer)
     if (timer->curr_split == timer->game->split_count) {
         // Increment finished_count
         ++*timer->finished_count;
+        timer->started = 0;
         ls_timer_stop(timer);
         ls_game_update_splits((ls_game*)timer->game, timer);
         if (cfg.libresplit.save_run_history.value.b) {
-            ls_run_save(timer, "FINISHED");
+            ls_run_record(timer, "FINISHED");
+        }
+
+        if (cfg.libresplit.auto_save.value.b) {
+            save_game((ls_game*)timer->game);
         }
     }
 
@@ -1341,11 +1373,11 @@ int ls_timer_skip(ls_timer* timer)
  */
 int ls_timer_unsplit(ls_timer* timer)
 {
-    LOG_DEBUG("Undoing a split...");
-    if (timer->curr_split == 0) {
+    if (timer->curr_split == 0 || is_saving()) {
         return 0;
     }
 
+    LOG_DEBUG("Undoing a split...");
     unsigned int curr = --timer->curr_split;
     for (unsigned int i = curr; i < timer->game->split_count; ++i) {
         timer->split_times[i] = timer->game->split_times[i];
@@ -1355,6 +1387,7 @@ int ls_timer_unsplit(ls_timer* timer)
         ls_time_clear(&timer->segment_deltas[i]);
     }
     if (timer->curr_split + 1 == timer->game->split_count) {
+        timer->started = 1;
         timer->running = true;
         atomic_store(&run_running, true);
     }
@@ -1420,7 +1453,7 @@ int ls_timer_reset(ls_timer* timer, ls_game* game)
 
     if (timer->curr_split < timer->game->split_count) {
         if (cfg.libresplit.save_run_history.value.b) {
-            ls_run_save(timer, "RESET");
+            ls_run_record(timer, "RESET");
         }
     }
 
@@ -1510,4 +1543,19 @@ void json_time_set(json_t* ref, const ls_time* time)
     json_object_set_new(ref, "real_time", json_string(str));
     ls_time_string_serialized(str, time->game_time);
     json_object_set_new(ref, "game_time", json_string(str));
+}
+
+/**
+ * @brief Sets the current date and time to a buffer.
+ * The buffer should be at least length 64.
+ *
+ * @param time_buf The char buffer to store the time string in.
+ */
+void ls_run_set_time(char* time_buf)
+{
+    time_t rawtime;
+    struct tm* timeinfo;
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(time_buf, 64, "%Y-%m-%d_%H-%M-%S", timeinfo);
 }

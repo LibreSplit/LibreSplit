@@ -43,6 +43,10 @@ static void sync_context_menu_state(LSAppWindow* win)
 
     action = g_action_map_lookup_action(G_ACTION_MAP(win), "always-on-top");
     g_simple_action_set_state(G_SIMPLE_ACTION(action), g_variant_new_boolean(win->opts.win_on_top));
+
+    gboolean can_save = win->game != NULL && win->timer != NULL && !win->timer->started;
+    action = g_action_map_lookup_action(G_ACTION_MAP(win), "save-splits");
+    g_simple_action_set_enabled(G_SIMPLE_ACTION(action), can_save);
 }
 
 /**

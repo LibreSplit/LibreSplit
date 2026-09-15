@@ -16,21 +16,29 @@ The settings file is divided in 3 main parts:
 
 Under the `libresplit` section, you will find the following settings:
 
-| Setting            | Type    | Description                                                  | Default        |
-| -----------------  | ------- | -----------------------------------------------------        | -------------- |
-| `start_decorated`  | Boolean | Start with window decorations                                | `false`        |
-| `start_on_top`     | Boolean | Start with window as always on top                           | `true`         |
-| `hide_cursor`      | Boolean | Hide cursor in window                                        | `false`        |
-| `global_hotkeys`   | Boolean | Enables global hotkeys                                       | `false`        |
-| `start_on_top`     | Boolean | Start with window as always on top*                          | `false`        |
-| `theme`            | String  | Default theme name                                           | `"standard"`   |
-| `theme_variant`    | String  | Default theme variant                                        | `""`           |
-| `decimals`         | Integer | Number of decimals to show on the timer (from 0 to 6)        | `2`            |
-| `save_run_history` | Boolean | Save JSON files with old runs in the runs subdirectory       | `true`         |
-| `ask_on_gold`      | Boolean | Ask for confirmation before resetting a run with gold splits | `true`         |
-| `ask_on_worse`     | Boolean | Ask before saving a run that is worse than PB                | `true`         |
+| Setting                      | Type    | Description                                                    | Default        |
+| ---------------------------- | ------- | -------------------------------------------------------------- | -------------- |
+| `start_decorated`            | Boolean | Start with window decorations                                  | `false`        |
+| `start_on_top`               | Boolean | Start with window as always on top                             | `true`         |
+| `hide_cursor`                | Boolean | Hide cursor in window                                          | `false`        |
+| `global_hotkeys`             | Boolean | Enables global hotkeys                                         | `false`        |
+| `start_on_top`               | Boolean | Start with window as always on top*                            | `false`        |
+| `appearance`                 | Integer | Allows you to select your light/dark mode preference†          | `System`       |
+| `theme`                      | String  | Default theme name                                             | `"standard"`   |
+| `theme_variant`              | String  | Default theme variant                                          | `""`           |
+| `decimals`                   | Integer | Number of decimals to show on the timer (from 0 to 6)          | `2`            |
+| `save_run_history`           | Boolean | Save JSON files with your attempts history                     | `true`         |
+| `run_history_next_to_splits` | Boolean | Save run history files in a directory next to your splits file | `false`        |
+| `auto_save`                  | Boolean | Performs saves automatically in-between runs                   | `true`         |
+| `ask_on_achievement`         | Boolean | Ask for confirmation before quitting with unsaved achievement‡ | `true`         |
+| `ask_on_worse`               | Boolean | Ask before saving a run that is worse than PB                  | `true`         |
 
 * The `start_on_top` setting is only available on x11. For Wayland always on top, see the [Always on Top](https://github.com/LibreSplit/LibreSplit/blob/main/README.md#always-on-top) section of our README.
+
+† This is a best effort attempt at setting the preference. On some Desktop Environments like KDE Plasma your global theme will
+  take precedence over this setting so it will appear to do nothing. In those cases, you should manage this via your System Preferences.
+
+‡ achievement here means a new PB, gold, or rainbow split.
 
 ### Keybind settings
 

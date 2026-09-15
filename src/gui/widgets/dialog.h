@@ -25,9 +25,9 @@ G_BEGIN_DECLS
  * Null means that nothing needs to be notified and no action must be taken.
  *
  * @param user_data Pointer to user supplied data pass to ls_dialog_open
- *
+ * @return unused but makes functions compatible with GSourceFunc
  */
-typedef void (*LSDialogCallback)(gpointer user_data);
+typedef gboolean (*LSDialogCallback)(gpointer user_data);
 
 /**
  * Callback for handling a file picker selection.
@@ -69,6 +69,7 @@ typedef struct {
     LSDialogCallback callback; /**< Action to run on click, or NULL to do nothing/cancel */
     gboolean is_cancel; /**< Whether escape or window close selects this option */
     gboolean is_default; /**< Whether or not this option is the default focus */
+    gint priority; /**< Priority override, defaults to G_PRIORITY_DEFAULT (since that priority is 0) */
 } LSDialogOption;
 
 typedef struct {

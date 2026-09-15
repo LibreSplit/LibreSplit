@@ -12,6 +12,7 @@
 #include "src/keybinds/keybinds_callbacks.h"
 #include "src/lasr/auto-splitter.h"
 #include "src/logging.h"
+#include "src/runs.h"
 #include "src/settings/settings.h"
 #include "src/settings/utils.h"
 #include "src/timer.h"
@@ -30,6 +31,8 @@ static void ls_app_init(LSApp* app)
 G_DEFINE_TYPE(LSApp, ls_app, GTK_TYPE_APPLICATION)
 
 G_DEFINE_TYPE(LSAppWindow, ls_app_window, GTK_TYPE_APPLICATION_WINDOW)
+
+static LSAppWindow* main_win = NULL;
 
 /**
  * Sets whether or not the window should be decorated
@@ -89,25 +92,48 @@ static void ls_app_window_map(GtkWidget* widget, gpointer data)
     x11_set_keep_above(GTK_WINDOW(widget), win->opts.win_on_top);
 }
 
-LSAppWindow* ls_app_window_new(LSApp* app)
+/**
+ * @brief Returns the LibreSplit main app window.
+ * Use this when you don't want to initialize the main window
+ * if it has not already been and/or you don't have the main G_APP instance.
+ *
+ * @return LSAppWindow* The main application window or NULL if none exists.
+ */
+LSAppWindow* ls_get_main_app_window(void)
 {
+    return main_win;
+}
+
+/**
+ * @brief Creates and initializes the main window singleton.
+ * If it already exists, returns the existing singleton instead.
+ *
+ * @param app The main LSApp instance.
+ * @return LSAppWindow* The main app window instance.
+ */
+LSAppWindow* ls_app_window_get_default(LSApp* app)
+{
+    if (main_win != NULL) {
+        LOG_INFO("LSAppWindow already initialized, returning singleton");
+        return main_win;
+    }
+
     LOG_DEBUG("Creating a new LibreSplit window");
-    LSAppWindow* win;
-    win = g_object_new(LS_APP_WINDOW_TYPE, "application", app, NULL);
+    main_win = g_object_new(LS_APP_WINDOW_TYPE, "application", app, NULL);
     GtkGesture* click = gtk_gesture_click_new();
     gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(click), 0);
-    gtk_event_controller_set_propagation_phase(GTK_EVENT_CONTROLLER(click),
-        GTK_PHASE_CAPTURE);
+    gtk_event_controller_set_propagation_phase(GTK_EVENT_CONTROLLER(click), GTK_PHASE_CAPTURE);
 
     g_signal_connect(click, "pressed", G_CALLBACK(handle_button_pressed), app);
-    gtk_widget_add_controller(GTK_WIDGET(win), GTK_EVENT_CONTROLLER(click));
-    return win;
+    gtk_widget_add_controller(GTK_WIDGET(main_win), GTK_EVENT_CONTROLLER(click));
+    return main_win;
 }
 
 void ls_app_window_open(LSAppWindow* win, const char* file)
 {
     LOG_DEBUG("Opening LibreSplit window");
     char* error_msg = NULL;
+    save_game_join(false);
 
     if (win->timer) {
         ls_app_window_clear_game(win);
@@ -117,6 +143,10 @@ void ls_app_window_open(LSAppWindow* win, const char* file)
     if (win->game) {
         ls_game_release(win->game);
         win->game = 0;
+    }
+    if (win->runs) {
+        ls_runs_release(win->runs);
+        win->runs = 0;
     }
     if (ls_game_create(&win->game, file, &error_msg)) {
         win->game = 0;
@@ -128,6 +158,8 @@ void ls_app_window_open(LSAppWindow* win, const char* file)
         }
     } else if (ls_timer_create(&win->timer, win->game)) {
         win->timer = 0;
+    } else if (ls_runs_create(&win->runs)) {
+        win->runs = 0;
     } else {
         ls_app_window_show_game(win);
     }
@@ -153,8 +185,7 @@ void ls_app_startup(GApplication* app)
  */
 void ls_app_activate(GApplication* app)
 {
-    LSAppWindow* win;
-    win = ls_app_window_new(LS_APP(app));
+    LSAppWindow* win = ls_app_window_get_default(LS_APP(app));
     gtk_window_present(GTK_WINDOW(win));
 
     if (cfg.history.split_file.value.s[0] != '\0') {
@@ -173,6 +204,7 @@ void ls_app_activate(GApplication* app)
         LOG_DEBUG("Opening split file selection dialog");
         open_activated(NULL, NULL, app);
     }
+
     if (cfg.history.auto_splitter_file.value.s[0] != '\0') {
         LOG_DEBUG("Opening last used auto splitter from history");
         struct stat st = { 0 };
@@ -184,6 +216,7 @@ void ls_app_activate(GApplication* app)
             strcpy(auto_splitter_file, auto_splitters_path);
         }
     }
+
     atomic_store(&auto_splitter_enabled, cfg.libresplit.auto_splitter_enabled.value.b);
 }
 
@@ -193,13 +226,9 @@ void ls_app_open(GApplication* app,
     const gchar* hint)
 {
     LOG_DEBUG("Starting LibreSplit App");
-    int i;
-    LSAppWindow* win = ls_get_main_app_window(GTK_APPLICATION(app));
-    if (!win) {
-        win = ls_app_window_new(LS_APP(app));
-    }
+    LSAppWindow* win = ls_app_window_get_default(LS_APP(app));
 
-    for (i = 0; i < n_files; i++) {
+    for (gint i = 0; i < n_files; i++) {
         gchar* path = g_file_get_path(files[i]);
         if (path != NULL) {
             ls_app_window_open(win, path);
@@ -315,14 +344,17 @@ static void ls_app_window_class_init(LSAppWindowClass* class)
 }
 
 /**
- * @brief The user was presented a confirm reset dialog while closing the app and chose yes.
- * This function performs the close operation after user confirmation.
+ * @brief Quit LibreSplit after any save operation completes.
+ * Usable by callbacks and gtk thread queues.
  *
  * @param window The main application window
+ * @param gboolean always G_SOURCE_REMOVE
  */
-static void destroy_window_after_confirmation(gpointer window)
+gboolean ls_app_window_quit(gpointer window)
 {
+    save_game_join(true);
     gtk_window_destroy(GTK_WINDOW(window));
+    return G_SOURCE_REMOVE;
 }
 
 /**
@@ -340,14 +372,15 @@ gboolean ls_app_window_delete(GtkWindow* window, gpointer data)
 
     LSAppWindow* win = LS_APP_WINDOW(window);
 
-    // Warn if the reset will lose a gold split, and allow the user to cancel the reset if they want to keep it
-    if (win->timer && win->timer->running && (ls_timer_has_gold_split(win->timer) || ls_timer_has_rainbow_split(win->timer))) {
-        if (cfg.libresplit.ask_on_gold.value.b) {
-            display_confirm_reset_dialog(destroy_window_after_confirmation, win);
+    // Warn if the quit will lose an achievement, and allow the user to cancel the quit if they want to keep it
+    if (ls_game_has_achievement(win->timer)) {
+        if (cfg.libresplit.ask_on_achievement.value.b) {
+            display_confirm_reset_dialog(ls_app_window_quit, win);
             return TRUE;
         }
     }
 
+    save_game_join(true);
     return FALSE;
 }
 
@@ -361,7 +394,11 @@ void ls_app_window_destroy(GtkWidget* widget, gpointer data)
 {
     LOG_INFO("Exiting LibreSplit. GG!");
     LSAppWindow* win = (LSAppWindow*)widget;
-    save_game_join();
+    if (main_win == win) {
+        main_win = NULL;
+    }
+
+    save_game_join(true);
     if (win->timer) {
         ls_timer_release(win->timer);
         win->timer = 0;
@@ -369,6 +406,10 @@ void ls_app_window_destroy(GtkWidget* widget, gpointer data)
     if (win->game) {
         ls_game_release(win->game);
         win->game = 0;
+    }
+    if (win->runs) {
+        ls_runs_release(win->runs);
+        win->runs = 0;
     }
     atomic_store(&auto_splitter_enabled, 0);
     atomic_store(&exit_requested, 1);
@@ -461,6 +502,40 @@ gboolean ls_app_window_step(gpointer data)
     return TRUE;
 }
 
+/**
+ * @brief Sets the block state to the main app window.
+ *
+ * @param data Pointer to whether to set the block state on or off.
+ * @return gboolean Always G_SOURCE_REMOVE to remove from the thread queue.
+ */
+static gboolean ls_app_window_set_blocked_state(gpointer data)
+{
+    gboolean block_window = *((gboolean*)data);
+    LSAppWindow* win = ls_get_main_app_window();
+    if (win == NULL || gtk_widget_in_destruction(GTK_WIDGET(win))) {
+        return G_SOURCE_REMOVE;
+    }
+
+    gtk_widget_set_sensitive(GTK_WIDGET(win), !block_window);
+    gtk_widget_set_opacity(win->container, block_window ? 0.5 : 1.0);
+    return G_SOURCE_REMOVE;
+}
+
+/**
+ * @brief Sends a request to the main GTK thread to set the window's block state.
+ * This should be used to indicate to the user that something is happening
+ * (like an in progress save) that requires interaction with LibreSplit
+ * to block for a short while.
+ *
+ * @param block_window Whether to set the block state on or off.
+ */
+void ls_app_window_set_blocked(gboolean block_window)
+{
+    gboolean* block_window_request = g_new(gboolean, 1);
+    *block_window_request = block_window;
+    g_main_context_invoke_full(NULL, G_PRIORITY_DEFAULT, ls_app_window_set_blocked_state, block_window_request, g_free);
+}
+
 gboolean ls_app_window_draw(gpointer data)
 {
     LSAppWindow* win = data;
@@ -475,27 +550,8 @@ gboolean ls_app_window_draw(gpointer data)
     } else {
         gtk_widget_queue_draw(GTK_WIDGET(win));
     }
+
     return TRUE;
-}
-
-/**
- * @brief A helper function to get the main LibreSplit AppWindow.
- * gtk_application_get_windows returns a list of windows ordered by the most
- * recently focused window. Therefore the first result is not gauranteed to be
- * the main window.
- *
- * @param app The application
- * @return LSAppWindow* The main application window or NULL if none exists
- */
-LSAppWindow* ls_get_main_app_window(GtkApplication* app)
-{
-    for (GList* node = gtk_application_get_windows(app); node != NULL; node = node->next) {
-        if (LS_IS_APP_WINDOW(node->data)) {
-            return LS_APP_WINDOW(node->data);
-        }
-    }
-
-    return NULL;
 }
 
 static void ls_app_window_init(LSAppWindow* win)

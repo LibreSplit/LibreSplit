@@ -23,7 +23,9 @@ void timer_stop_and_reset(LSAppWindow* win)
     if (ls_timer_reset(win->timer, win->game)) {
         ls_app_window_clear_game(win);
         ls_app_window_show_game(win);
-        save_game(win->game);
+        if (cfg.libresplit.auto_save.value.b) {
+            save_game(win->game);
+        }
     }
 
     for (GList* l = win->components; l != NULL; l = l->next) {
@@ -45,8 +47,8 @@ void timer_start_split(LSAppWindow* win)
         return;
 
     if (!win->timer->started) { // To start again a reset needs to happen
-        if (ls_timer_start(win->timer)) {
-            save_game(win->game);
+        if (!ls_timer_start(win->timer)) {
+            return;
         }
     } else {
         ls_timer_split(win->timer);
@@ -73,8 +75,8 @@ void timer_start(LSAppWindow* win)
     if (win->timer->running)
         return; // Timer is already running, do nothing
 
-    if (ls_timer_start(win->timer)) {
-        save_game(win->game);
+    if (!ls_timer_start(win->timer)) {
+        return;
     }
 
     for (GList* l = win->components; l != NULL; l = l->next) {
@@ -104,7 +106,9 @@ void timer_stop_or_reset(LSAppWindow* win)
         if (ls_timer_reset(win->timer, win->game)) {
             ls_app_window_clear_game(win);
             ls_app_window_show_game(win);
-            save_game(win->game);
+            if (cfg.libresplit.auto_save.value.b) {
+                save_game(win->game);
+            }
         }
     }
 
@@ -119,28 +123,33 @@ void timer_stop_or_reset(LSAppWindow* win)
 /**
  * @brief Performs the actual cancellation of a run when it should be cancelled.
  * This maybe be called from the affirmitive action of a run reset warning dialog.
+ * This function returns gboolean for LSDialogCallback and GSourceFunc
+ * compatibility, but is effectively a void function in practice.
  *
  * @param window A pointer to the main LSAppWindow of the app.
+ * @param gboolean always G_SOURCE_REMOVE
  */
-static void perform_cancel_run(gpointer window)
+static gboolean perform_cancel_run(gpointer window)
 {
     LSAppWindow* win = window;
 
     // autosplitter/global hotkey start sanity checks
     if (!win->timer) {
         LOG_WARN("Timer became null after confirm, cannot cancel run.");
-        return;
+        return G_SOURCE_REMOVE;
     }
 
     if (win->timer->running) {
         LOG_WARN("Timer started running after confirm, cannot cancel run.");
-        return;
+        return G_SOURCE_REMOVE;
     }
 
     ls_timer_cancel(win->timer);
     ls_app_window_clear_game(win);
     ls_app_window_show_game(win);
-    save_game(win->game);
+    if (cfg.libresplit.auto_save.value.b) {
+        save_game(win->game);
+    }
 
     for (GList* l = win->components; l != NULL; l = l->next) {
         LSComponent* component = l->data;
@@ -148,6 +157,8 @@ static void perform_cancel_run(gpointer window)
             component->ops->cancel_run(component, win->timer);
         }
     }
+
+    return G_SOURCE_REMOVE;
 }
 
 /**
@@ -166,9 +177,9 @@ void timer_cancel_run(LSAppWindow* win)
         return;
     }
 
-    // Warn if the reset will lose a gold split, and allow the user to cancel the reset if they want to keep it
+    // Warn if the cancel will lose a gold/rainbow split, and allow the user to abort the cancel if they want to keep it
     if (ls_timer_has_gold_split(win->timer) || ls_timer_has_rainbow_split(win->timer)) {
-        if (cfg.libresplit.ask_on_gold.value.b) {
+        if (cfg.libresplit.ask_on_achievement.value.b) {
             display_confirm_reset_dialog(perform_cancel_run, win);
             return;
         }
