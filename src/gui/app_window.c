@@ -324,6 +324,11 @@ static void ls_app_window_dispose(GObject* object)
         g_clear_object(&win->style);
     }
 
+    if (win->style_variant != NULL) {
+        gtk_style_context_remove_provider_for_display(win->display, GTK_STYLE_PROVIDER(win->style_variant));
+        g_clear_object(&win->style_variant);
+    }
+
     if (win->reset_style != NULL) {
         gtk_style_context_remove_provider_for_display(win->display, GTK_STYLE_PROVIDER(win->reset_style));
         g_clear_object(&win->reset_style);
@@ -559,6 +564,7 @@ static void ls_app_window_init(LSAppWindow* win)
     win->display = gdk_display_get_default();
     win->reset_style = NULL;
     win->style = NULL;
+    win->style_variant = NULL;
     win->step_source_id = 0;
     win->draw_source_id = 0;
     win->global_hotkeys_initialized = false;

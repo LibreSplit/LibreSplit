@@ -158,7 +158,7 @@ static size_t maps_getAll_ioctl(void)
     int f = open(path, O_RDONLY);
     if (f >= 0) {
         struct procmap_query q = { 0 };
-        char map_name[PATH_MAX] = { 0 };
+        char map_name[PATH_MAX + 1] = { 0 };
         q.size = sizeof(q);
         q.query_flags = PROCMAP_QUERY_COVERING_OR_NEXT_VMA;
         q.query_addr = 0;
