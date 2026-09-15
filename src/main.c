@@ -111,6 +111,20 @@ int main(int argc, char* argv[])
     check_directories();
 
     g_app = ls_app_new();
+    GError* error = NULL;
+    if (!g_application_register(G_APPLICATION(g_app), NULL, &error)) {
+        g_printerr("Unable to register LibreSplit: %s\n", error->message);
+        g_clear_error(&error);
+        g_clear_object(&g_app);
+        return EXIT_FAILURE;
+    }
+
+    // LibreSplit is already running
+    if (g_application_get_is_remote(G_APPLICATION(g_app))) {
+        g_print("LibreSplit is already running.\n");
+        return EXIT_SUCCESS;
+    }
+
     LOG_INFO("Creating Auto-Splitter Thread");
     pthread_t t1; // Auto-splitter thread
     pthread_create(&t1, NULL, &ls_auto_splitter, NULL);
