@@ -12,6 +12,8 @@ typedef enum LSGrowResult {
     LS_GROW_REALLOC_FAILED,
 } LSGrowResult;
 
+static void ls_runs_clear_failure_show(ls_runs* self, GtkWindow* win);
+
 /**
  * @brief Sets today's date to the date buffer in YYYY-MM-DD format.
  *
@@ -198,6 +200,20 @@ static gboolean ls_runs_clear_callback(gpointer data)
 }
 
 /**
+ * @brief Wrapper for when ls_runs_clear_callback_with_save
+ * fails to save. Redo the initial failure to give the user
+ * a best effort attempt at a chance to recover.
+ *
+ * @param data Pointer to self
+ * @return gboolean void in practice, gboolean for GSourceFunc
+ */
+static gboolean ls_runs_redo_clear_warning(gpointer data)
+{
+    ls_runs_clear_failure_show(data, GTK_WINDOW(ls_get_main_app_window()));
+    return G_SOURCE_REMOVE;
+}
+
+/**
  * @brief Wrapper for ls_runs_clear_callback that saves the user's run first.
  *
  * @param data Pointer to self
@@ -209,6 +225,39 @@ static gboolean ls_runs_clear_callback_with_save(gpointer data)
     LSAppWindow* win = ls_get_main_app_window();
     save_game(win->game);
     save_game_join(false);
+
+    if (!get_last_game_save_result() || !get_last_runs_save_result()) {
+        const LSDialogIcon icon = {
+            .source = "dialog-warning",
+            .type = LS_DIALOG_ICON_NAME,
+        };
+
+        const LSDialogOption options[] = {
+            {
+                .label = "_OK",
+                .callback = ls_runs_redo_clear_warning,
+                .is_cancel = TRUE,
+                .is_default = FALSE,
+            }
+        };
+
+        if (!ls_dialog_open(GTK_WINDOW(win),
+                "Save Failed",
+                "Save Failed",
+                "We were unable to save your runs history.\n"
+                "If this continues check your logs for errors.",
+                &icon,
+                options,
+                G_N_ELEMENTS(options), self, NULL)) {
+            // We don't even have memory for a dialog, sorry your data is gone
+            if (!ls_runs_clear(self)) {
+                g_idle_add_full(G_PRIORITY_HIGH, ls_runs_clear_failure, NULL, NULL);
+            }
+        }
+
+        return G_SOURCE_REMOVE;
+    }
+
     ls_runs_clear_callback(self);
     return G_SOURCE_REMOVE;
 }
@@ -270,6 +319,7 @@ static gboolean ls_runs_save_and_clear(gpointer data)
     save_game(ls_get_main_app_window()->game);
     save_game_join(false);
 
+    // No recovery chance this time since we couldn't open a dialog before anyway.
     if (!ls_runs_clear(self)) {
         // Well, we tried.
         g_idle_add_full(G_PRIORITY_HIGH, ls_runs_clear_failure, NULL, NULL);

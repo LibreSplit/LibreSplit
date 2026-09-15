@@ -15,6 +15,10 @@ static atomic_bool saving;
 static GMutex save_mutex;
 static bool saving_enabled = true;
 
+// start as true to symbolize there has not yet been any failure
+static atomic_bool last_game_save_result = true;
+static atomic_bool last_runs_save_result = true;
+
 typedef struct save_data {
     ls_game* game;
     ls_runs* runs;
@@ -225,6 +229,8 @@ static gpointer save_game_thread(gpointer data)
     save_data* snapshot = data;
     GObject* main_win = g_weak_ref_get(&snapshot->main_win);
     GtkWindow* win = main_win ? GTK_WINDOW(main_win) : NULL;
+
+    bool runs_result = true;
     int result = ls_game_save(snapshot->game);
     if (result) {
         ls_alert_warning(win, "Save Failed", "Save Failed", "We were unable to save your game.\nIf this continues check your logs for errors.");
@@ -232,7 +238,8 @@ static gpointer save_game_thread(gpointer data)
     }
 
     if (snapshot->runs) {
-        if (!ls_runs_save(snapshot->runs, snapshot->game, win)) {
+        runs_result = ls_runs_save(snapshot->runs, snapshot->game, win);
+        if (!runs_result) {
             ls_alert_warning(win, "Save Failed", "Save Failed", "We were unable to save your runs history.\nIf this continues check your logs for errors.");
             goto save_game_thread_finished;
         }
@@ -244,6 +251,9 @@ static gpointer save_game_thread(gpointer data)
     }
 
 save_game_thread_finished:
+    atomic_store(&last_game_save_result, result == 0);
+    atomic_store(&last_runs_save_result, runs_result);
+
     // if the game saved successfully, call ls_game_saved event.
     if (result == 0 && main_win) {
         ls_game_saved(LS_APP_WINDOW(main_win)->game);
@@ -262,6 +272,16 @@ save_game_thread_finished:
 bool is_saving(void)
 {
     return atomic_load(&saving);
+}
+
+bool get_last_game_save_result(void)
+{
+    return atomic_load(&last_game_save_result);
+}
+
+bool get_last_runs_save_result(void)
+{
+    return atomic_load(&last_runs_save_result);
 }
 
 /**
