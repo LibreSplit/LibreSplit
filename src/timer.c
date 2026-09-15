@@ -25,7 +25,7 @@
  * Returns the current time, taken from a monotonic clock
  * (a clock that is not affected by leap seconds or daylight savings).
  *
- * @return The current time, in milliseconds
+ * @return The current time, in microseconds
  */
 static long long ls_time_now(void)
 {
@@ -50,13 +50,13 @@ inline ls_time ls_timer_get_time(const ls_timer* timer, bool load_removed)
 }
 
 /**
- * Converts a time string into milliseconds
+ * Converts a time string into microseconds
  *
  * Takes a HH:MM:SS.mmmmmm formatted time string and converts it into
- * milliseconds.
+ * microseconds.
  *
  * @param string The time string to convert, in HH:MM:SS.mmmmmm format
- * @return The time string converted to milliseconds
+ * @return The time string converted to microseconds
  */
 long long ls_time_value(const char* string)
 {
@@ -246,9 +246,9 @@ void ls_time_clear(ls_time* time)
 }
 
 /**
- * Converts a time in milliseconds to a formatted string.
+ * Converts a time in microseconds to a formatted string.
  *
- * Takes a time in milliseconds and converts it into a human-readable format
+ * Takes a time in microseconds and converts it into a human-readable format
  * copying it via side-effect into the first and second argument, a bit
  * like strcpy would do.
  *
