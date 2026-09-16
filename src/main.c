@@ -111,6 +111,10 @@ int main(int argc, char* argv[])
     check_directories();
 
     g_app = ls_app_new();
+
+    // Register the application to prevent it being open more than once
+    // TODO: This is a temporary measure because LibreSplit currently doesn't
+    // Work well with multiple instances running.
     GError* error = NULL;
     if (!g_application_register(G_APPLICATION(g_app), NULL, &error)) {
         g_printerr("Unable to register LibreSplit: %s\n", error->message);
