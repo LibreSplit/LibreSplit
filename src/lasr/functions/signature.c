@@ -498,7 +498,7 @@ int perform_sig_scan(lua_State* L)
     }
 
     // By construction, the memory iterator buffer size is MEMORY_WINDOW_SIZE
-    if (pattern_length > mem_iter->buffer_size) {
+    if (pattern_length >= mem_iter->buffer_size) {
         LOG_ERR("Memory signature provided is too large.");
         lua_pushnil(L);
         goto cleanup;
