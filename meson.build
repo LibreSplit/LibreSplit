@@ -69,7 +69,6 @@ libresplit_sources = files(
 
     # LASR
     'src/lasr/auto-splitter.c',
-    'src/lasr/memory_iter/memory_iterator.c',
     'src/lasr/functions/bitwise.c',
     'src/lasr/functions/getBaseAddress.c',
     'src/lasr/functions/getMaps.c',
@@ -84,6 +83,8 @@ libresplit_sources = files(
     'src/lasr/functions/sizeOf.c',
     'src/lasr/functions/strtoida.c',
     'src/lasr/maps/maps.c',
+    'src/lasr/memory_iter/memory_iterator.c',
+    'src/lasr/settings.c',
     'src/lasr/utils.c',
     'src/logging.c',
     'src/main.c',

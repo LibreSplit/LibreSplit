@@ -6,6 +6,7 @@
 
 #include "./maps/maps.h"
 #include "functions.h"
+#include "settings.h"
 #include "src/logging.h"
 #include "utils.h"
 
@@ -544,6 +545,7 @@ void run_auto_splitter(void)
     luaL_openlibs(L);
     disable_functions(L, disabled_functions);
     push_lasr_functions(L, luac_functions);
+    lasr_settings_register(L);
 
     char current_file[PATH_MAX];
     strcpy(current_file, auto_splitter_file);
@@ -558,12 +560,13 @@ void run_auto_splitter(void)
         lua_pop(L, 1); // Remove the error message from the stack
         lua_close(L);
         maps_clearCache();
+        lasr_settings_clear();
         atomic_store(&auto_splitter_enabled, false);
         return;
     }
 
     // Execute the Lua file
-    if (lua_pcall(L, 0, LUA_MULTRET, base) != LUA_OK) {
+    if (lua_pcall(L, 0, LUA_MULTRET, base) != LUA_OK || lasr_settings_load(L) != LUA_OK) {
         // Error executing the file
         if (!lua_isnil(L, -1)) {
             const char* err = lua_tostring(L, -1);
@@ -574,9 +577,11 @@ void run_auto_splitter(void)
         lua_pop(L, 1);
         lua_close(L);
         maps_clearCache();
+        lasr_settings_clear();
         atomic_store(&auto_splitter_enabled, false);
         return;
     }
+
     lua_remove(L, base); /* remove traceback function */
 
     lua_getglobal(L, "state");
@@ -673,4 +678,5 @@ void run_auto_splitter(void)
 
     lua_close(L);
     maps_clearCache();
+    lasr_settings_clear();
 }
