@@ -40,7 +40,7 @@ void lasr_settings_clear(void)
  */
 static bool is_valid_string(lua_State* L, int index)
 {
-    if (!lua_isstring(L, index)) {
+    if (lua_type(L, index) != LUA_TSTRING) {
         return false;
     }
 
@@ -58,7 +58,7 @@ static bool is_valid_string(lua_State* L, int index)
  */
 static SettingType get_setting_type(lua_State* L, int index)
 {
-    if (!lua_isnumber(L, index)) {
+    if (lua_type(L, index) != LUA_TNUMBER) {
         return SETTING_INVALID;
     }
 
@@ -94,7 +94,7 @@ static const char* setting_set_val(lua_State* L, int index, SettingType type, Se
 
         case SETTING_INTEGER:
             {
-                if (!lua_isnumber(L, index)) {
+                if (lua_type(L, index) != LUA_TNUMBER) {
                     return "invalid value type set for default integer setting";
                 }
 
@@ -113,7 +113,7 @@ static const char* setting_set_val(lua_State* L, int index, SettingType type, Se
             }
 
         case SETTING_NUMBER:
-            if (!lua_isnumber(L, index)) {
+            if (lua_type(L, index) != LUA_TNUMBER) {
                 return "invalid value type set for default number setting";
             }
 
