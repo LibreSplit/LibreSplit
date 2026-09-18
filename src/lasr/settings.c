@@ -297,6 +297,12 @@ static void remove_define(lua_State* L, int function_index)
     lua_pop(L, 1);
 }
 
+/**
+ * @brief Registers the global settings object and
+ * type definitions that mirror the SettingType enum.
+ *
+ * @param L The current lua state.
+ */
 void lasr_settings_register(lua_State* L)
 {
     static const luaL_Reg functions[] = {
@@ -327,6 +333,14 @@ void lasr_settings_register(lua_State* L)
     }
 }
 
+/**
+ * @brief Load settings and define them for Lua.
+ * Runs define_settings if it exists and creates the
+ * settings hash table.
+ *
+ * @param L The current lua state.
+ * @return int 0 on success otherwise error #
+ */
 int lasr_settings_load(lua_State* L)
 {
     if (settings) {
