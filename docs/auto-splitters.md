@@ -31,6 +31,68 @@ cmdline('MyGameHasAVeryLongName.exe')
 * Next we have to define the basic functions. Not all are required and the ones that are required may change depending on the game or end goal, like if loading screens are included or not.
     * The order at which these run is the same as they are documented below.
 
+### `define_settings`
+The purpose of this function is to specify settings that your script make take along with their default values. LASR provides a global `settings` object that should contain all of your settings for the lifetime of your script. LibreSplit handles updating these settings for you as the user interacts with them. Currently, the following setting types are available:
+
+* `SETTING_BOOLEAN`
+* `SETTING_INTEGER`
+* `SETTING_NUMBER`
+* `SETTING_STRING`
+
+LibreSplit will run your `define_settings` function exactly once when your script is loaded before anything else to define your settings. This is the only time when settings may be defined.
+
+The `settings` object has 2 methods associated with it:
+
+#### `define`
+`settings.define(name, definition)`
+
+* name (string)
+    * the key used for your setting (to be used with `get`)
+* definition (object)
+    * type (int REQUIRED)
+        * integer value representing your setting type. Use the defined SETTING_* enum values above
+    * default (mixed REQUIRED)
+        * the default value for your setting (must match the setting type provided)
+    * desc (string OPTIONAL)
+        * optional description to show the user for what the setting is for
+
+This is the main method you will use to actually define each of your settings, their type and default value. Along with an optional description for the user of what the setting is for.
+`define` may ONLY be called within your `define_settings` function. Afterwards, calling `define` is no longer possible and will result in an error.
+
+Example usage:
+```lua
+function define_settings()
+    settings.define("category", {
+        type = SETTING_STRING,
+        default = "Any%",
+        desc = "Set the category you are running for our game!"
+    })
+
+    settings.define("is_emulator", {
+        type = SETTING_BOOLEAN,
+        default = false
+    })
+
+    settings.define("my_int_val", {
+        type = SETTING_INTEGER,
+        default = 5
+    })
+end
+```
+
+#### `get`
+`settings.get(name)`
+
+The get method is how you will get the current value for any of your defined settings. If the user has not provided any value, then the result will be your default value from your earlier
+definition. Calling `get` with a name that was not defined earlier will result in nil. Similarly, if your script has no `define_settings` function, then all calls to `get` will result in nil.
+
+the get method is available to any of the other lifetime global functions, but should not be used outside of the LASR lifecycle.
+
+Example usage:
+```lua
+local var = settings.get("is_emulator") -- defaults to false per our earlier example definition
+```
+
 ### `startup`
  The purpose of this function is to specify how many times LibreSplit checks memory values and executes functions each second, the default is 60Hz. Usually, 60Hz is fine and this function can remain undefined. However, it's there if you need it. Its also useful to change other configuration about the script.
 ```lua
