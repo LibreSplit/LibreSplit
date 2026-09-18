@@ -12,6 +12,7 @@ static GHashTable* settings;
 static void free_setting(gpointer data)
 {
     Setting* setting = data;
+    g_free(setting->config.key);
     g_free(setting->config.name);
     g_free(setting->config.desc);
     if (setting->config.type == SETTING_STRING) {
@@ -158,22 +159,31 @@ static int define_setting(lua_State* L)
     }
 
     if (!is_valid_string(L, 1)) {
-        return luaL_error(L, "[settings.define] name must be a valid string without any NUL bytes");
+        return luaL_error(L, "[settings.define] key must be a valid string without any NUL bytes");
     }
 
     if (!lua_istable(L, 2)) {
         return luaL_error(L, "[settings.define] definition must be a table");
     }
 
-    const char* name = lua_tostring(L, 1);
+    const char* key = lua_tostring(L, 1);
+    if (!*key) {
+        return luaL_error(L, "[settings.define] key must not be empty");
+    }
+
+    if (g_hash_table_contains(settings, key)) {
+        return luaL_error(L, "[settings.define] setting \"%s\" is already defined", key);
+    }
+
+    lua_pushliteral(L, "name");
+    lua_rawget(L, 2);
+
+    const char* name = lua_tostring(L, -1);
     if (!*name) {
         return luaL_error(L, "[settings.define] name must not be empty");
     }
 
-    if (g_hash_table_contains(settings, name)) {
-        return luaL_error(L, "[settings.define] setting \"%s\" is already defined", name);
-    }
-
+    lua_pop(L, 1);
     lua_pushliteral(L, "type");
     lua_rawget(L, 2);
 
@@ -201,6 +211,7 @@ static int define_setting(lua_State* L)
 
     const char* desc = lua_tostring(L, -1);
     Setting* setting = g_new0(Setting, 1);
+    setting->config.key = g_strdup(key);
     setting->config.name = g_strdup(name);
     setting->config.type = type;
     setting->config.default_val = default_val;
@@ -209,20 +220,20 @@ static int define_setting(lua_State* L)
         setting->config.default_val.string_val = g_strdup(default_val.string_val);
     }
 
-    g_hash_table_insert(settings, setting->config.name, setting);
+    g_hash_table_insert(settings, setting->config.key, setting);
     return 0;
 }
 
 /**
- * @brief Gets a setting by "name" or NULL if no settings defined or
+ * @brief Gets a setting by "key" or NULL if no settings defined or
  * the value does not exist.
  *
- * @param name The name of the setting.
+ * @param key The key of the setting.
  * @return Setting* Pointer to the setting or NULL.
  */
-Setting* lasr_settings_lookup(const char* name)
+Setting* lasr_settings_lookup(const char* key)
 {
-    return settings && name ? g_hash_table_lookup(settings, name) : NULL;
+    return settings && key ? g_hash_table_lookup(settings, key) : NULL;
 }
 
 /**
@@ -238,11 +249,11 @@ static int get_setting(lua_State* L)
     }
 
     if (!is_valid_string(L, 1)) {
-        return luaL_error(L, "[settings.get] name must be a valid string without any NUL bytes");
+        return luaL_error(L, "[settings.get] key must be a valid string without any NUL bytes");
     }
 
-    const char* name = lua_tostring(L, 1);
-    const Setting* setting = lasr_settings_lookup(name);
+    const char* key = lua_tostring(L, 1);
+    const Setting* setting = lasr_settings_lookup(key);
     if (!setting) {
         lua_pushnil(L);
         return 1;

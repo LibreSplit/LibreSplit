@@ -19,6 +19,7 @@ typedef union SettingVal {
 } SettingVal;
 
 typedef struct SettingDefinition {
+    char* key;
     char* name;
     SettingType type;
     SettingVal default_val;
