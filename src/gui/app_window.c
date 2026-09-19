@@ -161,6 +161,17 @@ void ls_app_window_open(LSAppWindow* win, const char* file)
     } else if (ls_runs_create(&win->runs)) {
         win->runs = 0;
     } else {
+        if (win->game->auto_splitter_file && win->game->auto_splitter_file[0] != '\0') {
+            LOG_DEBUG("Opening autosplitter");
+            struct stat st = { 0 };
+            if (stat(win->game->auto_splitter_file, &st) == -1) {
+                LOG_INFOF("Auto Splitter %s does not exist", win->game->auto_splitter_file);
+            } else {
+                strcpy(auto_splitter_file, win->game->auto_splitter_file);
+            }
+        }
+
+        atomic_store(&auto_splitter_enabled, cfg.libresplit.auto_splitter_enabled.value.b);
         ls_app_window_show_game(win);
     }
 }
@@ -204,20 +215,6 @@ void ls_app_activate(GApplication* app)
         LOG_DEBUG("Opening split file selection dialog");
         open_activated(NULL, NULL, app);
     }
-
-    if (cfg.history.auto_splitter_file.value.s[0] != '\0') {
-        LOG_DEBUG("Opening last used auto splitter from history");
-        struct stat st = { 0 };
-        char auto_splitters_path[PATH_MAX];
-        strcpy(auto_splitters_path, cfg.history.auto_splitter_file.value.s);
-        if (stat(auto_splitters_path, &st) == -1) {
-            LOG_INFOF("Auto Splitter %s does not exist", auto_splitters_path);
-        } else {
-            strcpy(auto_splitter_file, auto_splitters_path);
-        }
-    }
-
-    atomic_store(&auto_splitter_enabled, cfg.libresplit.auto_splitter_enabled.value.b);
 }
 
 void ls_app_open(GApplication* app,

@@ -77,6 +77,52 @@ static ls_game* create_snapshot(const ls_game* game)
         }
     }
 
+    if (game->auto_splitter_file) {
+        snapshot->auto_splitter_file = strdup(game->auto_splitter_file);
+        if (!snapshot->auto_splitter_file) {
+            LOG_ERR("snapshot creation: unable to duplicate `auto_splitter_file` in memory");
+            goto create_snapshot_failed;
+        }
+    }
+
+    if (game->auto_splitter_settings_count) {
+        lock_user_settings();
+        snapshot->auto_splitter_settings_count = game->auto_splitter_settings_count;
+        snapshot->auto_splitter_settings = calloc(game->auto_splitter_settings_count, sizeof(UserSetting*));
+        if (!snapshot->auto_splitter_settings) {
+            LOG_ERR("snapshot creation: snapshot creation: unable to allocate memory for `auto_splitter_settings`");
+            unlock_user_settings();
+            goto create_snapshot_failed;
+        }
+
+        for (size_t i = 0; i < game->auto_splitter_settings_count; ++i) {
+            snapshot->auto_splitter_settings[i] = calloc(1, sizeof(UserSetting));
+            if (!snapshot->auto_splitter_settings[i]) {
+                LOG_ERRF("snapshot creation: snapshot creation: unable to allocate memory for setting[%zu]", i);
+                unlock_user_settings();
+                goto create_snapshot_failed;
+            }
+
+            snapshot->auto_splitter_settings[i]->key = strdup(game->auto_splitter_settings[i]->key);
+            if (!snapshot->auto_splitter_settings[i]->key) {
+                LOG_ERRF("snapshot creation: snapshot creation: unable to duplicate setting[%zu].key", i);
+                unlock_user_settings();
+                goto create_snapshot_failed;
+            }
+
+            snapshot->auto_splitter_settings[i]->type = game->auto_splitter_settings[i]->type;
+            snapshot->auto_splitter_settings[i]->val = game->auto_splitter_settings[i]->val;
+            if (snapshot->auto_splitter_settings[i]->type == SETTING_STRING) {
+                snapshot->auto_splitter_settings[i]->val.string_val = strdup(game->auto_splitter_settings[i]->val.string_val);
+                if (!snapshot->auto_splitter_settings[i]->val.string_val) {
+                    LOG_ERRF("snapshot creation: snapshot creation: unable to duplicate setting[%zu] string value", i);
+                    unlock_user_settings();
+                    goto create_snapshot_failed;
+                }
+            }
+        }
+    }
+
     if (!game->split_count) {
         return snapshot;
     }

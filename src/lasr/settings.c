@@ -1,4 +1,5 @@
 #include "settings.h"
+#include "src/gui/app_window.h"
 #include "src/logging.h"
 
 #include <glib.h>
@@ -8,6 +9,17 @@
 #include <strings.h>
 
 static GHashTable* settings;
+static GMutex user_settings_mutex;
+
+void lock_user_settings(void)
+{
+    g_mutex_lock(&user_settings_mutex);
+}
+
+void unlock_user_settings(void)
+{
+    g_mutex_unlock(&user_settings_mutex);
+}
 
 static void free_setting(gpointer data)
 {
@@ -344,6 +356,51 @@ void lasr_settings_register(lua_State* L)
     }
 }
 
+static void lasr_user_settings_load(void)
+{
+    // nothing to do
+    if (!settings) {
+        return;
+    }
+
+    lock_user_settings();
+
+    // don't do anything with this other than read settings.
+    LSAppWindow* win = ls_get_main_app_window();
+    if (!win || !win->game || !win->game->auto_splitter_settings || win->game->auto_splitter_settings_count == 0) {
+        goto lasr_user_settings_load_unlock;
+    }
+
+    for (size_t i = 0; i < win->game->auto_splitter_settings_count; ++i) {
+        UserSetting* user_setting = win->game->auto_splitter_settings[i];
+        if (!g_hash_table_contains(settings, user_setting->key)) {
+            continue;
+        }
+
+        Setting* setting = g_hash_table_lookup(settings, user_setting->key);
+        if (!setting) {
+            // this should be impossible
+            LOG_WARNF("NULL setting definition found for \"%s\"", user_setting->key);
+            continue;
+        }
+
+        if (user_setting->type != setting->config.type) {
+            LOG_WARNF("Invalid setting type for \"%s\"", user_setting->key);
+            continue;
+        }
+
+        setting->set = true;
+        setting->val = user_setting->val;
+        if (setting->config.type == SETTING_STRING) {
+            g_free(setting->val.string_val);
+            setting->val.string_val = g_strdup(user_setting->val.string_val);
+        }
+    }
+
+lasr_user_settings_load_unlock:
+    unlock_user_settings();
+}
+
 /**
  * @brief Load settings and define them for Lua.
  * Runs define_settings if it exists and creates the
@@ -388,6 +445,8 @@ int lasr_settings_load(lua_State* L)
         status = lua_pcall(L, 0, 0, 0);
         if (status != LUA_OK) {
             lasr_settings_clear();
+        } else {
+            lasr_user_settings_load();
         }
     }
 

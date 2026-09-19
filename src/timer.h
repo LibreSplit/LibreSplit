@@ -1,5 +1,6 @@
 #pragma once
 
+#include "src/lasr/settings.h"
 #include "src/settings/definitions.h"
 #include <jansson.h>
 #include <stdatomic.h>
@@ -47,6 +48,7 @@ typedef struct ls_game {
     char* title;
     char* theme;
     char* theme_variant;
+    char* auto_splitter_file;
     ls_time_method comparison_method;
     int attempt_count;
     int finished_count;
@@ -65,6 +67,8 @@ typedef struct ls_game {
     atomic_bool has_unsaved_pb;
     atomic_bool has_unsaved_gold;
     atomic_bool has_unsaved_rainbow;
+    UserSetting** auto_splitter_settings;
+    size_t auto_splitter_settings_count;
 } ls_game;
 
 /**

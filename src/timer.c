@@ -348,6 +348,24 @@ void ls_delta_string(char* string, long long time)
     ls_time_string_format(string, NULL, time, 0, 1, 1);
 }
 
+static void ls_auto_splitter_settings_release(ls_game* game)
+{
+    lock_user_settings();
+    for (size_t i = 0; i < game->auto_splitter_settings_count; i++) {
+        if (game->auto_splitter_settings[i]->type == SETTING_STRING) {
+            free(game->auto_splitter_settings[i]->val.string_val);
+        }
+
+        free(game->auto_splitter_settings[i]->key);
+        free(game->auto_splitter_settings[i]);
+    }
+
+    free(game->auto_splitter_settings);
+    game->auto_splitter_settings = NULL;
+    game->auto_splitter_settings_count = 0;
+    unlock_user_settings();
+}
+
 /**
  * Frees the memory allocated for a game struct and sets all its pointers to NULL.
  *
@@ -360,18 +378,19 @@ void ls_game_release(ls_game* game)
     }
 
     LOG_DEBUG("Releasing game...");
-    if (game->title) {
-        free(game->title);
-        game->title = 0;
-    }
-    if (game->theme) {
-        free(game->theme);
-        game->theme = 0;
-    }
-    if (game->theme_variant) {
-        free(game->theme_variant);
-        game->theme_variant = 0;
-    }
+    free(game->title);
+    game->title = 0;
+
+    free(game->theme);
+    game->theme = 0;
+
+    free(game->theme_variant);
+    game->theme_variant = 0;
+
+    free(game->auto_splitter_file);
+    game->auto_splitter_file = 0;
+    ls_auto_splitter_settings_release(game);
+
     if (game->split_titles) {
         for (unsigned int i = 0; i < game->split_count; ++i) {
             if (game->split_titles[i]) {
@@ -410,6 +429,109 @@ void ls_game_release(ls_game* game)
     }
 
     free(game);
+}
+
+static void load_auto_splitter_settings(json_t* json, ls_game* game)
+{
+    json_t* settings = json_object_get(json, "auto_splitter_settings");
+    if (!json_is_array(settings)) {
+        return;
+    }
+
+    size_t count = json_array_size(settings);
+    if (count == 0) {
+        return;
+    }
+
+    lock_user_settings();
+
+    game->auto_splitter_settings = calloc(count, sizeof(UserSetting*));
+    if (!game->auto_splitter_settings) {
+        LOG_WARN("unable to allocate user settings array");
+        unlock_user_settings();
+        return;
+    }
+
+    size_t i;
+    game->auto_splitter_settings_count = count;
+
+    // It's probably better to not take mix and matched settings for a splitter so load them all or stick to defaults
+    for (i = 0; i < count; ++i) {
+        game->auto_splitter_settings[i] = calloc(1, sizeof(UserSetting));
+        if (!game->auto_splitter_settings[i]) {
+            LOG_WARNF("unable to allocate user setting object at %zu", i);
+            goto load_auto_splitter_settings_failed;
+        }
+
+        json_t* setting = json_array_get(settings, i);
+        json_t* type = json_object_get(setting, "type");
+        if (!type) {
+            LOG_WARNF("unable to get setting type at %zu", i);
+            goto load_auto_splitter_settings_failed;
+        }
+
+        int type_val = json_integer_value(type);
+        if (type_val < SETTING_BOOLEAN || type_val >= SETTING_INVALID) {
+            LOG_WARNF("invalid setting type %d at %zu", type_val, i);
+            goto load_auto_splitter_settings_failed;
+        }
+
+        game->auto_splitter_settings[i]->type = (SettingType)type_val;
+        json_t* key = json_object_get(setting, "key");
+        if (!key) {
+            LOG_WARNF("unable to get setting key at %zu", i);
+            goto load_auto_splitter_settings_failed;
+        }
+
+        game->auto_splitter_settings[i]->key = strdup(json_string_value(key));
+        if (!game->auto_splitter_settings[i]->key) {
+            LOG_WARNF("unable to copy setting key at %zu", i);
+            goto load_auto_splitter_settings_failed;
+        }
+
+        json_t* val = json_object_get(setting, "val");
+        if (!val) {
+            LOG_WARNF("unable to get setting value at %zu", i);
+            goto load_auto_splitter_settings_failed;
+        }
+
+        switch (game->auto_splitter_settings[i]->type) {
+            case SETTING_BOOLEAN:
+                game->auto_splitter_settings[i]->val.bool_val = json_boolean_value(val);
+                break;
+
+            case SETTING_INTEGER:
+                game->auto_splitter_settings[i]->val.int_val = json_integer_value(val);
+                break;
+
+            case SETTING_NUMBER:
+                game->auto_splitter_settings[i]->val.num_val = json_number_value(val);
+                break;
+
+            case SETTING_STRING:
+                game->auto_splitter_settings[i]->val.string_val = strdup(json_string_value(val));
+                if (!game->auto_splitter_settings[i]->val.string_val) {
+                    LOG_WARNF("unable to copy setting value at %zu", i);
+                    goto load_auto_splitter_settings_failed;
+                }
+
+                break;
+
+            case SETTING_INVALID:
+                // impossible since we already validated type before.
+                break;
+        }
+    }
+
+    // settings loaded successfully
+    unlock_user_settings();
+    return;
+
+load_auto_splitter_settings_failed:
+    unlock_user_settings();
+    // i will be 1 less than the last allocation. Set count to i + 1 so we don't go past to allocations that didn't happen
+    game->auto_splitter_settings_count = i + 1;
+    ls_auto_splitter_settings_release(game);
 }
 
 int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
@@ -468,6 +590,17 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
             error = 1;
             goto game_create_error;
         }
+    }
+    // copy autosplitter
+    ref = json_object_get(json, "auto_splitter");
+    if (ref) {
+        game->auto_splitter_file = strdup(json_string_value(ref));
+        if (!game->auto_splitter_file) {
+            error = 1;
+            goto game_create_error;
+        }
+
+        load_auto_splitter_settings(json, game);
     }
     // get comparison method, default to real time
     game->comparison_method = LS_REAL_TIME;
@@ -870,6 +1003,53 @@ ls_write_save_failed:
     return result;
 }
 
+static void save_auto_splitter_settings(json_t* json, const ls_game* game)
+{
+    if (game->auto_splitter_settings_count < 0) {
+        return;
+    }
+
+    lock_user_settings();
+    json_t* settings = json_array();
+    for (size_t i = 0; i < game->auto_splitter_settings_count; ++i) {
+        json_t* setting = json_object();
+        json_object_set_new(setting, "key", json_string(game->auto_splitter_settings[i]->key));
+        json_object_set_new(setting, "type", json_integer(game->auto_splitter_settings[i]->type));
+
+        switch (game->auto_splitter_settings[i]->type) {
+            case SETTING_BOOLEAN:
+                json_object_set_new(setting, "val", json_boolean(game->auto_splitter_settings[i]->val.bool_val));
+                break;
+
+            case SETTING_INTEGER:
+                json_object_set_new(setting, "val", json_integer(game->auto_splitter_settings[i]->val.int_val));
+                break;
+
+            case SETTING_NUMBER:
+                json_object_set_new(setting, "val", json_real(game->auto_splitter_settings[i]->val.num_val));
+                break;
+
+            case SETTING_STRING:
+                json_object_set_new(setting, "val", json_string(game->auto_splitter_settings[i]->val.string_val));
+                break;
+
+            case SETTING_INVALID:
+                // This shouldn't be possible but just to be safe
+                json_decref(setting);
+                setting = NULL;
+                break;
+        }
+
+        // setting can't be null since an invalid setting type can't happen but...
+        if (setting) {
+            json_array_append(settings, setting);
+        }
+    }
+
+    json_object_set_new(json, "auto_splitter_settings", settings);
+    unlock_user_settings();
+}
+
 /**
  * Save the current game state to the splits file.
  *
@@ -933,6 +1113,11 @@ int ls_game_save(const ls_game* game)
     if (game->theme_variant) {
         json_object_set_new(json, "theme_variant",
             json_string(game->theme_variant));
+    }
+    if (game->auto_splitter_file) {
+        json_object_set_new(json, "auto_splitter",
+            json_string(game->auto_splitter_file));
+        save_auto_splitter_settings(json, game);
     }
     json_object_set_new(json, "comparison_method", json_integer(game->comparison_method));
     if (game->width) {

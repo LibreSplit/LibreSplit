@@ -59,7 +59,6 @@ typedef struct HistoryConfig {
     ConfigEntry split_file;
     ConfigEntry last_split_folder;
     ConfigEntry last_auto_splitter_folder;
-    ConfigEntry auto_splitter_file;
 } HistoryConfig;
 
 typedef struct AppConfig {

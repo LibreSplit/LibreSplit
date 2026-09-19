@@ -3,11 +3,20 @@
 #include <lua.h>
 #include <stdbool.h>
 
+/**
+ * @brief Indicates the type of the value.
+ * Since this gets stored in the json file, make sure
+ * we explicitly define the values to ensure they never change.
+ * Always append to this list, never change values.
+ * Make sure new settings go before SETTING_INVALID
+ * SETTING_INVALID should always just be the last value so
+ * do not define its value.
+ */
 typedef enum SettingType {
-    SETTING_BOOLEAN,
-    SETTING_INTEGER,
-    SETTING_NUMBER,
-    SETTING_STRING,
+    SETTING_BOOLEAN = 0,
+    SETTING_INTEGER = 1,
+    SETTING_NUMBER = 2,
+    SETTING_STRING = 3,
     SETTING_INVALID, // Easy way to compare a value >= this is invalid. Keep this last
 } SettingType;
 
@@ -31,6 +40,12 @@ typedef struct Setting {
     SettingVal val;
     bool set;
 } Setting;
+
+typedef struct UserSetting {
+    char* key;
+    SettingVal val;
+    SettingType type;
+} UserSetting;
 
 void lasr_settings_clear(void);
 void lasr_settings_register(lua_State* L);
