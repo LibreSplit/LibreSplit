@@ -740,3 +740,20 @@ void run_auto_splitter(void)
     maps_clearCache();
     lasr_settings_clear();
 }
+
+/**
+ * @brief Stops the auto splitter and waits for the process to end.
+ * The wait is very quick so doing it on another thread should be fine.
+ *
+ * If auto splitter wasn't running, does nothing
+ */
+void stop_auto_splitter(void)
+{
+    const bool was_asl_enabled = atomic_load(&auto_splitter_enabled);
+    if (was_asl_enabled) {
+        atomic_store(&auto_splitter_enabled, false);
+        while (atomic_load(&auto_splitter_running)) {
+            // wait, this will be very fast so its ok to just spin
+        }
+    }
+}

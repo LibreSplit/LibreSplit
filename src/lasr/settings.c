@@ -190,6 +190,10 @@ static int define_setting(lua_State* L)
     lua_pushliteral(L, "name");
     lua_rawget(L, 2);
 
+    if (!is_valid_string(L, -1)) {
+        return luaL_error(L, "[settings.define] name must be a valid string without any NUL bytes");
+    }
+
     const char* name = lua_tostring(L, -1);
     if (!*name) {
         return luaL_error(L, "[settings.define] name must not be empty");
@@ -390,10 +394,11 @@ static void lasr_user_settings_load(void)
         }
 
         setting->set = true;
-        setting->val = user_setting->val;
         if (setting->config.type == SETTING_STRING) {
             g_free(setting->val.string_val);
             setting->val.string_val = g_strdup(user_setting->val.string_val);
+        } else {
+            setting->val = user_setting->val;
         }
     }
 

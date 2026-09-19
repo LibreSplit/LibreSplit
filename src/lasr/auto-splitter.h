@@ -51,3 +51,4 @@ struct lasr_function {
 
 void check_directories(void);
 void run_auto_splitter(void);
+void stop_auto_splitter(void);
