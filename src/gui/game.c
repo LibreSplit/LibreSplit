@@ -121,6 +121,8 @@ static ls_game* create_snapshot(const ls_game* game)
                 }
             }
         }
+
+        unlock_user_settings();
     }
 
     if (!game->split_count) {
