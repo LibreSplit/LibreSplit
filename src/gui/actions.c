@@ -391,18 +391,19 @@ static void open_autosplitter_selected(GtkWindow* parent, const char* filename)
     // Timer started while picking file sanity check
     if (win->timer && win->timer->running) {
         ls_alert_info(GTK_WINDOW(win), "LibreSplit", "The timer is currently running", "Please stop the run before changing the auto splitter.");
-    } else {
-        char* folder_path = g_path_get_dirname(filename);
-        CFG_SET_STR(cfg.history.last_auto_splitter_folder.value.s, folder_path);
-        CFG_SET_STR(cfg.history.auto_splitter_file.value.s, filename);
-        strcpy(auto_splitter_file, filename);
-        config_save();
-
-        // Restart auto-splitter if it was running
-        restart_auto_splitter();
-
-        g_free(folder_path);
+        return;
     }
+
+    char* folder_path = g_path_get_dirname(filename);
+    CFG_SET_STR(cfg.history.last_auto_splitter_folder.value.s, folder_path);
+    CFG_SET_STR(cfg.history.auto_splitter_file.value.s, filename);
+    strcpy(auto_splitter_file, filename);
+    config_save();
+
+    // Restart auto-splitter if it was running
+    restart_auto_splitter();
+
+    g_free(folder_path);
 }
 
 /**
