@@ -87,7 +87,6 @@ static ls_game* create_snapshot(const ls_game* game)
 
     if (game->auto_splitter_settings_count) {
         lock_user_settings();
-        snapshot->auto_splitter_settings_count = game->auto_splitter_settings_count;
         snapshot->auto_splitter_settings = calloc(game->auto_splitter_settings_count, sizeof(UserSetting*));
         if (!snapshot->auto_splitter_settings) {
             LOG_ERR("snapshot creation: snapshot creation: unable to allocate memory for `auto_splitter_settings`");
@@ -103,6 +102,7 @@ static ls_game* create_snapshot(const ls_game* game)
                 goto create_snapshot_failed;
             }
 
+            snapshot->auto_splitter_settings_count++;
             snapshot->auto_splitter_settings[i]->key = strdup(game->auto_splitter_settings[i]->key);
             if (!snapshot->auto_splitter_settings[i]->key) {
                 LOG_ERRF("snapshot creation: snapshot creation: unable to duplicate setting[%zu].key", i);
