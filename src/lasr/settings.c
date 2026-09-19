@@ -139,7 +139,7 @@ static const char* setting_set_val(lua_State* L, int index, SettingType type, Se
 /**
  * @brief Defines a new setting in the settings global.
  * Validates the script's input and creates a new setting in memory
- * then inserts it to the hash table at "name"
+ * then inserts it to the hash table at "key"
  *
  * @param L The current lua state.
  * @return int Always 0 or error.
@@ -237,7 +237,7 @@ Setting* lasr_settings_lookup(const char* key)
 }
 
 /**
- * @brief Get the value for "name" from settings.
+ * @brief Get the value for "key" from settings.
  *
  * @param L The current lua state.
  * @return int Always 1 or error.
