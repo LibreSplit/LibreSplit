@@ -162,6 +162,7 @@ static gboolean perform_save_splits(gpointer window)
 
     // don't allow saving while we're in some invalid state or we're in the middle of a run.
     if (win == NULL || win->game == NULL || win->timer == NULL || win->timer->started) {
+        LOG_INFO("Game save requested without a splits file loaded or in the middle of a run - Rejecting.")
         return G_SOURCE_REMOVE;
     }
 

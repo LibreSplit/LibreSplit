@@ -278,16 +278,16 @@ static gpointer save_game_thread(gpointer data)
     GObject* main_win = g_weak_ref_get(&snapshot->main_win);
     GtkWindow* win = main_win ? GTK_WINDOW(main_win) : NULL;
 
-    bool runs_result = true;
-    int result = ls_game_save(snapshot->game);
-    if (result) {
+    bool runs_save_result = true;
+    int game_save_result = ls_game_save(snapshot->game);
+    if (game_save_result) {
         ls_alert_warning(win, "Save Failed", "Save Failed", "We were unable to save your game.\nIf this continues check your logs for errors.");
         goto save_game_thread_finished;
     }
 
     if (snapshot->runs) {
-        runs_result = ls_runs_save(snapshot->runs, snapshot->game, win);
-        if (!runs_result) {
+        runs_save_result = ls_runs_save(snapshot->runs, snapshot->game, win);
+        if (!runs_save_result) {
             ls_alert_warning(win, "Save Failed", "Save Failed", "We were unable to save your runs history.\nIf this continues check your logs for errors.");
             goto save_game_thread_finished;
         }
@@ -299,11 +299,11 @@ static gpointer save_game_thread(gpointer data)
     }
 
 save_game_thread_finished:
-    atomic_store(&last_game_save_result, result == 0);
-    atomic_store(&last_runs_save_result, runs_result);
+    atomic_store(&last_game_save_result, game_save_result == 0);
+    atomic_store(&last_runs_save_result, runs_save_result);
 
     // if the game saved successfully, call ls_game_saved event.
-    if (result == 0 && main_win) {
+    if (game_save_result == 0 && main_win) {
         ls_game_saved(LS_APP_WINDOW(main_win)->game);
     }
 

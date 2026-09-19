@@ -21,7 +21,25 @@ extern atomic_bool run_using_game_time_call;
 extern atomic_bool run_using_game_time;
 extern atomic_bool run_started;
 extern atomic_bool run_running;
+extern atomic_int lasr_event_requests;
 extern bool prev_is_loading;
+
+/** \enum TimerEvent
+ *
+ * Used to work through the event requests coming from the timer
+ * towards the auto splitter
+ */
+enum TimerEvent {
+    TIMER_EVT_START = 1 << 0,
+    TIMER_EVT_SPLIT = 1 << 1,
+    TIMER_EVT_STOP = 1 << 2,
+    TIMER_EVT_RESET = 1 << 3,
+    TIMER_EVT_CANCEL = 1 << 4,
+    TIMER_EVT_SKIP = 1 << 5,
+    TIMER_EVT_UNSPLIT = 1 << 6,
+    TIMER_EVT_PAUSE = 1 << 7,
+    TIMER_EVT_UNPAUSE = 1 << 8,
+};
 
 /**
  * Defines a Lua Auto Splitter Runtime Function.

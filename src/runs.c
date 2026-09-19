@@ -249,7 +249,9 @@ static gboolean ls_runs_clear_callback_with_save(gpointer data)
                 options,
                 G_N_ELEMENTS(options), self, NULL)) {
             // We don't even have memory for a dialog, sorry your data is gone
+            LOG_WARN("Unable to save runs history, attempting to clear it");
             if (!ls_runs_clear(self)) {
+                LOG_WARN("Unable to clear runs history, LibreSplit will now terminate");
                 g_idle_add_full(G_PRIORITY_HIGH, ls_runs_clear_failure, NULL, NULL);
             }
         }
@@ -299,7 +301,9 @@ static void ls_runs_clear_failure_show(ls_runs* self, GtkWindow* win)
             options,
             G_N_ELEMENTS(options), self, NULL)) {
         // We don't even have memory for a dialog, sorry your data is gone
+        LOG_WARN("Unable to save runs history, attempting to clear it");
         if (!ls_runs_clear(self)) {
+            LOG_WARN("Unable to clear runs history, LibreSplit will now terminate");
             g_idle_add_full(G_PRIORITY_HIGH, ls_runs_clear_failure, NULL, NULL);
         }
     }
@@ -419,7 +423,7 @@ bool ls_runs_clear(ls_runs* self)
 
     self->attempts = calloc(INITIAL_ATTEMPTS_ARRAY_SIZE, sizeof(ls_attempt*));
     if (self->attempts == NULL) {
-        // This should never happens since we should have freed more memory than we're requesting.
+        // This should never happen since we should have freed more memory than we're requesting.
         LOG_WARN("unable to allocate runs after clear");
         return false;
     }
