@@ -70,15 +70,16 @@ static void open_splits_selected(GtkWindow* parent, const char* filename)
     // Timer started while picking file sanity check
     if (win->timer && win->timer->running) {
         ls_alert_info(GTK_WINDOW(win), "LibreSplit", "The timer is currently running", "Please stop the run before changing splits.");
-    } else {
-        char* folder_path = g_path_get_dirname(filename);
-        CFG_SET_STR(cfg.history.last_split_folder.value.s, folder_path);
-        ls_app_window_open(win, filename);
-        CFG_SET_STR(cfg.history.split_file.value.s, filename);
-
-        g_free(folder_path);
-        config_save();
+        return;
     }
+
+    char* folder_path = g_path_get_dirname(filename);
+    CFG_SET_STR(cfg.history.last_split_folder.value.s, folder_path);
+    ls_app_window_open(win, filename);
+    CFG_SET_STR(cfg.history.split_file.value.s, filename);
+
+    g_free(folder_path);
+    config_save();
 
     if (!win->game || !win->timer) {
         gtk_widget_set_visible(win->welcome_box->box, TRUE);
