@@ -47,6 +47,8 @@ typedef struct UserSetting {
     SettingType type;
 } UserSetting;
 
+void lock_user_settings(void);
+void unlock_user_settings(void);
 void lasr_settings_clear(void);
 void lasr_settings_register(lua_State* L);
 int lasr_settings_load(lua_State* L);
