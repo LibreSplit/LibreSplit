@@ -10,6 +10,7 @@ jobs:
               run: |
                   pacman-key --init
                   pacman -Syu --needed --noconfirm git
+                  git config --global --add safe.directory "$GITHUB_WORKSPACE"
                   # Pin the matching LLVM libraries alongside clang-format.
                   pacman -U --noconfirm \
                     https://archive.archlinux.org/packages/l/llvm-libs/llvm-libs-22.1.8-2-x86_64.pkg.tar.zst \
