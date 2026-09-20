@@ -366,8 +366,13 @@ static void ls_auto_splitter_settings_release(ls_game* game)
     free(game->auto_splitter_settings);
     game->auto_splitter_settings = NULL;
     game->auto_splitter_settings_count = 0;
-    auto_splitter_user_settings = NULL;
-    auto_splitter_user_settings_count = NULL;
+
+    // Only clear this when we're actually releasing the game, not a snapshot
+    if (auto_splitter_user_settings == &game->auto_splitter_settings) {
+        auto_splitter_user_settings = NULL;
+        auto_splitter_user_settings_count = NULL;
+    }
+
     unlock_user_settings();
 }
 
