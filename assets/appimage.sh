@@ -1,11 +1,18 @@
-#!/bin/bash
+#!/bin/sh
 
-export XDG_DATA_DIRS="$APPDIR/usr/share:${XDG_DATA_DIRS:-/usr/share}"
-export GTK_EXE_PREFIX="$APPDIR/usr"
-export GTK_PATH="$APPDIR/usr/lib/gtk-4.0"
+set -e
+
+export PATH="$APPDIR/bin:$PATH"
+
+# Keep quick-sharun's runtime fixes when dispatching to either executable.
+. "$APPDIR/AppRun.lib"
+for hook in "$APPDIR"/bin/*.hook; do
+    [ -f "$hook" ] || continue
+    . "$hook"
+done
 
 if [ $# -eq 0 ]; then
-    exec "$APPDIR/usr/bin/libresplit"
+    exec "$APPDIR/bin/libresplit"
 else
-    exec "$APPDIR/usr/bin/libresplit-ctl" "$@"
+    exec "$APPDIR/bin/libresplit-ctl" "$@"
 fi

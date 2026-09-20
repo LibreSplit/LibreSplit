@@ -34,23 +34,19 @@ jobs:
                   fi
 
     linter-check:
-        runs-on: ubuntu-26.04
+        runs-on: ubuntu-24.04
+        container: ghcr.io/pkgforge-dev/archlinux:latest
 
         steps:
+            - name: Install dependencies
+              run: |
+                  pacman-key --init
+                  pacman -Syu --needed --noconfirm base-devel git meson gtk4 libx11 jansson luajit openssl
+                  # Use same cppcheck version as before for compatibility
+                  pacman -U --noconfirm https://archive.archlinux.org/packages/c/cppcheck/cppcheck-2.21.1-1-x86_64.pkg.tar.zst
+
             - name: Checkout repository
               uses: actions/checkout@v7
-
-            - name: Install and cache dependencies
-              uses: awalsh128/cache-apt-pkgs-action@latest
-              with:
-                  packages: >
-                    meson
-                    libgtk-4-dev
-                    libx11-dev
-                    libjansson-dev
-                    libluajit-5.1-dev
-                    cppcheck
-                  version: 1.0
 
             - name: Set up project
               run: meson setup build -Dbuildtype=debug
