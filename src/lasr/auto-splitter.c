@@ -75,6 +75,26 @@ static const char* disabled_functions[] = {
 };
 
 /**
+ * @brief Initializes all auto_splitter values to their defaults
+ * Call this when opening a new game.
+ */
+void init_auto_splitter(void)
+{
+    // don't init auto_splitter_enabled, or auto_splitter_running here
+    atomic_store(&call_start, false);
+    atomic_store(&call_split, false);
+    atomic_store(&call_reset, false);
+    atomic_store(&toggle_loading, false);
+    atomic_store(&run_using_game_time, false);
+    atomic_store(&run_using_game_time_call, false);
+    atomic_store(&lasr_event_requests, 0);
+    atomic_store(&game_time_value, 0);
+    atomic_store(&update_game_time, false);
+    use_game_time = false;
+    prev_is_loading = false;
+}
+
+/**
  * Check if the game process exists and is running.
  *
  * @returns Zero if the process is not running, non-zero if it is.

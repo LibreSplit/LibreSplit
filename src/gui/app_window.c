@@ -136,6 +136,7 @@ void ls_app_window_open(LSAppWindow* win, const char* file)
     save_game_join(false);
     stop_auto_splitter();
     strcpy(auto_splitter_file, "");
+    init_auto_splitter();
 
     if (win->timer) {
         ls_app_window_clear_game(win);

@@ -49,6 +49,7 @@ struct lasr_function {
     lua_CFunction function_ptr; /*!< C Function to be executed */
 } typedef lasr_function;
 
+void init_auto_splitter(void);
 void check_directories(void);
 void run_auto_splitter(void);
 void stop_auto_splitter(void);
