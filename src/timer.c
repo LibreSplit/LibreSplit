@@ -506,6 +506,7 @@ static void load_auto_splitter_settings(json_t* json, ls_game* game)
             }
         } else {
             LOG_WARNF("unsupported JSON value at %zu for key: %s", i, key);
+            goto load_auto_splitter_settings_failed;
         }
 
         ++i;

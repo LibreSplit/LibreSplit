@@ -389,6 +389,13 @@ static void lasr_user_settings_load(void)
             continue;
         }
 
+        // allow fixing integer to double conversions
+        if (setting->config.type == SETTING_NUMBER && user_setting->type == SETTING_INTEGER) {
+            user_setting->type = SETTING_NUMBER;
+            double new_val = (double)user_setting->val.int_val;
+            user_setting->val.num_val = new_val;
+        }
+
         if (user_setting->type != setting->config.type) {
             LOG_WARNF("Invalid setting type for \"%s\"", user_setting->key);
             continue;
