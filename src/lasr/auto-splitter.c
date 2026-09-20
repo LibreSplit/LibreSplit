@@ -92,6 +92,11 @@ void init_auto_splitter(void)
     atomic_store(&update_game_time, false);
     use_game_time = false;
     prev_is_loading = false;
+
+    // lasr initial values
+    refresh_rate = 60;
+    maps_cache_cycles = 1;
+    maps_cache_cycles_value = 1;
 }
 
 /**
