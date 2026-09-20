@@ -401,14 +401,14 @@ static void open_autosplitter_selected(GtkWindow* parent, const char* filename)
     char* folder_path = g_path_get_dirname(filename);
     CFG_SET_STR(cfg.history.last_auto_splitter_folder.value.s, folder_path);
 
-    free(win->game->auto_splitter_file);
-    win->game->auto_splitter_file = NULL;
-    win->game->auto_splitter_file = strdup(filename);
-    if (!win->game->auto_splitter_file) {
+    char* new_splitter = strdup(filename);
+    if (!new_splitter) {
         LOG_WARNF("unable to open the autosplitter at %s", filename);
         goto open_autosplitter_selected_cleanup;
     }
 
+    free(win->game->auto_splitter_file);
+    win->game->auto_splitter_file = new_splitter;
     strcpy(auto_splitter_file, filename);
     if (cfg.libresplit.auto_save.value.b) {
         save_game(win->game);

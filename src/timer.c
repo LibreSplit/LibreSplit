@@ -479,7 +479,7 @@ static void load_auto_splitter_settings(json_t* json, ls_game* game)
 
         json_t* type = json_object_get(setting, "type");
         if (!json_is_integer(type)) {
-            LOG_WARNF("invalid setting type at %zu", type, i);
+            LOG_WARNF("invalid setting type at %zu", i);
             goto load_auto_splitter_settings_failed;
         }
 
