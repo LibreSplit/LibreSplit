@@ -47,7 +47,7 @@ The `settings` object has 2 methods associated with it:
 `settings.define(key, definition)`
 
 * key (string)
-    * the key used for your setting (to be used with `get`)
+    * the key used for your setting, must be unique (to be used with `get`)
 * definition (object)
     * name (string REQUIRED)
         * friendly setting name to display to the user

@@ -444,11 +444,11 @@ void ls_game_release(ls_game* game)
 static void load_auto_splitter_settings(json_t* json, ls_game* game)
 {
     json_t* settings = json_object_get(json, "auto_splitter_settings");
-    if (!json_is_array(settings)) {
+    if (!json_is_object(settings)) {
         return;
     }
 
-    size_t count = json_array_size(settings);
+    size_t count = json_object_size(settings);
     if (count == 0) {
         return;
     }
@@ -462,105 +462,53 @@ static void load_auto_splitter_settings(json_t* json, ls_game* game)
         return;
     }
 
+    const char* key;
+    json_t* val;
+    size_t i = 0;
+
     // It's probably better to not take mix and matched settings for a splitter so load them all or stick to defaults
-    for (size_t i = 0; i < count; ++i) {
+    json_object_foreach(settings, key, val)
+    {
         game->auto_splitter_settings[i] = calloc(1, sizeof(UserSetting));
         if (!game->auto_splitter_settings[i]) {
-            LOG_WARNF("unable to allocate user setting object at %zu", i);
+            LOG_WARNF("unable to allocate user setting object at %zu for key: %s", i, key);
             goto load_auto_splitter_settings_failed;
         }
 
         game->auto_splitter_settings_count++;
-        json_t* setting = json_array_get(settings, i);
-        if (!json_is_object(setting)) {
-            LOG_WARNF("invalid setting object at %zu", i);
-            goto load_auto_splitter_settings_failed;
-        }
-
-        json_t* type = json_object_get(setting, "type");
-        if (!json_is_integer(type)) {
-            LOG_WARNF("invalid setting type at %zu", i);
-            goto load_auto_splitter_settings_failed;
-        }
-
-        json_int_t type_val = json_integer_value(type);
-        if (type_val < SETTING_BOOLEAN || type_val >= SETTING_INVALID) {
-            LOG_WARNF("invalid setting type %" JSON_INTEGER_FORMAT " at %zu", type_val, i);
-            goto load_auto_splitter_settings_failed;
-        }
-
-        game->auto_splitter_settings[i]->type = (SettingType)type_val;
-        json_t* key = json_object_get(setting, "key");
-        if (!json_is_string(key)) {
-            LOG_WARNF("unable to get setting key at %zu", i);
-            goto load_auto_splitter_settings_failed;
-        }
-
-        game->auto_splitter_settings[i]->key = strdup(json_string_value(key));
+        game->auto_splitter_settings[i]->key = strdup(key);
         if (!game->auto_splitter_settings[i]->key) {
-            LOG_WARNF("unable to copy setting key at %zu", i);
+            LOG_WARNF("unable to copy setting key at %zu for key: %s", i, key);
             goto load_auto_splitter_settings_failed;
         }
 
-        json_t* val = json_object_get(setting, "val");
-        if (!val) {
-            LOG_WARNF("unable to get setting value at %zu", i);
-            goto load_auto_splitter_settings_failed;
+        if (json_is_boolean(val)) {
+            game->auto_splitter_settings[i]->type = SETTING_BOOLEAN;
+            game->auto_splitter_settings[i]->val.bool_val = json_boolean_value(val);
+        } else if (json_is_integer(val)) {
+            game->auto_splitter_settings[i]->type = SETTING_INTEGER;
+            json_int_t int_val = json_integer_value(val);
+            if (int_val < LONG_MIN || int_val > LONG_MAX) {
+                LOG_WARNF("invalid int setting value out of range at %zu for key: %s", i, key);
+                goto load_auto_splitter_settings_failed;
+            }
+
+            game->auto_splitter_settings[i]->val.int_val = (long)int_val;
+        } else if (json_is_real(val)) {
+            game->auto_splitter_settings[i]->type = SETTING_NUMBER;
+            game->auto_splitter_settings[i]->val.num_val = json_real_value(val);
+        } else if (json_is_string(val)) {
+            game->auto_splitter_settings[i]->type = SETTING_STRING;
+            game->auto_splitter_settings[i]->val.string_val = strdup(json_string_value(val));
+            if (!game->auto_splitter_settings[i]->val.string_val) {
+                LOG_WARNF("unable to copy setting value at %zu for key: %s", i, key);
+                goto load_auto_splitter_settings_failed;
+            }
+        } else {
+            LOG_WARNF("unsupported JSON value at %zu for key: %s", i, key);
         }
 
-        switch (game->auto_splitter_settings[i]->type) {
-            case SETTING_BOOLEAN:
-                if (!json_is_boolean(val)) {
-                    LOG_WARNF("invalid boolean setting value at %zu", i);
-                    goto load_auto_splitter_settings_failed;
-                }
-
-                game->auto_splitter_settings[i]->val.bool_val = json_boolean_value(val);
-                break;
-
-            case SETTING_INTEGER:
-                {
-                    if (!json_is_integer(val)) {
-                        LOG_WARNF("invalid int setting value at %zu", i);
-                        goto load_auto_splitter_settings_failed;
-                    }
-
-                    json_int_t int_val = json_integer_value(val);
-                    if (int_val < LONG_MIN || int_val > LONG_MAX) {
-                        LOG_WARNF("invalid int setting value out of range at %zu", i);
-                        goto load_auto_splitter_settings_failed;
-                    }
-
-                    game->auto_splitter_settings[i]->val.int_val = (long)int_val;
-                    break;
-                }
-            case SETTING_NUMBER:
-                if (!json_is_number(val)) {
-                    LOG_WARNF("invalid number setting value at %zu", i);
-                    goto load_auto_splitter_settings_failed;
-                }
-
-                game->auto_splitter_settings[i]->val.num_val = json_number_value(val);
-                break;
-
-            case SETTING_STRING:
-                if (!json_is_string(val)) {
-                    LOG_WARNF("invalid string setting value at %zu", i);
-                    goto load_auto_splitter_settings_failed;
-                }
-
-                game->auto_splitter_settings[i]->val.string_val = strdup(json_string_value(val));
-                if (!game->auto_splitter_settings[i]->val.string_val) {
-                    LOG_WARNF("unable to copy setting value at %zu", i);
-                    goto load_auto_splitter_settings_failed;
-                }
-
-                break;
-
-            case SETTING_INVALID:
-                // impossible since we already validated type before.
-                break;
-        }
+        ++i;
     }
 
     // settings loaded successfully
@@ -1069,39 +1017,34 @@ static void save_auto_splitter_settings(json_t* json, const ls_game* game)
     }
 
     lock_user_settings();
-    json_t* settings = json_array();
+    json_t* settings = json_object();
     for (size_t i = 0; i < game->auto_splitter_settings_count; ++i) {
-        json_t* setting = json_object();
-        json_object_set_new(setting, "key", json_string(game->auto_splitter_settings[i]->key));
-        json_object_set_new(setting, "type", json_integer(game->auto_splitter_settings[i]->type));
+        json_t* setting = NULL;
 
         switch (game->auto_splitter_settings[i]->type) {
             case SETTING_BOOLEAN:
-                json_object_set_new(setting, "val", json_boolean(game->auto_splitter_settings[i]->val.bool_val));
+                setting = json_boolean(game->auto_splitter_settings[i]->val.bool_val);
                 break;
 
             case SETTING_INTEGER:
-                json_object_set_new(setting, "val", json_integer(game->auto_splitter_settings[i]->val.int_val));
+                setting = json_integer(game->auto_splitter_settings[i]->val.int_val);
                 break;
 
             case SETTING_NUMBER:
-                json_object_set_new(setting, "val", json_real(game->auto_splitter_settings[i]->val.num_val));
+                setting = json_real(game->auto_splitter_settings[i]->val.num_val);
                 break;
 
             case SETTING_STRING:
-                json_object_set_new(setting, "val", json_string(game->auto_splitter_settings[i]->val.string_val));
+                setting = json_string(game->auto_splitter_settings[i]->val.string_val);
                 break;
 
             case SETTING_INVALID:
-                // This shouldn't be possible but just to be safe
-                json_decref(setting);
-                setting = NULL;
+                // This shouldn't be possible
                 break;
         }
 
-        // setting can't be null since an invalid setting type can't happen but...
         if (setting) {
-            json_array_append_new(settings, setting);
+            json_object_set_new(settings, game->auto_splitter_settings[i]->key, setting);
         }
     }
 
