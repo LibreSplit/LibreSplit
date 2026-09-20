@@ -369,14 +369,15 @@ static void lasr_user_settings_load(void)
 
     lock_user_settings();
 
-    // don't do anything with this other than read settings.
-    LSAppWindow* win = ls_get_main_app_window();
-    if (!win || !win->game || !win->game->auto_splitter_settings || win->game->auto_splitter_settings_count == 0) {
+    size_t count;
+    UserSetting** user_settings;
+    ls_game_user_settings_get(&user_settings, &count);
+    if (count == 0 || user_settings == NULL) {
         goto lasr_user_settings_load_unlock;
     }
 
-    for (size_t i = 0; i < win->game->auto_splitter_settings_count; ++i) {
-        UserSetting* user_setting = win->game->auto_splitter_settings[i];
+    for (size_t i = 0; i < count; ++i) {
+        UserSetting* user_setting = user_settings[i];
         if (!g_hash_table_contains(settings, user_setting->key)) {
             continue;
         }

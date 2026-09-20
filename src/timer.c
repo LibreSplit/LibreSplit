@@ -21,6 +21,9 @@
 #include <string.h>
 #include <time.h>
 
+static UserSetting*** auto_splitter_user_settings = NULL;
+static size_t* auto_splitter_user_settings_count = 0;
+
 /**
  * Returns the current time, taken from a monotonic clock
  * (a clock that is not affected by leap seconds or daylight savings).
@@ -363,6 +366,8 @@ static void ls_auto_splitter_settings_release(ls_game* game)
     free(game->auto_splitter_settings);
     game->auto_splitter_settings = NULL;
     game->auto_splitter_settings_count = 0;
+    auto_splitter_user_settings = NULL;
+    auto_splitter_user_settings_count = NULL;
     unlock_user_settings();
 }
 
@@ -554,12 +559,27 @@ static void load_auto_splitter_settings(json_t* json, ls_game* game)
     }
 
     // settings loaded successfully
+    auto_splitter_user_settings = &game->auto_splitter_settings;
+    auto_splitter_user_settings_count = &game->auto_splitter_settings_count;
     unlock_user_settings();
     return;
 
 load_auto_splitter_settings_failed:
     unlock_user_settings();
     ls_auto_splitter_settings_release(game);
+}
+
+/**
+ * @brief Gets the current user settings for the open autosplitter
+ * or null if no autosplitter is open.
+ *
+ * @param settings The current user settings
+ * @param count The number of user settings in the array
+ */
+void ls_game_user_settings_get(UserSetting*** settings, size_t* count)
+{
+    *settings = auto_splitter_user_settings != NULL ? *auto_splitter_user_settings : NULL;
+    *count = auto_splitter_user_settings_count != NULL ? *auto_splitter_user_settings_count : 0;
 }
 
 int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
