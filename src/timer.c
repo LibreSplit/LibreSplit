@@ -465,10 +465,12 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
     } else {
         // check if title exists
         ref = json_object_get(json, "title");
-        game->name = strdup(json_string_value(ref));
-        if (!game->name) {
-            error = 1;
-            goto game_create_error;
+        if (ref) {
+            game->name = strdup(json_string_value(ref));
+            if (!game->name) {
+                error = 1;
+                goto game_create_error;
+            }
         }
     }
     // copy game category
