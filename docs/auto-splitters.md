@@ -32,14 +32,14 @@ cmdline('MyGameHasAVeryLongName.exe')
     * The order at which these run is the same as they are documented below.
 
 ### `define_settings`
-The purpose of this function is to specify settings that your script make take along with their default values. LASR provides a global `settings` object that should contain all of your settings for the lifetime of your script. LibreSplit handles updating these settings for you as the user interacts with them. Currently, the following setting types are available:
+The purpose of this optional function is to specify settings that your script make take along with their default values. LASR provides a global `settings` object that should contain all of your settings for the lifetime of your script. LibreSplit handles updating these settings for you as the user interacts with them. Currently, the following setting types are available:
 
 * `SETTING_BOOLEAN`
 * `SETTING_INTEGER`
 * `SETTING_NUMBER`
 * `SETTING_STRING`
 
-LibreSplit will run your `define_settings` function exactly once when your script is loaded before anything else to define your settings. This is the only time when settings may be defined.
+If provided, LibreSplit will run your `define_settings` function exactly once when your script is loaded before anything else to define your settings. This is the only time when settings may be defined.
 
 The `settings` object has 2 methods associated with it:
 
@@ -88,10 +88,12 @@ end
 #### `get`
 `settings.get(key)`
 
-The get method is how you will get the current value for any of your defined settings. If the user has not provided any value, then the result will be your default value from your earlier
-definition. Calling `get` with a key that was not defined earlier will result in nil. Similarly, if your script has no `define_settings` function, then all calls to `get` will result in nil.
+The `get` method is how you will get the current value for any of your defined settings. If the user has not provided any value, then the result will be your default value from your earlier
+definition.
 
-the get method is available to any of the other lifetime global functions, but should not be used outside of the LASR lifecycle.
+Calling `get` with a key that was not defined earlier will result in nil. Similarly, if your script has no `define_settings` function, then all calls to `get` will result in nil.
+
+The `get` method is available to any of the other lifetime global functions, but should not be used outside of the LASR lifecycle.
 
 Example usage:
 ```lua

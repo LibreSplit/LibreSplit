@@ -466,7 +466,7 @@ static void load_auto_splitter_settings(json_t* json, ls_game* game)
     json_t* val;
     size_t i = 0;
 
-    // It's probably better to not take mix and matched settings for a splitter so load them all or stick to defaults
+    // It's probably better to not take mixed and matched settings for a splitter so load them all or stick to defaults
     json_object_foreach(settings, key, val)
     {
         game->auto_splitter_settings[i] = calloc(1, sizeof(UserSetting));

@@ -11,11 +11,23 @@
 static GHashTable* settings;
 static GMutex user_settings_mutex;
 
+/**
+ * @brief Locks the user settings mutex.
+ * Use anytime you are accessing or modifying
+ * the user's auto splitter settings from the current
+ * `ls_game` object.
+ */
 void lock_user_settings(void)
 {
     g_mutex_lock(&user_settings_mutex);
 }
 
+/**
+ * @brief Unlocks the user settings mutex.
+ * Use after you are done accessing or modifying
+ * the user's auto splitter settings from the current
+ * `ls_game` object.
+ */
 void unlock_user_settings(void)
 {
     g_mutex_unlock(&user_settings_mutex);
@@ -360,6 +372,10 @@ void lasr_settings_register(lua_State* L)
     }
 }
 
+/**
+ * @brief Loads the user's auto splitter settings overrides after
+ * settings get defined by the script.
+ */
 static void lasr_user_settings_load(void)
 {
     // nothing to do
