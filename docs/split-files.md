@@ -8,7 +8,9 @@ You can use splits located in [the resource repository](https://github.com/Libre
 
 | Key                 | Type               | Value                                               |
 | ------------------- | ------------------ | --------------------------------------------------- |
-| `title`             | string             | Title string at top of window                       |
+| `name`              | string             | The name of your game                               |
+| `category`          | string             | The name of your run category                       |
+| `icon`              | string             | Icon file path or url                               |
 | `attempt_count`     | int                | Number of attempts                                  |
 | `comparison_method` | int                | Method of comparison between real_time or game_time |
 | `start_delay`       | string (timestamp) | Non-negative delay until timer starts               |

@@ -45,6 +45,9 @@ typedef enum ls_time_method {
 typedef struct ls_game {
     char path[PATH_MAX];
     char* title;
+    char* name;
+    char* category;
+    char* icon_path;
     char* theme;
     char* theme_variant;
     ls_time_method comparison_method;

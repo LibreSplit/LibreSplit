@@ -53,10 +53,26 @@ static ls_game* create_snapshot(const ls_game* game)
     snapshot->contains_icons = game->contains_icons;
     snapshot->split_count = game->split_count;
 
-    if (game->title) {
-        snapshot->title = strdup(game->title);
-        if (!snapshot->title) {
-            LOG_ERR("snapshot creation: unable to duplicate `title` in memory");
+    if (game->name) {
+        snapshot->name = strdup(game->name);
+        if (!snapshot->name) {
+            LOG_ERR("snapshot creation: unable to duplicate `name` in memory");
+            goto create_snapshot_failed;
+        }
+    }
+
+    if (game->category) {
+        snapshot->category = strdup(game->category);
+        if (!snapshot->category) {
+            LOG_ERR("snapshot creation: unable to duplicate `category` in memory");
+            goto create_snapshot_failed;
+        }
+    }
+
+    if (game->icon_path) {
+        snapshot->icon_path = strdup(game->icon_path);
+        if (!snapshot->icon_path) {
+            LOG_ERR("snapshot creation: unable to duplicate `icon_path` in memory");
             goto create_snapshot_failed;
         }
     }

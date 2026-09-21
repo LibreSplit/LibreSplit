@@ -364,6 +364,18 @@ void ls_game_release(ls_game* game)
         free(game->title);
         game->title = 0;
     }
+    if (game->name) {
+        free(game->name);
+        game->name = 0;
+    }
+    if (game->category) {
+        free(game->category);
+        game->category = 0;
+    }
+    if (game->icon_path) {
+        free(game->icon_path);
+        game->icon_path = 0;
+    }
     if (game->theme) {
         free(game->theme);
         game->theme = 0;
@@ -442,13 +454,64 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
         sprintf(*error_msg, "%s (%d:%d)", json_error.text, json_error.line, json_error.column);
         goto game_create_error;
     }
-    // copy title
-    ref = json_object_get(json, "title");
+    // copy game name
+    ref = json_object_get(json, "name");
     if (ref) {
-        game->title = strdup(json_string_value(ref));
+        game->name = strdup(json_string_value(ref));
+        if (!game->name) {
+            error = 1;
+            goto game_create_error;
+        }
+    } else {
+        // check if title exists
+        ref = json_object_get(json, "title");
+        game->name = strdup(json_string_value(ref));
+        if (!game->name) {
+            error = 1;
+            goto game_create_error;
+        }
+    }
+    // copy game category
+    ref = json_object_get(json, "category");
+    if (ref) {
+        game->category = strdup(json_string_value(ref));
+        if (!game->category) {
+            error = 1;
+            goto game_create_error;
+        }
+    }
+    // copy icon path
+    ref = json_object_get(json, "icon");
+    if (ref) {
+        game->icon_path = strdup(json_string_value(ref));
+        if (!game->icon_path) {
+            error = 1;
+            goto game_create_error;
+        }
+    }
+    // set title TODO: remove this when title becomes editable via layouts
+    if (game->name) {
+        // length for new string including null byte
+        size_t len = strlen(game->name) + 1;
+        size_t cat_len = 0;
+        if (game->category) {
+            // add category length + a space byte
+            // no need for a duplicate null byte
+            cat_len = strlen(game->category);
+            len += cat_len + 1;
+        }
+
+        game->title = calloc(len, sizeof(char));
         if (!game->title) {
             error = 1;
             goto game_create_error;
+        }
+
+        strcpy(game->title, game->name);
+        if (game->category) {
+            // len contains the full string length, subtract the category, the null byte and the space.
+            strcpy(game->title + (len - cat_len - 2), " ");
+            strcpy(game->title + (len - cat_len - 1), game->category);
         }
     }
     // copy theme
@@ -883,8 +946,14 @@ int ls_game_save(const ls_game* game)
     char str[256];
     json_t* json = json_object();
     json_t* splits = json_array();
-    if (game->title) {
-        json_object_set_new(json, "title", json_string(game->title));
+    if (game->name) {
+        json_object_set_new(json, "name", json_string(game->name));
+    }
+    if (game->category) {
+        json_object_set_new(json, "category", json_string(game->category));
+    }
+    if (game->icon_path) {
+        json_object_set_new(json, "icon", json_string(game->icon_path));
     }
     if (game->attempt_count) {
         json_object_set_new(json, "attempt_count",
