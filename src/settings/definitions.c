@@ -164,12 +164,6 @@ AppConfig cfg = {
             .value.s = "",
             .desc = "Last Auto Splitter Folder Opened",
         },
-        .auto_splitter_file = {
-            .key = "auto_splitter_file",
-            .type = CFG_STRING,
-            .value.s = "",
-            .desc = "Last Auto Splitter File",
-        },
     },
 };
 

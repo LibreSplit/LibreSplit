@@ -18,10 +18,7 @@ bool restart_auto_splitter(void)
 {
     const bool was_asl_enabled = atomic_load(&auto_splitter_enabled);
     if (was_asl_enabled) {
-        atomic_store(&auto_splitter_enabled, false);
-        while (atomic_load(&auto_splitter_running) && was_asl_enabled) {
-            // wait, this will be very fast so its ok to just spin
-        }
+        stop_auto_splitter();
         atomic_store(&auto_splitter_enabled, true);
     }
     return was_asl_enabled;

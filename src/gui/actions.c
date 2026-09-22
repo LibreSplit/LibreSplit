@@ -70,15 +70,16 @@ static void open_splits_selected(GtkWindow* parent, const char* filename)
     // Timer started while picking file sanity check
     if (win->timer && win->timer->running) {
         ls_alert_info(GTK_WINDOW(win), "LibreSplit", "The timer is currently running", "Please stop the run before changing splits.");
-    } else {
-        char* folder_path = g_path_get_dirname(filename);
-        CFG_SET_STR(cfg.history.last_split_folder.value.s, folder_path);
-        ls_app_window_open(win, filename);
-        CFG_SET_STR(cfg.history.split_file.value.s, filename);
-
-        g_free(folder_path);
-        config_save();
+        return;
     }
+
+    char* folder_path = g_path_get_dirname(filename);
+    CFG_SET_STR(cfg.history.last_split_folder.value.s, folder_path);
+    ls_app_window_open(win, filename);
+    CFG_SET_STR(cfg.history.split_file.value.s, filename);
+
+    g_free(folder_path);
+    config_save();
 
     if (!win->game || !win->timer) {
         gtk_widget_set_visible(win->welcome_box->box, TRUE);
@@ -283,6 +284,8 @@ void close_activated(GSimpleAction* action,
     win = ls_app_window_get_default(LS_APP(app));
     timer_stop_and_reset(win);
     save_game_join(false);
+    stop_auto_splitter();
+    strcpy(auto_splitter_file, "");
 
     if (win->game && win->timer) {
         ls_app_window_clear_game(win);
@@ -392,18 +395,32 @@ static void open_autosplitter_selected(GtkWindow* parent, const char* filename)
     // Timer started while picking file sanity check
     if (win->timer && win->timer->running) {
         ls_alert_info(GTK_WINDOW(win), "LibreSplit", "The timer is currently running", "Please stop the run before changing the auto splitter.");
-    } else {
-        char* folder_path = g_path_get_dirname(filename);
-        CFG_SET_STR(cfg.history.last_auto_splitter_folder.value.s, folder_path);
-        CFG_SET_STR(cfg.history.auto_splitter_file.value.s, filename);
-        strcpy(auto_splitter_file, filename);
-        config_save();
-
-        // Restart auto-splitter if it was running
-        restart_auto_splitter();
-
-        g_free(folder_path);
+        return;
     }
+
+    char* folder_path = g_path_get_dirname(filename);
+    CFG_SET_STR(cfg.history.last_auto_splitter_folder.value.s, folder_path);
+
+    char* new_splitter = strdup(filename);
+    if (!new_splitter) {
+        LOG_WARNF("unable to open the autosplitter at %s", filename);
+        goto open_autosplitter_selected_cleanup;
+    }
+
+    free(win->game->auto_splitter_file);
+    win->game->auto_splitter_file = new_splitter;
+    strcpy(auto_splitter_file, filename);
+    if (cfg.libresplit.auto_save.value.b) {
+        save_game(win->game);
+        save_game_join(false);
+        config_save();
+    }
+
+    // Restart auto-splitter if it was running
+    restart_auto_splitter();
+
+open_autosplitter_selected_cleanup:
+    g_free(folder_path);
 }
 
 /**
@@ -430,7 +447,12 @@ void open_auto_splitter(GSimpleAction* action,
     }
 
     win = ls_app_window_get_default(LS_APP(app));
-    if (win->timer && win->timer->running) {
+    if (!win->game || !win->timer) {
+        ls_alert_info(GTK_WINDOW(win), "LibreSplit", "No Splits Open", "You must open your splits before opening an autosplitter.");
+        return;
+    }
+
+    if (win->timer->running) {
         ls_alert_info(GTK_WINDOW(win), "LibreSplit", "The timer is currently running", "Please stop the run before changing the auto splitter.");
         return;
     }

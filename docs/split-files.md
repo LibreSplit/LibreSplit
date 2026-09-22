@@ -6,20 +6,22 @@ You can use splits located in [the resource repository](https://github.com/Libre
 
 ## Main Object
 
-| Key                 | Type               | Value                                               |
-| ------------------- | ------------------ | --------------------------------------------------- |
-| `name`              | string             | The name of your game                               |
-| `category`          | string             | The name of your run category                       |
-| `icon`              | string             | Icon file path or url                               |
-| `attempt_count`     | int                | Number of attempts                                  |
-| `comparison_method` | int                | Method of comparison between real_time or game_time |
-| `start_delay`       | string (timestamp) | Non-negative delay until timer starts               |
-| `world_record`      | time               | Best known [time](#time-object)                     |
-| `splits`            | array              | Array of [split objects](#split-object)             |
-| `theme`             | string             | Window theme                                        |
-| `theme_variant`     | string             | Window theme variant                                |
-| `width`             | int                | Window width                                        |
-| `height`            | int                | Window height                                       |
+| Key                      | Type               | Value                                               |
+| ------------------------ | ------------------ | --------------------------------------------------- |
+| `name`                   | string             | The name of your game                               |
+| `category`               | string             | The name of your run category                       |
+| `icon`                   | string             | Icon file path or url                               |
+| `attempt_count`          | int                | Number of attempts                                  |
+| `comparison_method`      | int                | Method of comparison between real_time or game_time |
+| `start_delay`            | string (timestamp) | Non-negative delay until timer starts               |
+| `world_record`           | time               | Best known [time](#time-object)                     |
+| `splits`                 | array              | Array of [split objects](#split-object)             |
+| `theme`                  | string             | Window theme                                        |
+| `theme_variant`          | string             | Window theme variant                                |
+| `width`                  | int                | Window width                                        |
+| `height`                 | int                | Window height                                       |
+| `auto_splitter`          | string             | Path to your auto splitter Lua script               |
+| `auto_splitter_settings` | object             | Optional settings for your auto splitter            |
 
 Most of the above keys are optional.
 `comparison_method` determines which time is authoritative for determining things like PBs and best splits.
