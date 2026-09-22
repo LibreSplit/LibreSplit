@@ -2,6 +2,7 @@
 
 #include "../utils.h"
 #include "lua.h"
+#include "src/lasr/maps/maps.h"
 
 #include <stdatomic.h>
 #include <stdio.h>
@@ -37,6 +38,9 @@ void stock_process_id(const char* pid_command)
 {
     char pid_output[PATH_MAX + 100];
     pid_output[0] = '\0';
+
+    // We just started a new process monitoring, we may want to clean up a stale cache
+    maps_clearCache();
 
     while (atomic_load(&auto_splitter_enabled)) {
         execute_command(pid_command, pid_output);

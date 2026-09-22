@@ -31,7 +31,7 @@ typedef struct ProcessMap {
     uintptr_t start;
     uintptr_t end;
     uintptr_t size;
-    char name[PATH_MAX];
+    char name[PATH_MAX + 1];
 } ProcessMap;
 
 bool restart_auto_splitter(void);

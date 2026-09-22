@@ -32,6 +32,75 @@ process('MyGameHasAVeryLongName.exe', true)
 - Next we have to define the basic functions. Not all are required and the ones that are required may change depending on the game or end goal, like if loading screens are included or not.
   - The order at which these run is the same as they are documented below.
 
+### `define_settings`
+The purpose of this optional function is to specify settings that your script make take along with their default values. LASR provides a global `settings` object that should contain all of your settings for the lifetime of your script. LibreSplit handles updating these settings for you as the user interacts with them. Currently, the following setting types are available:
+
+* `SETTING_BOOLEAN`
+* `SETTING_INTEGER`
+* `SETTING_NUMBER`
+* `SETTING_STRING`
+
+If provided, LibreSplit will run your `define_settings` function exactly once when your script is loaded before anything else to define your settings. This is the only time when settings may be defined.
+
+The `settings` object has 2 methods associated with it:
+
+#### `define`
+`settings.define(key, definition)`
+
+* key (string)
+    * the key used for your setting, must be unique (to be used with `get`)
+* definition (object)
+    * name (string REQUIRED)
+        * friendly setting name to display to the user
+    * type (int REQUIRED)
+        * integer value representing your setting type. Use the defined SETTING_* enum values above
+    * default (mixed REQUIRED)
+        * the default value for your setting (must match the setting type provided)
+    * desc (string OPTIONAL)
+        * optional description to show the user what the setting is for
+
+This is the main method you will use to actually define each of your settings, their type and default value. Along with an optional description for the user of what the setting is for.
+`define` may ONLY be called within your `define_settings` function. Afterwards, calling `define` is no longer possible and will result in an error.
+
+Example usage:
+```lua
+function define_settings()
+    settings.define("category", {
+        name = "Category",
+        type = SETTING_STRING,
+        default = "Any%",
+        desc = "Set the category you are running for our game!"
+    })
+
+    settings.define("is_emulator", {
+        name = "Is Emulator",
+        type = SETTING_BOOLEAN,
+        default = false
+    })
+
+    settings.define("my_int_val", {
+        name = "I don't know what to put here",
+        type = SETTING_INTEGER,
+        default = 5
+    })
+end
+```
+
+#### `get`
+`settings.get(key)`
+
+The `get` method is how you will get the current value for any of your defined settings. If the user has not provided any value, then the result will be your default value from your earlier
+definition.
+
+Calling `get` with a key that was not defined earlier will result in nil. Similarly, if your script has no `define_settings` function, then all calls to `get` will result in nil.
+
+The `get` method is available to any of the other lifetime global functions, but should not be used outside of the LASR lifecycle.
+
+Example usage:
+```lua
+local var = settings.get("is_emulator") -- defaults to false per our earlier example definition
+```
+
 ### `startup`
 
 The purpose of this function is to specify how many times LibreSplit checks memory values and executes functions each second, the default is 60Hz. Usually, 60Hz is fine and this function can remain undefined. However, it's there if you need it. Its also useful to change other configuration about the script.
@@ -589,3 +658,18 @@ end
 `processExists()` will return `true` or `false`.
 
 _Note: If you want to use longer names, add `true` on second parameter e.g. `process("game.exe", true)`._
+## Reactive Functions
+
+The following functions are event handlers that will be called on certain events, whether such events happen due to auto-splitter commands or are done manually.
+
+- `onStart()`
+- `onSplit()`
+- `onStop()`
+- `onReset()`
+- `onCancel()`
+- `onSkip()`
+- `onUnsplit()`
+- `onPause()`
+- `onUnpause()`
+
+These functions are run at the end of each Lua runtime loop, if the related event has been triggered.

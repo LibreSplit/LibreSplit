@@ -11,8 +11,8 @@
 <a href="https://github.com/LibreSplit/LibreSplit/stargazers">
 <img src="https://img.shields.io/github/stars/LibreSplit/LibreSplit?style=for-the-badge&logo=GitHub"</img>
 </a>
-<a href="https://docs.gtk.org/gtk3/getting_started.html">
-<img src="https://img.shields.io/static/v1?label=Made%20with&message=GTK%203.0&color=725d9c&style=for-the-badge&logo=GTK&logoColor=white"/>
+<a href="https://docs.gtk.org/gtk4/getting_started.html">
+<img src="https://img.shields.io/static/v1?label=Made%20with&message=GTK%204&color=725d9c&style=for-the-badge&logo=GTK&logoColor=white"/>
 </a>
 <a href="https://github.com/LibreSplit/LibreSplit/blob/main/LICENSE">
 <img src="https://img.shields.io/github/license/LibreSplit/LibreSplit?label=license&style=for-the-badge&logo=GNU&logoColor=white&color=b85353"/>
@@ -45,19 +45,40 @@ LibreSplit is a speedrun timer based on [urn](https://github.com/3snowp7im/urn) 
 - **Always on Top support.**
 - **Support for in-game time.**
 
-----
+---
 
 ## Installation
 
-- Arch-based Distros
-    - `yay libresplit-git`
-    - `paru libresplit-git`
+- Fedora based Distros
 
-    See the [libresplit-git](https://aur.archlinux.org/packages/libresplit-git) package on the Arch User Repository (AUR).
+  Download the RPM for your system and open it with your software manager:
+  - [x86_64](https://rpm.libresplit.org/libresplit.x86_64.rpm)
+  - [arm64](https://rpm.libresplit.org/libresplit.aarch64.rpm)
+
+  Or install it from the cli:
+
+  ```sh
+  sudo dnf install "https://rpm.libresplit.org/libresplit.$(uname -m).rpm"
+  ```
+
+  Official RPM packages are signed with the [LibreSplit RPM signing key](https://rpm.libresplit.org/RPM-GPG-KEY-libresplit)
+  You can verify the package using the following fingerprint:
+
+  ```text
+  AE81 2B2C ED7C D507 FCD1  B39E 10C0 57F4 106B 63CB
+  ```
+
+- Arch-based Distros
+
+  LibreSplit is available on the Arch User Repository (AUR). You can install it with your AUR manager of choice:
+  - `yay libresplit-git`
+  - `paru libresplit-git`
+
+  See the [libresplit-git](https://aur.archlinux.org/packages/libresplit-git) package on the AUR.
 
 - NixOS
 
-    See the [libresplit](https://search.nixos.org/packages?channel=25.05&show=libresplit&query=libresplit) package, courtesy of [@fgaz](https://github.com/fgaz).
+  See the [libresplit](https://search.nixos.org/packages?channel=25.05&show=libresplit&query=libresplit) package, courtesy of [@fgaz](https://github.com/fgaz).
 
 ## Building
 
@@ -65,7 +86,7 @@ LibreSplit requires the following dependencies on your system to compile:
 
 - `git`
 - `meson`
-- `libgtk+-3.0`
+- `libgtk4`
 - `x11`
 - `libjansson` (for reading JSON split files)
 - `luajit` (for the Lua Auto Splitter Runtime)
@@ -78,19 +99,31 @@ and also the following (optional) runtime dependencies:
 
 Install the required dependencies:
 
-- Debian-based systems
+- Fedora/RHEL Based Systems
 
     ```sh
-    sudo apt update
-    sudo apt install build-essential libgtk-3-dev libjansson-dev meson libluajit-5.1-dev libssl-dev
+    sudo dnf install binutils gcc git gtk4-devel jansson-devel libX11-devel luajit-devel meson openssl-devel
     ```
+
+    For optional dependencies:
+
+    ```sh
+    sudo dnf install glib-networking gvfs
+    ```
+
+- Debian-based systems
+
+  ```sh
+  sudo apt update
+  sudo apt install build-essential libgtk-4-dev libjansson-dev meson libluajit-5.1-dev libssl-dev
+  ```
 
 - Arch-based systems
 
-    ```sh
-    sudo pacman -Sy
-    sudo pacman -S gtk3 jansson luajit git meson openssl
-    ```
+  ```sh
+  sudo pacman -Sy
+  sudo pacman -S gtk4 jansson luajit git meson openssl
+  ```
 
 Clone the project:
 
@@ -125,16 +158,39 @@ A file dialog will then appear, asking you to select a Split JSON file (see [Spl
 
 Initially the window is undecorated. You can toggle window decorations by pressing the `Right Control` key.
 
+### Always on Top
+
+LibreSplit supports Always on Top in X11 sessions via an application setting. This can be toggled on or off in the
+right click context menu. This setting only works on X11 sessions.
+
+On Wayland, always on top can usually be configured in your compositor. If you notice that the "Always on Top" setting
+does not appear, you are on Wayland. An example on KDE specifically for configuring your compositor to always keep LibreSplit
+on top is provided below.
+
+To configure LibreSplit as always on top on KDE:
+- Open: System Settings -> Apps & Windows -> Window Management -> Window Rules
+- Here you can create a new window rule for LibreSplit.
+- Give it any Description you'd like such as "LibreSplit Always on Top"
+- Set "Window class (application)" to "Exact match" and "libresplit"
+- Set "Match whole window class" to "No"
+- Set the "Window types" dropdown to "All selected"
+- Now click "Add Property..."
+  - Scroll and look for "Arrangement & Access"
+  - Under this you should see "Keep above other windows" select that
+- Close the "Add Property..." panel
+- Set Keep above other windows to Force and Yes
+- Click Apply
+
 ### Default Keybinds
 
 The timer is controlled with the following keys
 (note that their action **depends on the state of the timer**):
 
-| Key                   | Timer is Stopped   | Timer is running   |
-| --------------------- | ------------------ | ------------------ |
-| <kbd>Spacebar</kbd>   | Start timer        | Split              |
-| <kbd>Backspace</kbd>  | Reset timer        | Stop timer         |
-| <kbd>Delete</kbd>     | Cancel             | -                  |
+| Key                  | Timer is Stopped | Timer is running |
+| -------------------- | ---------------- | ---------------- |
+| <kbd>Spacebar</kbd>  | Start timer      | Split            |
+| <kbd>Backspace</kbd> | Reset timer      | Stop timer       |
+| <kbd>Delete</kbd>    | Cancel           | -                |
 
 Cancel will **reset the timer** and **decrement the attempt counter**. A run that is reset before the start delay is automatically cancelled.
 
@@ -149,14 +205,14 @@ If you forget to split, or accidentally split twice, you can manually change the
 
 The color of a time or delta has a special meaning.
 
-| Color         | Meaning                                  |
-| ------------- | ---------------------------------------- |
-| Dark red      | Behind splits in PB and losing time      |
-| Light red     | Behind splits in PB and gaining time     |
-| Dark green    | Ahead of splits in PB and gaining time   |
-| Light green   | Ahead of splits in PB and losing time    |
-| Blue          | Best split time in any run               |
-| Gold          | Best segment time in any run             |
+| Color       | Meaning                                |
+| ----------- | -------------------------------------- |
+| Dark red    | Behind splits in PB and losing time    |
+| Light red   | Behind splits in PB and gaining time   |
+| Dark green  | Ahead of splits in PB and gaining time |
+| Light green | Ahead of splits in PB and losing time  |
+| Blue        | Best split time in any run             |
+| Gold        | Best segment time in any run           |
 
 ---
 
@@ -194,56 +250,55 @@ For more information, check the [Themes documentation](docs/themes.md).
 
 - **How do I resize the application window?**
 
-    You can edit the `width` and `height` properties in the [Split JSON File](docs/split-files.md)
+  You can edit the `width` and `height` properties in the [Split JSON File](docs/split-files.md)
 
 - **How do I change the default keybinds?**
 
-    You can change the keybinds by editing your `settings.json` file (usually inside the `~/.config/libresplit` folder).
+  You can change the keybinds by editing your `settings.json` file (usually inside the `~/.config/libresplit` folder).
 
-    See [Settings and Keybinds](docs/settings-keybinds.md) for some examples and more information.
+  See [Settings and Keybinds](docs/settings-keybinds.md) for some examples and more information.
 
 - **How do I make the keybinds global?**
 
-    You can set the `global_hotkeys` property as `true` by editing your `settings.json` file.
+  You can set the `global_hotkeys` property as `true` by editing your `settings.json` file.
 
-    Wayland users experienced crashes when enabled `global_hotkeys`, so this settings is ignored for Wayland desktops.
+  Wayland users experienced crashes when enabled `global_hotkeys`, so this settings is ignored for Wayland desktops.
 
-    See [Settings and Keybinds](docs/settings-keybinds.md) for more information and workarounds for Wayland.
+  See [Settings and Keybinds](docs/settings-keybinds.md) for more information and workarounds for Wayland.
 
 - **Can I modify LibreSplit's appearance?**
 
-    Yes. You can [create your own theme](docs/themes.md) or [download themes online](https://github.com/LibreSplit/LibreSplit-resources/tree/main/themes).
+  Yes. You can [create your own theme](docs/themes.md) or [download themes online](https://github.com/LibreSplit/LibreSplit-resources/tree/main/themes).
 
 - **How can I make my own split file?**
 
-    You can use any existing JSON split file as an example from our [resource repository](https://github.com/LibreSplit/LibreSplit-resources/tree/main/splits) and refer to the [Split Files Documentation](docs/split-files.md) for more information.
+  You can use any existing JSON split file as an example from our [resource repository](https://github.com/LibreSplit/LibreSplit-resources/tree/main/splits) and refer to the [Split Files Documentation](docs/split-files.md) for more information.
 
-    You can place the split files wherever you prefer, just open them when starting LibreSplit.
+  You can place the split files wherever you prefer, just open them when starting LibreSplit.
 
 - **Can I define custom icons for my splits?**
 
-    Yes! You can use local files or web urls. See the `icon` key in the [split object](docs/split-files.md#split-object).
+  Yes! You can use local files or web urls. See the `icon` key in the [split object](docs/split-files.md#split-object).
 
-    The default icon size is 20x20px, but you can change it like so:
+  The default icon size is 20x20px, but you can change it like so:
 
-    ```css
-    .split-icon {
-        min-width: 24px;
-        min-height: 24px;
-        background-size: 24px;
-    }
-    ```
+  ```css
+  .split-icon {
+    min-width: 24px;
+    min-height: 24px;
+    background-size: 24px;
+  }
+  ```
 
 - **Can I contribute?**
 
-    Absolutely!
+  Absolutely!
 
-    You can contribute in many ways:
-
-    - By making [pull requests](https://github.com/LibreSplit/LibreSplit/pulls).
-    - By creating new themes, split files or auto splitters and add them to our [resource repository](https://github.com/LibreSplit/LibreSplit-resources/).
-    - By [reporting issues](https://github.com/LibreSplit/LibreSplit/pulls).
-    - By sending us suggestions, feature requests, improve the documentation and more. Feel free to join our [discord server](https://discord.gg/qbzD7MBjyw) to follow LibreSplit's development up close.
+  You can contribute in many ways:
+  - By making [pull requests](https://github.com/LibreSplit/LibreSplit/pulls).
+  - By creating new themes, split files or auto splitters and add them to our [resource repository](https://github.com/LibreSplit/LibreSplit-resources/).
+  - By [reporting issues](https://github.com/LibreSplit/LibreSplit/pulls).
+  - By sending us suggestions, feature requests, improve the documentation and more. Feel free to join our [discord server](https://discord.gg/qbzD7MBjyw) to follow LibreSplit's development up close.
 
 ---
 

@@ -14,12 +14,13 @@ Also each split JSON file can apply their own themes by specifying a `theme` key
 2. Place the stylesheet under the `~/.config/libresplit/themes/<name>/<name>.css`directory where `name` is the name of your theme. If you have your `XDG_CONFIG_HOME` env var pointing somewhere else, you may need to change the directory accordingly.
 3. Theme variants should follow the pattern `<name>-<variant>.css`.
 
-See the [GtkCssProvider documentation](https://docs.gtk.org/gtk3/css-properties.html) for a list of supported CSS properties. Note that you can also modify the default font-family.
+See the [GTK 4 CSS properties documentation](https://docs.gtk.org/gtk4/css-properties.html) for a list of supported CSS properties. Note that you can also modify the default font-family.
 
 | LibreSplit CSS classes        | Explanation Where needed                                                                                                                                 |
 | ----------------------------- | -----------------------------------------------                                                                                                          |
-| `.window`                     | Any window of LibreSplit (editing this class might affect other LibreSplit windows)                                                                      |
-| `.window.main-window`         | LibreSplit's main timer window (this won't influence other LibreSplit windows)                                                                           |
+| `window`                      | Any window of LibreSplit (editing this class might affect other LibreSplit windows)                                                                      |
+| `.window.main-window`         | LibreSplit's main timer window - think of this like the main `<body>` of a standard webpage                                                              |
+| `.libresplit-content`         | LibreSplit's timer content container - this is like the top level `<div>` element whose parent is `<body>` that all the components are a descendant of   |
 | `.header`                     | The header, containing title and attempt counters                                                                                                        |
 | `.title`                      | The title of the category (set in the splits json file)                                                                                                  |
 | `.attempt-count`              | Counter for attempts in top right corner (#attempts_finished / attempts_total)                                                                           |
@@ -29,7 +30,7 @@ See the [GtkCssProvider documentation](https://docs.gtk.org/gtk3/css-properties.
 | `.timer-container`            | Container for both the detailed and normal timer                                                                                                         |
 | `.detailed-timer`             | Container for the `segment-pb` and `segment-best` classes                                                                                                |
 | `.timer-seconds`              | Large main timer seconds                                                                                                                                 |
-| `.timer-millis`               | Large main timer milli(seconds)                                                                                                                          |
+| `.timer-millis`               | Large main timer fractional seconds                                                                                                                      |
 | `.delay`                      | Timer not running/in negative time                                                                                                                       |
 | `.splits`                     | Container of the splits                                                                                                                                  |
 | `.split`                      | The splits themselves                                                                                                                                    |
@@ -56,7 +57,7 @@ See the [GtkCssProvider documentation](https://docs.gtk.org/gtk3/css-properties.
 | `.segment-best`               | Best text within .detailed-timer                                                                                                                         |
 | `.segment-pb`                 | PB text within .detailed-timer                                                                                                                           |
 | `.segment-seconds`            | Smaller detailed timer seconds                                                                                                                           |
-| `.segment-millis`             | Smaller detailed timer milli(seconds)                                                                                                                    |
+| `.segment-millis`             | Smaller detailed timer fractional seconds                                                                                                                |
 | `.sum-of-bests-label`         | Text that says "Sum of Bests"                                                                                                                            |
 | `.sum-of-bests`               | Time for Sum of Bests                                                                                                                                    |
 | `.personal-best-label`        | Text that says "Personal Best"                                                                                                                           |
@@ -72,11 +73,19 @@ For instance, if your split is titled "First split", it can be styled by targeti
 
 A more complex example: if your split is named "Space Station (Part 1)", the CSS class will be `.split-title-space-station--part-1-` (because the parentheses will become hyphens).
 
+## Theme Variants
+
+As hinted at above, themes can also supply variants in your themes directory by providing another css file named `<theme>-<variant>.css`.
+The theming system applies your base theme css, and then your variant on top of it taking precedence so you can apply overrides to anything
+your variant needs to provide the slightly different look/feel over the base theme without having to redefine the entire theme for each variant.
+A theme variant must supplement a base theme. Which means a base `<theme>.css` file must exist alongside your `<theme>-<variant>.css` so that
+the variant works alongside the theme.
+
 ## FAQ
 
 ### How do I hide a section of LibreSplit?
 
-GTK does not have a built-in way of hiding pieces of the interface, but you can hide most items by setting the font-size to zero. For instance:
+GTK CSS does not have a built-in way of hiding pieces of the interface, but you can hide most items by setting the font-size to zero. For instance:
 
 ```css
 .segment-pb, .segment-best{
@@ -96,13 +105,13 @@ If you run LibreSplit from a terminal like this:
 GTK_DEBUG=interactive libresplit
 ```
 
-LiveSplit will be started together with another window: the interactive GTK debugger. Like the one you see below:
+LibreSplit will be started together with another window: the interactive GTK debugger. Like the one you see below:
 
 ![The GTK Debug window](./images/gtk_debugger.png)
 
-Make sure that both LibreSplit and this window are visible, because when you click on one row in the GTK debugger (`Objects` tab), the corresponding section in LiveSplit will flash 3 times, letting you know what you selected.
+Make sure that both LibreSplit and this window are visible, because when you click on one row in the GTK debugger (`Objects` tab), the corresponding section in LibreSplit will flash 3 times, letting you know what you selected.
 
-Once you found what you want to edit, take a note of its `style class` (See [Creating your own theme](#creating-your-own-theme) for a list) and head to the `CSS` tab: there you can edit in real time LiveSplit's aspect. These edits are temporary, but they can help you developing your own CSS theme.
+Once you found what you want to edit, take a note of its `style class` (See [Creating your own theme](#creating-your-own-theme) for a list) and head to the `CSS` tab: there you can edit in real time LibreSplit's aspect. These edits are temporary, but they can help you developing your own CSS theme.
 
 Once you're done developing your theme, feel free to share it with the community!
 
@@ -119,6 +128,6 @@ Yes! But you'll need to first erase all your desktop theme's (and LibreSplit's) 
 
 **WARNING:** If you use this rule without setting any others, LibreSplit won't look like a GTK (or an application) at all, and will be next to unusable.
 
-With the help of GTK's [CSS Overview](https://docs.gtk.org/gtk3/css-overview.html) you'll be able to customize everything, including Context Menus, The Help and Settings screens (to an extent).
+With the help of GTK's [CSS Overview](https://docs.gtk.org/gtk4/css-overview.html) you'll be able to customize everything, including Context Menus, The Help and Settings screens (to an extent).
 
 This is very advanced wizardry, so be careful!

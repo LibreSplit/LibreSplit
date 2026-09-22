@@ -11,7 +11,7 @@ typedef struct LSTimer {
     LSComponent base; /*!< The base struct that is extended. */
     GtkWidget* time; /*!< The timer container */
     GtkWidget* time_seconds; /*!< The label representing the seconds part of the timer */
-    GtkWidget* time_millis; /*!< The label representing the milliseconds part of the timer */
+    GtkWidget* time_millis; /*!< The label representing the fractional seconds part of the timer */
 } LSTimer;
 extern LSComponentOps ls_timer_operations;
 
@@ -32,29 +32,24 @@ LSComponent* ls_component_timer_new(void)
     self->time = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
     add_class(self->time, "timer");
     add_class(self->time, "time");
-    gtk_widget_show(self->time);
 
     spacer = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
     gtk_widget_set_hexpand(spacer, TRUE);
-    gtk_container_add(GTK_CONTAINER(self->time), spacer);
-    gtk_widget_show(spacer);
+    gtk_box_append(GTK_BOX(self->time), spacer);
 
     self->time_seconds = gtk_label_new(NULL);
     add_class(self->time_seconds, "timer-seconds");
-    gtk_widget_set_valign(self->time_seconds, GTK_ALIGN_BASELINE);
-    gtk_container_add(GTK_CONTAINER(self->time), self->time_seconds);
-    gtk_widget_show(self->time_seconds);
+    gtk_widget_set_valign(self->time_seconds, GTK_ALIGN_BASELINE_FILL);
+    gtk_box_append(GTK_BOX(self->time), self->time_seconds);
 
     spacer = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     gtk_widget_set_valign(spacer, GTK_ALIGN_END);
-    gtk_container_add(GTK_CONTAINER(self->time), spacer);
-    gtk_widget_show(spacer);
+    gtk_box_append(GTK_BOX(self->time), spacer);
 
     self->time_millis = gtk_label_new(NULL);
     add_class(self->time_millis, "timer-millis");
-    gtk_widget_set_valign(self->time_millis, GTK_ALIGN_BASELINE);
-    gtk_container_add(GTK_CONTAINER(spacer), self->time_millis);
-    gtk_widget_show(self->time_millis);
+    gtk_widget_set_valign(self->time_millis, GTK_ALIGN_BASELINE_FILL);
+    gtk_box_append(GTK_BOX(spacer), self->time_millis);
 
     return (LSComponent*)self;
 }
@@ -120,7 +115,7 @@ static void timer_draw(LSComponent* self_, const ls_game* game, const ls_timer* 
     if (curr && curr == game->split_count) {
         curr = game->split_count - 1;
     }
-    if (ls_timer_get_time(timer, true) <= 0) {
+    if (ls_time_get_by_method(ls_timer_get_time(timer, true), game->comparison_method) <= 0) {
         add_class(self->time, "delay");
     } else {
         if (timer->curr_split == game->split_count
@@ -138,7 +133,7 @@ static void timer_draw(LSComponent* self_, const ls_game* game, const ls_timer* 
             }
         }
     }
-    ls_time_millis_string(str, &millis[1], ls_timer_get_time(timer, true));
+    ls_time_millis_string(str, &millis[1], ls_time_get_by_method(ls_timer_get_time(timer, true), game->comparison_method));
     millis[0] = '.';
     gtk_label_set_text(GTK_LABEL(self->time_seconds), str);
     gtk_label_set_text(GTK_LABEL(self->time_millis), millis);

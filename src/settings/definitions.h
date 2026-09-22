@@ -8,7 +8,8 @@ typedef enum ConfigType {
     CFG_BOOL,
     CFG_INT,
     CFG_STRING,
-    CFG_KEYBIND
+    CFG_KEYBIND,
+    CFG_CHOICE
 } ConfigType;
 
 typedef union ConfigValue {
@@ -23,6 +24,8 @@ typedef struct ConfigEntry {
     const ConfigType type;
     ConfigValue value; // Serves as default value unless explicitly changed by user configuration
     const char* const desc;
+    const char* const* choices; // Config choice labels indexed by value.i
+    bool hide; // Option to hide a config option from settings
 } ConfigEntry;
 
 typedef struct LibreSplitConfig {
@@ -31,11 +34,14 @@ typedef struct LibreSplitConfig {
     ConfigEntry hide_cursor;
     ConfigEntry auto_splitter_enabled;
     ConfigEntry global_hotkeys;
+    ConfigEntry appearance;
     ConfigEntry theme;
     ConfigEntry theme_variant;
     ConfigEntry decimals;
     ConfigEntry save_run_history;
-    ConfigEntry ask_on_gold;
+    ConfigEntry run_history_next_to_splits;
+    ConfigEntry auto_save;
+    ConfigEntry ask_on_achievement;
     ConfigEntry ask_on_worse;
 } LibreSplitConfig;
 
@@ -53,7 +59,6 @@ typedef struct HistoryConfig {
     ConfigEntry split_file;
     ConfigEntry last_split_folder;
     ConfigEntry last_auto_splitter_folder;
-    ConfigEntry auto_splitter_file;
 } HistoryConfig;
 
 typedef struct AppConfig {

@@ -1,19 +1,34 @@
 ## LibreSplit was unable to read memory from the target process.
-* This is because in linux, a process cannot read the memory of another process that are unrelated
-* This fix should ONLY be used if you REALLY want to run the linux native version of a game with a linux native auto splitter
-* To fix this: **Run the game/program trough stam**
-* If the above doesnt work for some reason, keep reading
+
+- This is because in linux, a process cannot read the memory of another process that are unrelated
+- This fix should ONLY be used if you REALLY want to run the linux native version of a game with a linux native auto splitter
+- To fix this: **Run the game/program trough stam**
+- If the above doesnt work for some reason, keep reading
+
 ### THIS WORKAROUND IS A HUGE SECURITY RISK, SO PLEASE ONLY DO IT IF ABSOLUTELY NECESSARY.
+
 #### You should give such permission only to programs you fully trust: A vulnerability in a program with such permission could give full system-wide access to malicious actors
-* Run `sudo setcap cap_sys_ptrace+ep /path/to/libresplit`
-    * Replace `path/to/libresplit` with the actual path of the libresplit binary
-* To revert back this capability run:
-* `sudo setcap -r /path/to/libresplit`
-    * Replace `path/to/libresplit` with the actual path of the libresplit binary
+
+- Run `sudo setcap cap_sys_ptrace+ep /path/to/libresplit`
+    - Replace `path/to/libresplit` with the actual path of the libresplit binary
+- To revert back this capability run:
+- `sudo setcap -r /path/to/libresplit`
+    - Replace `path/to/libresplit` with the actual path of the libresplit binary
 
 ## Global hotkeys on wayland
-* Global hotkeys on wayland are disabled by default when the `WAYLAND_DISPLAY` environment variable is set, if you want to enable them regardless of it, you can set `LIBRESPLIT_FORCE_GLOBAL_HOTKEYS` to `1` or anything and they will be enabled, expect it to be somewhat unreliable
+
+Global hotkeys on wayland are disabled by default when the `WAYLAND_DISPLAY` environment variable is set, if you want to enable them regardless of it, you can set `LIBRESPLIT_FORCE_GLOBAL_HOTKEYS` to `1` or anything and they will be enabled, expect it to be somewhat unreliable
 
 ## Memory offsets are wrong/dont work
-* This might be to some bug in fetching maps with ioctl
-* You can disable ioctl behaviour by setting `LIBRESPLIT_DISABLE_IOCTL_MAPS` environment variable to `1`.
+
+This might be to some bug in fetching maps with ioctl
+
+You can disable ioctl behaviour by setting `LIBRESPLIT_DISABLE_IOCTL_MAPS` environment variable to `1`.
+
+## Signature Scanning is locked in an infinite loop of "short reads"
+
+To save on memory, LibreSplit uses a technique to read the game's memory in chunks.
+
+There are times where the OS might return "short reads" (LibreSplit receives less bytes than requested), usually such situation is temporary, but if such short reads persist and all of them are shorter than the pattern length (in bytes) then LibreSplit's signature scanning algorithm might get stuck.
+
+This should be an occurrence that should span between "just theoretical" to "very rare", but it **is** a possibility, so please let us know if such problem occurs!

@@ -6,9 +6,10 @@
 
 #include "./maps/maps.h"
 #include "functions.h"
+#include "settings.h"
+#include "src/logging.h"
 #include "utils.h"
 
-#include <assert.h>
 #include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
@@ -25,6 +26,7 @@ int refresh_rate = 60; /*!< The Auto Splitter's refresh rate applied */
 bool use_game_time = false; /*!< Enables IGT */
 atomic_bool update_game_time = false; /*!< True if the auto splitter is requesting the game time to be updated */
 atomic_llong game_time_value = 0; /*!< The in-game time value, in milliseconds */
+atomic_int lasr_event_requests = 0; /*!< Keeps tabs of which events we should react to */
 
 /**
  * Defines the behaviour of the map cache.
@@ -71,6 +73,31 @@ static const char* disabled_functions[] = {
     "newproxy",
     NULL
 };
+
+/**
+ * @brief Initializes all auto_splitter values to their defaults
+ * Call this when opening a new game.
+ */
+void init_auto_splitter(void)
+{
+    // don't init auto_splitter_enabled, or auto_splitter_running here
+    atomic_store(&call_start, false);
+    atomic_store(&call_split, false);
+    atomic_store(&call_reset, false);
+    atomic_store(&toggle_loading, false);
+    atomic_store(&run_using_game_time, false);
+    atomic_store(&run_using_game_time_call, false);
+    atomic_store(&lasr_event_requests, 0);
+    atomic_store(&game_time_value, 0);
+    atomic_store(&update_game_time, false);
+    use_game_time = false;
+    prev_is_loading = false;
+
+    // lasr initial values
+    refresh_rate = 60;
+    maps_cache_cycles = 1;
+    maps_cache_cycles_value = 1;
+}
 
 /**
  * Check if the game process exists and is running.
@@ -211,16 +238,28 @@ static int traceback(lua_State* L)
  */
 static void pcall_fix_traceback(lua_State* L, const char* func)
 {
-    if (!lua_isstring(L, -1))
+    if (!lua_isstring(L, -1)) {
         return;
+    }
+
     const char* trace = lua_tostring(L, -1);
     const char* last_line = strrchr(trace, '\n');
-    assert(last_line != NULL && "all stacktraces have at least one newline: the one following the error message");
-    // "\t/path/to/script.lua:line: in function </path/to/script.lua:line>"
-    assert(strlen(last_line) > strlen(auto_splitter_file) + 1);
-    const char* path = strchr(last_line + 1 + strlen(auto_splitter_file), '<'); // auto splitter path may contain a `<` character
-    if (path == NULL)
+    if (last_line == NULL) {
+        LOG_WARN("lua traceback: invalid trace, traceback should have at least one new line");
         return;
+    }
+
+    // "\t/path/to/script.lua:line: in function </path/to/script.lua:line>"
+    if (strlen(last_line) <= strlen(auto_splitter_file) + 1) {
+        // the trace should include the path and therefore be bigger.
+        return;
+    }
+
+    const char* path = strchr(last_line + 1 + strlen(auto_splitter_file), '<'); // auto splitter path may contain a `<` character
+    if (path == NULL) {
+        return;
+    }
+
     lua_pushlstring(L, trace, path - trace);
     lua_pushfstring(L, "'%s'", func);
     lua_concat(L, 2);
@@ -372,6 +411,10 @@ void startup(lua_State* L)
 {
     call_va(L, "startup", "");
 
+    if (!atomic_load(&auto_splitter_enabled)) {
+        return;
+    }
+
     lua_getglobal(L, "refreshRate");
     if (lua_isnumber(L, -1)) {
         refresh_rate = lua_tointeger(L, -1);
@@ -520,6 +563,22 @@ void gameTime(lua_State* L)
 }
 
 /**
+ * Utility function to check if a Lua function is defined in an auto splitter
+ *
+ * @param L The lua state
+ * @param name The function name to look for
+ *
+ * @returns True if the function is defined in the auto splitter, false otherwise
+ */
+static bool has_lua_function(lua_State* L, const char* name)
+{
+    lua_getglobal(L, name);
+    bool exists = lua_isfunction(L, -1);
+    lua_pop(L, 1); // Remove function from the stack
+    return exists;
+}
+
+/**
  * Loads the auto splitter Lua file and executes the auto splitter.
  */
 void run_auto_splitter(void)
@@ -528,6 +587,7 @@ void run_auto_splitter(void)
     luaL_openlibs(L);
     disable_functions(L, disabled_functions);
     push_lasr_functions(L, luac_functions);
+    lasr_settings_register(L);
 
     char current_file[PATH_MAX];
     strcpy(current_file, auto_splitter_file);
@@ -541,12 +601,14 @@ void run_auto_splitter(void)
         fprintf(stderr, "Lua syntax error: %s\n", error_msg);
         lua_pop(L, 1); // Remove the error message from the stack
         lua_close(L);
+        maps_clearCache();
+        lasr_settings_clear();
         atomic_store(&auto_splitter_enabled, false);
         return;
     }
 
     // Execute the Lua file
-    if (lua_pcall(L, 0, LUA_MULTRET, base) != LUA_OK) {
+    if (lua_pcall(L, 0, LUA_MULTRET, base) != LUA_OK || lasr_settings_load(L) != LUA_OK) {
         // Error executing the file
         if (!lua_isnil(L, -1)) {
             const char* err = lua_tostring(L, -1);
@@ -556,42 +618,32 @@ void run_auto_splitter(void)
         }
         lua_pop(L, 1);
         lua_close(L);
+        maps_clearCache();
+        lasr_settings_clear();
         atomic_store(&auto_splitter_enabled, false);
         return;
     }
+
     lua_remove(L, base); /* remove traceback function */
 
-    lua_getglobal(L, "state");
-    bool state_exists = lua_isfunction(L, -1);
-    lua_pop(L, 1); // Remove 'state' from the stack
-
-    lua_getglobal(L, "start");
-    bool start_exists = lua_isfunction(L, -1);
-    lua_pop(L, 1); // Remove 'start' from the stack
-
-    lua_getglobal(L, "split");
-    bool split_exists = lua_isfunction(L, -1);
-    lua_pop(L, 1); // Remove 'split' from the stack
-
-    lua_getglobal(L, "isLoading");
-    bool is_loading_exists = lua_isfunction(L, -1);
-    lua_pop(L, 1); // Remove 'isLoading' from the stack
-
-    lua_getglobal(L, "startup");
-    bool startup_exists = lua_isfunction(L, -1);
-    lua_pop(L, 1); // Remove 'startup' from the stack
-
-    lua_getglobal(L, "reset");
-    bool reset_exists = lua_isfunction(L, -1);
-    lua_pop(L, 1); // Remove 'reset' from the stack
-
-    lua_getglobal(L, "update");
-    bool update_exists = lua_isfunction(L, -1);
-    lua_pop(L, 1); // Remove 'update' from the stack
-
-    lua_getglobal(L, "gameTime");
-    bool gameTime_exists = lua_isfunction(L, -1);
-    lua_pop(L, 1); // Remove 'gameTime' from the stack
+    bool state_exists = has_lua_function(L, "state");
+    bool start_exists = has_lua_function(L, "start");
+    bool split_exists = has_lua_function(L, "split");
+    bool is_loading_exists = has_lua_function(L, "isLoading");
+    bool startup_exists = has_lua_function(L, "startup");
+    bool reset_exists = has_lua_function(L, "reset");
+    bool update_exists = has_lua_function(L, "update");
+    bool gameTime_exists = has_lua_function(L, "gameTime");
+    // Reactive Functions
+    bool onStart_exists = has_lua_function(L, "onStart");
+    bool onSplit_exists = has_lua_function(L, "onSplit");
+    bool onStop_exists = has_lua_function(L, "onStop");
+    bool onReset_exists = has_lua_function(L, "onReset");
+    bool onCancel_exists = has_lua_function(L, "onCancel");
+    bool onSkip_exists = has_lua_function(L, "onSkip");
+    bool onUnsplit_exists = has_lua_function(L, "onUnsplit");
+    bool onPause_exists = has_lua_function(L, "onPause");
+    bool onUnpause_exists = has_lua_function(L, "onUnpause");
 
     if (startup_exists) {
         startup(L);
@@ -636,6 +688,62 @@ void run_auto_splitter(void)
             reset(L);
         }
 
+        if (onStart_exists) {
+            if ((atomic_load(&lasr_event_requests) & TIMER_EVT_START)) {
+                call_va(L, "onStart", "");
+            }
+        }
+
+        if (onSplit_exists) {
+            if ((atomic_load(&lasr_event_requests) & TIMER_EVT_SPLIT)) {
+                call_va(L, "onSplit", "");
+            }
+        }
+
+        if (onStop_exists) {
+            if ((atomic_load(&lasr_event_requests) & TIMER_EVT_STOP)) {
+                call_va(L, "onStop", "");
+            }
+        }
+
+        if (onReset_exists) {
+            if ((atomic_load(&lasr_event_requests) & TIMER_EVT_RESET)) {
+                call_va(L, "onReset", "");
+            }
+        }
+
+        if (onCancel_exists) {
+            if ((atomic_load(&lasr_event_requests) & TIMER_EVT_CANCEL)) {
+                call_va(L, "onCancel", "");
+            }
+        }
+
+        if (onSkip_exists) {
+            if ((atomic_load(&lasr_event_requests) & TIMER_EVT_SKIP)) {
+                call_va(L, "onSkip", "");
+            }
+        }
+
+        if (onUnsplit_exists) {
+            if ((atomic_load(&lasr_event_requests) & TIMER_EVT_UNSPLIT)) {
+                call_va(L, "onUnsplit", "");
+            }
+        }
+
+        if (onPause_exists) {
+            if ((atomic_load(&lasr_event_requests) & TIMER_EVT_PAUSE)) {
+                call_va(L, "onPause", "");
+            }
+        }
+
+        if (onUnpause_exists) {
+            if ((atomic_load(&lasr_event_requests) & TIMER_EVT_UNPAUSE)) {
+                call_va(L, "onUnpause", "");
+            }
+        }
+
+        atomic_store(&lasr_event_requests, 0);
+
         // Clear the memory maps cache if needed
         maps_cache_cycles_value--;
         if (maps_cache_cycles_value < 1) {
@@ -654,4 +762,20 @@ void run_auto_splitter(void)
     }
 
     lua_close(L);
+    maps_clearCache();
+    lasr_settings_clear();
+}
+
+/**
+ * @brief Stops the auto splitter and waits for the process to end.
+ * The wait is very quick so doing it on another thread should be fine.
+ *
+ * If auto splitter wasn't running, does nothing
+ */
+void stop_auto_splitter(void)
+{
+    atomic_store(&auto_splitter_enabled, false);
+    while (atomic_load(&auto_splitter_running)) {
+        // wait, this will be very fast so its ok to just spin
+    }
 }

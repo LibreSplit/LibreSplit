@@ -1,79 +1,361 @@
 #include "src/gui/actions.h"
 #include "src/gui/app_window.h"
-#include "src/gui/help_dialog.h"
-#include "src/gui/settings_dialog.h"
+#include "src/gui/backends/x11.h"
+#include "src/gui/widgets/help_dialog.h"
+#include "src/gui/widgets/settings_dialog.h"
 #include "src/lasr/auto-splitter.h"
 #include <gtk/gtk.h>
 
+// standardized cross-platform cursor names
+static const char* const resize_cursors[] = {
+    [GDK_SURFACE_EDGE_NORTH_WEST] = "nwse-resize",
+    [GDK_SURFACE_EDGE_NORTH] = "ns-resize",
+    [GDK_SURFACE_EDGE_NORTH_EAST] = "nesw-resize",
+    [GDK_SURFACE_EDGE_WEST] = "ew-resize",
+    [GDK_SURFACE_EDGE_EAST] = "ew-resize",
+    [GDK_SURFACE_EDGE_SOUTH_WEST] = "nesw-resize",
+    [GDK_SURFACE_EDGE_SOUTH] = "ns-resize",
+    [GDK_SURFACE_EDGE_SOUTH_EAST] = "nwse-resize",
+};
+
+static const GActionEntry context_menu_actions[] = {
+    { "open-splits", open_activated },
+    { "save-splits", save_activated },
+    { "open-auto-splitter", open_auto_splitter },
+    { "enable-auto-splitter", NULL, NULL, "false", toggle_auto_splitter },
+    { "reload", reload_activated },
+    { "close", close_activated },
+    { "always-on-top", NULL, NULL, "false", menu_toggle_win_on_top },
+    { "settings", show_settings_dialog },
+    { "about-and-help", show_help_dialog },
+    { "quit", quit_activated },
+};
+
 /**
- * Creates the Context Menu.
+ * Syncs the context-menu toggles with application state
  *
- * @param widget The widget that was right clicked. Not used here.
- * @param event The click event, containing which button was used to click.
- * @param app Pointer to the LibreSplit application.
- *
- * @return True if the click was done with the RMB (and a context menu was shown), False otherwise.
+ * @param win The application window that owns the actions
  */
-gboolean button_right_click(GtkWidget* widget, GdkEventButton* event, gpointer app)
+static void sync_context_menu_state(LSAppWindow* win)
 {
-    if (event->button == GDK_BUTTON_SECONDARY) {
-        GList* windows;
-        LSAppWindow* win;
-        windows = gtk_application_get_windows(GTK_APPLICATION(app));
-        if (windows) {
-            win = LS_APP_WINDOW(windows->data);
-        } else {
-            win = ls_app_window_new(LS_APP(app));
-        }
-        if (win->context_menu == NULL) {
-            GtkWidget* menu = gtk_menu_new();
-            GtkWidget* menu_open_splits = gtk_menu_item_new_with_label("Open Splits");
-            GtkWidget* menu_save_splits = gtk_menu_item_new_with_label("Save Splits");
-            GtkWidget* menu_open_auto_splitter = gtk_menu_item_new_with_label("Open Auto Splitter");
-            GtkWidget* menu_enable_auto_splitter = gtk_check_menu_item_new_with_label("Enable Auto Splitter");
-            gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_enable_auto_splitter), atomic_load(&auto_splitter_enabled));
-            GtkWidget* menu_enable_win_on_top = gtk_check_menu_item_new_with_label("Always on Top");
-            gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(menu_enable_win_on_top), win->opts.win_on_top);
-            GtkWidget* menu_reload = gtk_menu_item_new_with_label("Reload");
-            GtkWidget* menu_close = gtk_menu_item_new_with_label("Close");
-            GtkWidget* menu_settings = gtk_menu_item_new_with_label("Settings");
-            GtkWidget* menu_about = gtk_menu_item_new_with_label("About and help");
-            GtkWidget* menu_quit = gtk_menu_item_new_with_label("Quit");
+    GAction* action = g_action_map_lookup_action(G_ACTION_MAP(win), "enable-auto-splitter");
+    g_simple_action_set_state(G_SIMPLE_ACTION(action), g_variant_new_boolean(atomic_load(&auto_splitter_enabled)));
 
-            // Add the menu items to the menu
-            gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_open_splits);
-            gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_save_splits);
-            gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
-            gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_open_auto_splitter);
-            gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_enable_auto_splitter);
-            gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
-            gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_reload);
-            gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_close);
-            gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
-            gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_enable_win_on_top);
-            gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_settings);
-            gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_about);
-            gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
-            gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_quit);
+    action = g_action_map_lookup_action(G_ACTION_MAP(win), "always-on-top");
+    g_simple_action_set_state(G_SIMPLE_ACTION(action), g_variant_new_boolean(win->opts.win_on_top));
 
-            // Attach the callback functions to the menu items
-            g_signal_connect(menu_open_splits, "activate", G_CALLBACK(open_activated), app);
-            g_signal_connect(menu_save_splits, "activate", G_CALLBACK(save_activated), app);
-            g_signal_connect(menu_open_auto_splitter, "activate", G_CALLBACK(open_auto_splitter), app);
-            g_signal_connect(menu_enable_auto_splitter, "toggled", G_CALLBACK(toggle_auto_splitter), NULL);
-            g_signal_connect(menu_enable_win_on_top, "toggled", G_CALLBACK(menu_toggle_win_on_top), app);
-            g_signal_connect(menu_reload, "activate", G_CALLBACK(reload_activated), app);
-            g_signal_connect(menu_close, "activate", G_CALLBACK(close_activated), app);
-            g_signal_connect(menu_settings, "activate", G_CALLBACK(show_settings_dialog), app);
-            g_signal_connect(menu_about, "activate", G_CALLBACK(show_help_dialog), app);
-            g_signal_connect(menu_quit, "activate", G_CALLBACK(quit_activated), app);
+    gboolean can_save = win->game != NULL && win->timer != NULL && !win->timer->started;
+    action = g_action_map_lookup_action(G_ACTION_MAP(win), "save-splits");
+    g_simple_action_set_enabled(G_SIMPLE_ACTION(action), can_save);
+}
 
-            win->context_menu = menu;
-        }
+/**
+ * Determines which window edge the pointer is hovering over
+ *
+ * @param widget The widget referenced by the coordinates
+ * @param x The pointer's x-coordinate
+ * @param y The pointer's y-coordinate
+ * @param edge A reference to the GdkSurfaceEdge to save the value to
+ * @return bool Whether or not an edge was detected
+ */
+static bool get_window_edge(GtkWidget* widget, double x, double y, GdkSurfaceEdge* edge)
+{
+    int width = gtk_widget_get_width(widget);
+    int height = gtk_widget_get_height(widget);
+    bool left = x < WINDOW_PAD;
+    bool right = x >= width - WINDOW_PAD;
+    bool top = y < WINDOW_PAD;
+    bool bot = y >= height - WINDOW_PAD;
 
-        gtk_widget_show_all(win->context_menu);
-        gtk_menu_popup_at_pointer(GTK_MENU(win->context_menu), (GdkEvent*)event);
-        return TRUE;
+    if (top && left) {
+        *edge = GDK_SURFACE_EDGE_NORTH_WEST;
+    } else if (top && right) {
+        *edge = GDK_SURFACE_EDGE_NORTH_EAST;
+    } else if (bot && left) {
+        *edge = GDK_SURFACE_EDGE_SOUTH_WEST;
+    } else if (bot && right) {
+        *edge = GDK_SURFACE_EDGE_SOUTH_EAST;
+    } else if (top) {
+        *edge = GDK_SURFACE_EDGE_NORTH;
+    } else if (bot) {
+        *edge = GDK_SURFACE_EDGE_SOUTH;
+    } else if (left) {
+        *edge = GDK_SURFACE_EDGE_WEST;
+    } else if (right) {
+        *edge = GDK_SURFACE_EDGE_EAST;
+    } else {
+        return false;
     }
-    return FALSE;
+
+    return true;
+}
+
+/**
+ * Begins an interactive move, or an edge resize for an undecorated window.
+ *
+ * @param gesture The click gesture receiving the primary-button press
+ * @param x The press x-coordinate
+ * @param y The press y-coordinate
+ */
+void button_left_click(GtkGestureClick* gesture, double x, double y)
+{
+    GtkEventController* controller = GTK_EVENT_CONTROLLER(gesture);
+    LSAppWindow* win = LS_APP_WINDOW(gtk_event_controller_get_widget(controller));
+    GdkSurfaceEdge edge;
+    bool resize = !gtk_window_get_decorated(GTK_WINDOW(win))
+        && get_window_edge(gtk_event_controller_get_widget(controller), x, y, &edge);
+
+    GdkEvent* event = gtk_event_controller_get_current_event(controller);
+    GdkDevice* device = gtk_event_controller_get_current_event_device(controller);
+    GdkSurface* surface = gtk_native_get_surface(GTK_NATIVE(win));
+    double surface_x;
+    double surface_y;
+
+    if (event == NULL
+        || device == NULL
+        || surface == NULL
+        || !GDK_IS_TOPLEVEL(surface)
+        || !gdk_event_get_position(event, &surface_x, &surface_y)) {
+        return;
+    }
+
+    gtk_gesture_set_state(GTK_GESTURE(gesture), GTK_EVENT_SEQUENCE_CLAIMED);
+    if (resize) {
+        gdk_toplevel_begin_resize(GDK_TOPLEVEL(surface),
+            edge,
+            device,
+            GDK_BUTTON_PRIMARY,
+            surface_x,
+            surface_y,
+            gtk_event_controller_get_current_event_time(controller));
+    } else {
+        gdk_toplevel_begin_move(GDK_TOPLEVEL(surface),
+            device,
+            GDK_BUTTON_PRIMARY,
+            surface_x,
+            surface_y,
+            gtk_event_controller_get_current_event_time(controller));
+    }
+    gtk_event_controller_reset(controller);
+}
+
+/**
+ * @brief Style overrides for the context menu.
+ * Applies a 1px padding to the viewport to fix highlight clipping with fractional scaling themes.
+ * Applies a smaller padding to the context menu than gtk's default.
+ * Applies default no hover stylings when nothing is hovered.
+ * Applies default unchecked checkbox border.
+ */
+static const char context_menu_styles[] = "popover.libresplit-context-menu viewport { padding: 1px; }\n"
+                                          ".libresplit-context-menu contents { padding: 4px; }\n"
+                                          ".libresplit-context-menu modelbutton:selected:not(:hover):not(:focus-visible):not(:disabled) { background-color: transparent; color: inherit; }\n"
+                                          ".libresplit-context-menu check { border: 1px solid alpha(currentColor, 0.5); }";
+
+/**
+ * @brief Adds a styling class to the context menu and default styles.
+ *
+ * @param menu The context menu widget.
+ */
+static void context_menu_style(GtkWidget* menu)
+{
+    gtk_widget_add_css_class(menu, "libresplit-context-menu");
+    GdkDisplay* display = gtk_widget_get_display(menu);
+    if (g_object_get_data(G_OBJECT(display), "libresplit-context-menu-style") != NULL) {
+        return;
+    }
+
+    GtkCssProvider* provider = gtk_css_provider_new();
+    gtk_css_provider_load_from_string(provider, context_menu_styles);
+    gtk_style_context_add_provider_for_display(display, GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+    g_object_set_data_full(G_OBJECT(display), "libresplit-context-menu-style", provider, g_object_unref);
+}
+
+/**
+ * Creates the context menu and its window-scoped actions.
+ *
+ * @param win The application window that owns the menu
+ * @param app The LibreSplit application passed to menu action callbacks
+ */
+static void create_context_menu(LSAppWindow* win, gpointer app)
+{
+    GMenu* menu = g_menu_new();
+    GMenu* section = g_menu_new();
+
+    g_action_map_add_action_entries(G_ACTION_MAP(win),
+        context_menu_actions,
+        G_N_ELEMENTS(context_menu_actions),
+        app);
+
+    g_menu_append(section, "Open Splits", "win.open-splits");
+    g_menu_append(section, "Save Splits", "win.save-splits");
+    g_menu_append_section(menu, NULL, G_MENU_MODEL(section));
+    g_object_unref(section);
+
+    section = g_menu_new();
+    g_menu_append(section, "Open Auto Splitter", "win.open-auto-splitter");
+    g_menu_append(section, "Enable Auto Splitter", "win.enable-auto-splitter");
+    g_menu_append_section(menu, NULL, G_MENU_MODEL(section));
+    g_object_unref(section);
+
+    section = g_menu_new();
+    g_menu_append(section, "Reload", "win.reload");
+    g_menu_append(section, "Close", "win.close");
+    g_menu_append_section(menu, NULL, G_MENU_MODEL(section));
+    g_object_unref(section);
+
+    section = g_menu_new();
+    if (is_x11_display()) {
+        g_menu_append(section, "Always on Top", "win.always-on-top");
+    }
+
+    g_menu_append(section, "Settings", "win.settings");
+    g_menu_append(section, "About and help", "win.about-and-help");
+    g_menu_append_section(menu, NULL, G_MENU_MODEL(section));
+    g_object_unref(section);
+
+    section = g_menu_new();
+    g_menu_append(section, "Quit", "win.quit");
+    g_menu_append_section(menu, NULL, G_MENU_MODEL(section));
+    g_object_unref(section);
+
+    win->context_menu = gtk_popover_menu_new_from_model(G_MENU_MODEL(menu));
+    gtk_widget_set_halign(win->context_menu, GTK_ALIGN_START);
+    gtk_popover_set_has_arrow(GTK_POPOVER(win->context_menu), FALSE);
+    gtk_widget_set_parent(win->context_menu, GTK_WIDGET(win));
+    context_menu_style(win->context_menu);
+    g_object_unref(menu);
+}
+
+/**
+ * Opens the context menu at the pointer position.
+ *
+ * @param gesture The click gesture receiving the secondary-button press
+ * @param x The press x-coordinate in the application window allocation
+ * @param y The press y-coordinate in the application window allocation
+ * @param app Pointer to the LibreSplit application
+ */
+void button_right_click(GtkGestureClick* gesture, double x, double y, gpointer app)
+{
+    LSAppWindow* win = LS_APP_WINDOW(gtk_event_controller_get_widget(
+        GTK_EVENT_CONTROLLER(gesture)));
+
+    if (win->context_menu == NULL) {
+        create_context_menu(win, app);
+    }
+
+    sync_context_menu_state(win);
+
+    GdkRectangle pointing_to = {
+        .x = (int)x,
+        .y = (int)y,
+        .width = 1,
+        .height = 1,
+    };
+
+    gtk_gesture_set_state(GTK_GESTURE(gesture), GTK_EVENT_SEQUENCE_CLAIMED);
+    gtk_popover_set_pointing_to(GTK_POPOVER(win->context_menu), &pointing_to);
+    gtk_window_set_focus_visible(GTK_WINDOW(win), FALSE);
+    gtk_popover_popup(GTK_POPOVER(win->context_menu));
+}
+
+/**
+ * Delegates supported pointer presses to their respective handlers.
+ *
+ * Primary-button presses move the window or resize it from an undecorated
+ * edge. Secondary-button presses open the LibreSplit context menu.
+ *
+ * @param gesture The click gesture receiving the button press
+ * @param n_press The number of presses in the current sequence
+ * @param x The press x-coordinate in the application window allocation
+ * @param y The press y-coordinate in the application window allocation
+ * @param app Pointer to the LibreSplit application
+ */
+void handle_button_pressed(GtkGestureClick* gesture, int n_press, double x, double y, gpointer app)
+{
+    GtkEventController* controller = GTK_EVENT_CONTROLLER(gesture);
+    GdkEvent* event = gtk_event_controller_get_current_event(controller);
+
+    if (event != NULL && gdk_event_triggers_context_menu(event)) {
+        button_right_click(gesture, x, y, app);
+        return;
+    }
+
+    switch (gtk_gesture_single_get_current_button(GTK_GESTURE_SINGLE(gesture))) {
+        case GDK_BUTTON_PRIMARY:
+            button_left_click(gesture, x, y);
+            break;
+    }
+}
+
+/**
+ * Displays the appropriate resize cursor while the pointer is over an edge
+ * of an undecorated window.
+ *
+ * @param controller The motion controller attached to the application window
+ * @param x The pointer x-coordinate in the application window allocation
+ * @param y The pointer y-coordinate in the application window allocation
+ * @param data Pointer to the LibreSplit application window
+ */
+void handle_pointer_motion(GtkEventControllerMotion* controller, double x, double y, gpointer data)
+{
+    LSAppWindow* win = LS_APP_WINDOW(data);
+    GtkWidget* widget = gtk_event_controller_get_widget(
+        GTK_EVENT_CONTROLLER(controller));
+
+    if (win->opts.hide_cursor) {
+        if (win->resize_cursor_hover) {
+            gtk_widget_set_cursor_from_name(widget, "none");
+            win->resize_cursor_hover = false;
+        }
+        return;
+    }
+
+    // if decorations are enabled, decorations handle resize
+    if (gtk_window_get_decorated(GTK_WINDOW(win))) {
+        if (win->resize_cursor_hover) {
+            gtk_widget_set_cursor_from_name(widget, NULL);
+            win->resize_cursor_hover = false;
+        }
+        return;
+    }
+
+    GdkSurfaceEdge edge;
+    const char* cursor = NULL;
+
+    if (get_window_edge(widget, x, y, &edge)) {
+        if (win->resize_cursor_hover && win->resize_cursor_edge == edge) {
+            return;
+        }
+
+        cursor = resize_cursors[edge];
+    } else if (!win->resize_cursor_hover) {
+        return;
+    }
+
+    gtk_widget_set_cursor_from_name(widget, cursor);
+    win->resize_cursor_hover = cursor != NULL;
+    if (win->resize_cursor_hover) {
+        win->resize_cursor_edge = edge;
+    }
+}
+
+/**
+ * Clears edge-resize cursor state when the pointer leaves the window.
+ *
+ * @param controller The motion controller attached to the application window
+ * @param data Pointer to the LibreSplit application window
+ */
+void handle_pointer_leave(GtkEventControllerMotion* controller, gpointer data)
+{
+    LSAppWindow* win = LS_APP_WINDOW(data);
+
+    if (win->opts.hide_cursor) {
+        win->resize_cursor_hover = false;
+        return;
+    }
+
+    if (win->resize_cursor_hover) {
+        gtk_widget_set_cursor_from_name(gtk_event_controller_get_widget(GTK_EVENT_CONTROLLER(controller)), NULL);
+        win->resize_cursor_hover = false;
+    }
 }

@@ -1,6 +1,7 @@
 #include "maps.h"
 
 #include "src/lasr/utils.h"
+#include "src/logging.h"
 
 #include <fcntl.h>
 #include <linux/fs.h>
@@ -157,7 +158,7 @@ static size_t maps_getAll_ioctl(void)
     int f = open(path, O_RDONLY);
     if (f >= 0) {
         struct procmap_query q = { 0 };
-        char map_name[PATH_MAX] = { 0 };
+        char map_name[PATH_MAX + 1] = { 0 };
         q.size = sizeof(q);
         q.query_flags = PROCMAP_QUERY_COVERING_OR_NEXT_VMA;
         q.query_addr = 0;
@@ -205,15 +206,19 @@ static bool maps_parseMapsLine(const char* line, ProcessMap* map)
 {
     uint64_t size;
     char mode[8];
-    unsigned long offset;
-    unsigned int major_id, minor_id, node_id;
+    unsigned long offset, node_id;
+    unsigned int major_id, minor_id;
 
     // Thank you kernel source code
-    int sscanf_res = sscanf(line, "%lx-%lx %7s %lx %u:%u %u %" STR(PATH_MAX) "[^\n]", &map->start,
+    int sscanf_res = sscanf(line, "%lx-%lx %7s %lx %x:%x %lu %" STR(PATH_MAX) "[^\n]", &map->start,
         &map->end, mode, &offset, &major_id,
         &minor_id, &node_id, map->name);
-    if (!sscanf_res)
+    // Here we only allow the map name to be empty, anything else should return show a
+    // parsing failure
+    if (sscanf_res < 7) {
+        LOG_DEBUGF("Cannot fully parse the maps line: %s", line);
         return false;
+    }
 
     // Calculate the map size
     size = map->end - map->start;
@@ -230,24 +235,33 @@ static size_t maps_getAll_legacy(void)
 {
     char path[22]; // 22 is the maximum length the path can be (strlen("/proc/4294967296/maps"))
 
-    snprintf(path, sizeof(path), "/proc/%d/maps", process.pid);
+    if (snprintf(path, sizeof(path), "/proc/%d/maps", process.pid) < 0) {
+        LOG_ERR("Failed to create maps path");
+        return 0;
+    }
 
     FILE* f = fopen(path, "r");
 
-    if (f) {
-        char current_line[PATH_MAX + 100];
-        maps_clearCache();
-        while (fgets(current_line, sizeof(current_line), f) != NULL) {
-            ProcessMap map;
-            if (maps_parseMapsLine(current_line, &map)) {
-                append_entry(map);
-            } else {
-                printf("Failed to parse maps line: %s\n", current_line);
-            }
-        }
-        fclose(f);
-        maps_cache = maps_flatten(&maps_cache_size);
+    if (!f) {
+        LOG_ERR("Failed to open maps file");
+        return 0;
     }
+
+    char current_line[PATH_MAX + 100];
+    maps_clearCache();
+    // XXX: [Penaz] [2026-09-10] Is it possible for /proc/pid/maps to generate a line longer
+    // ^ than 4096 (+ 100 chars of "padding") characters? If we ever run into buffer size issues
+    // ^ it might be worth looking into using getline()
+    while (fgets(current_line, sizeof(current_line), f) != NULL) {
+        ProcessMap map = { 0 };
+        if (maps_parseMapsLine(current_line, &map)) {
+            append_entry(map);
+        } else {
+            printf("Failed to parse maps line: %s\n", current_line);
+        }
+    }
+    fclose(f);
+    maps_cache = maps_flatten(&maps_cache_size);
     return maps_cache_size;
 }
 

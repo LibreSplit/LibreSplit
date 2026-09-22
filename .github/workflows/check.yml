@@ -2,11 +2,23 @@ on: [push, pull_request]
 
 jobs:
     format-check:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04
+        container: ghcr.io/pkgforge-dev/archlinux:latest
 
         steps:
+            - name: Install dependencies
+              run: |
+                  pacman-key --init
+                  pacman -Syu --needed --noconfirm git
+                  git config --global --add safe.directory "$GITHUB_WORKSPACE"
+                  # Pin the matching LLVM libraries alongside clang-format.
+                  pacman -U --noconfirm \
+                    https://archive.archlinux.org/packages/l/llvm-libs/llvm-libs-22.1.8-2-x86_64.pkg.tar.zst \
+                    https://archive.archlinux.org/packages/c/clang/clang-22.1.8-1-x86_64.pkg.tar.zst
+                  clang-format --version | grep -F "clang-format version 22.1.8"
+
             - name: Checkout repository
-              uses: actions/checkout@v4
+              uses: actions/checkout@v7
 
             - name: Format files
               run: |
@@ -23,26 +35,88 @@ jobs:
                   fi
 
     linter-check:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04
+        container: ghcr.io/pkgforge-dev/archlinux:latest
 
         steps:
-            - name: Checkout repository
-              uses: actions/checkout@v4
+            - name: Install dependencies
+              run: |
+                  pacman-key --init
+                  pacman -Syu --needed --noconfirm base-devel git meson gtk4 libx11 jansson luajit openssl
+                  # Use same cppcheck version as before for compatibility
+                  pacman -U --noconfirm https://archive.archlinux.org/packages/c/cppcheck/cppcheck-2.21.1-1-x86_64.pkg.tar.zst
 
-            - name: Install and cache dependencies
-              uses: awalsh128/cache-apt-pkgs-action@latest
-              with:
-                  packages: >
-                    meson
-                    libgtk-3-dev
-                    libx11-dev
-                    libjansson-dev
-                    libluajit-5.1-dev
-                    cppcheck
-                  version: 1.0
+            - name: Checkout repository
+              uses: actions/checkout@v7
 
             - name: Set up project
               run: meson setup build -Dbuildtype=debug
 
             - name: Run linter tests
               run: meson test -C build --suite lint -v
+
+    build-check:
+        needs: linter-check
+        runs-on: ubuntu-24.04
+        container: registry.fedoraproject.org/fedora:44
+        env:
+            RPM_RELEASE: "1"
+            VERSION: "0.0.0"
+
+        steps:
+            - name: Install Fedora tooling
+              run: >-
+                  dnf install --assumeyes
+                  dnf5-plugins
+                  git-core
+                  rpm-build
+
+            - name: Checkout repository
+              uses: actions/checkout@v7
+              with:
+                  fetch-depth: 1
+                  persist-credentials: false
+
+            - name: Prepare RPM sources
+              run: |
+                  set -euo pipefail
+
+                  git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+
+                  rpm_topdir="${RUNNER_TEMP}/rpmbuild"
+                  install -d \
+                    "${rpm_topdir}/BUILD" \
+                    "${rpm_topdir}/BUILDROOT" \
+                    "${rpm_topdir}/RPMS" \
+                    "${rpm_topdir}/SOURCES" \
+                    "${rpm_topdir}/SPECS" \
+                    "${rpm_topdir}/SRPMS"
+
+                  git archive \
+                    --format=tar.gz \
+                    --prefix="libresplit-${VERSION}/" \
+                    --output="${rpm_topdir}/SOURCES/libresplit-${VERSION}.tar.gz" \
+                    HEAD
+
+                  cp assets/rpm/libresplit.spec "${rpm_topdir}/SPECS/libresplit.spec"
+                  cp \
+                    assets/rpm/libresplit.repo \
+                    assets/rpm/org.libresplit.LibreSplit.metainfo.xml \
+                    "${rpm_topdir}/SOURCES/"
+
+            - name: Install RPM build dependencies
+              run: |
+                  rpm_topdir="${RUNNER_TEMP}/rpmbuild"
+                  dnf --assumeyes builddep \
+                    -D "libresplit_version ${VERSION}" \
+                    -D "libresplit_release ${RPM_RELEASE}" \
+                    --spec "${rpm_topdir}/SPECS/libresplit.spec"
+
+            - name: Build RPM
+              run: |
+                  rpm_topdir="${RUNNER_TEMP}/rpmbuild"
+                  rpmbuild -bb \
+                    --define "_topdir ${rpm_topdir}" \
+                    --define "libresplit_version ${VERSION}" \
+                    --define "libresplit_release ${RPM_RELEASE}" \
+                    "${rpm_topdir}/SPECS/libresplit.spec"

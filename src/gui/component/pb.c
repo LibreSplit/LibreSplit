@@ -33,20 +33,17 @@ LSComponent* ls_component_pb_new(void)
     self->container = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
     add_class(self->container, "footer"); /* hack */
     add_class(self->container, "personal-best-container");
-    gtk_widget_show(self->container);
 
     label = gtk_label_new(PERSONAL_BEST);
     add_class(label, "personal-best-label");
     gtk_widget_set_halign(label, GTK_ALIGN_START);
     gtk_widget_set_hexpand(label, TRUE);
-    gtk_container_add(GTK_CONTAINER(self->container), label);
-    gtk_widget_show(label);
+    gtk_box_append(GTK_BOX(self->container), label);
 
     self->personal_best = gtk_label_new(NULL);
     add_class(self->personal_best, "personal-best");
     gtk_widget_set_halign(self->personal_best, GTK_ALIGN_END);
-    gtk_container_add(GTK_CONTAINER(self->container), self->personal_best);
-    gtk_widget_show(self->personal_best);
+    gtk_box_append(GTK_BOX(self->container), self->personal_best);
 
     return (LSComponent*)self;
 }
@@ -84,9 +81,9 @@ static void pb_show_game(LSComponent* self_,
 {
     LSPb* self = (LSPb*)self_;
     char str[256];
-    if (game->split_count && game->split_times[game->split_count - 1]) {
+    if (game->split_count && ls_time_get_by_method(game->split_times[game->split_count - 1], game->comparison_method)) {
         ls_time_string(
-            str, game->split_times[game->split_count - 1]);
+            str, ls_time_get_by_method(game->split_times[game->split_count - 1], game->comparison_method));
         gtk_label_set_text(GTK_LABEL(self->personal_best), str);
     }
 }
@@ -118,18 +115,18 @@ static void pb_draw(LSComponent* self_, const ls_game* game,
     gtk_label_set_text(GTK_LABEL(self->personal_best), "-");
     if (game->split_count
         && timer->curr_split == game->split_count
-        && timer->split_times[game->split_count - 1]
-        && (!game->split_times[game->split_count - 1]
-            || (timer->split_times[game->split_count - 1]
-                < game->split_times[game->split_count - 1]))) {
+        && ls_time_get_by_method(timer->split_times[game->split_count - 1], game->comparison_method)
+        && (!ls_time_get_by_method(game->split_times[game->split_count - 1], game->comparison_method)
+            || (ls_time_get_by_method(timer->split_times[game->split_count - 1], game->comparison_method)
+                < ls_time_get_by_method(game->split_times[game->split_count - 1], game->comparison_method)))) {
         add_class(self->personal_best, "time");
         ls_time_string(
-            str, timer->split_times[game->split_count - 1]);
+            str, ls_time_get_by_method(timer->split_times[game->split_count - 1], game->comparison_method));
         gtk_label_set_text(GTK_LABEL(self->personal_best), str);
-    } else if (game->split_count && game->split_times[game->split_count - 1]) {
+    } else if (game->split_count && ls_time_get_by_method(game->split_times[game->split_count - 1], game->comparison_method)) {
         add_class(self->personal_best, "time");
         ls_time_string(
-            str, game->split_times[game->split_count - 1]);
+            str, ls_time_get_by_method(game->split_times[game->split_count - 1], game->comparison_method));
         gtk_label_set_text(GTK_LABEL(self->personal_best), str);
     }
 }
