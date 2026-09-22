@@ -464,11 +464,11 @@ static void load_auto_splitter_settings(json_t* json, ls_game* game)
 
     const char* key;
     json_t* val;
-    size_t i = 0;
 
     // It's probably better to not take mixed and matched settings for a splitter so load them all or stick to defaults
     json_object_foreach(settings, key, val)
     {
+        const size_t i = game->auto_splitter_settings_count;
         game->auto_splitter_settings[i] = calloc(1, sizeof(UserSetting));
         if (!game->auto_splitter_settings[i]) {
             LOG_WARNF("unable to allocate user setting object at %zu for key: %s", i, key);
@@ -508,8 +508,6 @@ static void load_auto_splitter_settings(json_t* json, ls_game* game)
             LOG_WARNF("unsupported JSON value at %zu for key: %s", i, key);
             goto load_auto_splitter_settings_failed;
         }
-
-        ++i;
     }
 
     // settings loaded successfully
