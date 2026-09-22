@@ -378,9 +378,9 @@ void save_game(ls_game* game)
     }
 
     LSAppWindow* win = ls_get_main_app_window();
-    g_weak_ref_init(&snapshot->main_win, win ? G_OBJECT(win) : NULL);
+    g_weak_ref_init(&snapshot->main_win, G_OBJECT(win));
 
-    if (cfg.libresplit.save_run_history.value.b) {
+    if (win && cfg.libresplit.save_run_history.value.b) {
         snapshot->runs = win->runs;
     }
 
