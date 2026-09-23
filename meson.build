@@ -109,7 +109,7 @@ css_o = custom_target(
     'fallback-css-o',
     input: 'src/fallback.css',
     output: 'fallback.o',
-    command: [ld, '-r', '-b', 'binary', '-o', '@OUTPUT@', '@INPUT@'],
+    command: [ld, '-r', '-z', 'noexecstack', '-b', 'binary', '-o', '@OUTPUT@', '@INPUT@'],
     build_by_default: true,
 )
 
