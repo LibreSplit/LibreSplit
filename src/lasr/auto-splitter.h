@@ -5,11 +5,14 @@
 #include <stdatomic.h>
 #include <stdbool.h>
 
+#include "export.h"
+
 extern char auto_splitter_file[PATH_MAX];
 extern int refresh_rate;
 extern bool use_game_time;
 extern atomic_bool update_game_time;
 extern atomic_llong game_time_value;
+extern lasr_global* shared_globals;
 extern int maps_cache_cycles;
 extern atomic_bool auto_splitter_enabled;
 extern atomic_bool auto_splitter_running;

@@ -8,6 +8,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "export.h"
+
 #include <sys/uio.h>
 ssize_t process_vm_readv(pid_t pid,
     const struct iovec* local_iov,
@@ -35,6 +37,7 @@ typedef struct ProcessMap {
 } ProcessMap;
 
 bool restart_auto_splitter(void);
+void register_shared_global(lasr_global* new);
 uintptr_t find_base_address(const char* module);
 bool handle_memory_error(uint32_t err);
 const char* value_to_c_string(lua_State* L, int index);

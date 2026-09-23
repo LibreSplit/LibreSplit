@@ -4,7 +4,9 @@
  */
 #include "auto-splitter.h"
 
+#include "../logging.h"
 #include "./maps/maps.h"
+#include "export.h"
 #include "functions.h"
 #include "utils.h"
 
@@ -15,6 +17,7 @@
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <time.h>
@@ -25,6 +28,7 @@ int refresh_rate = 60; /*!< The Auto Splitter's refresh rate applied */
 bool use_game_time = false; /*!< Enables IGT */
 atomic_bool update_game_time = false; /*!< True if the auto splitter is requesting the game time to be updated */
 atomic_llong game_time_value = 0; /*!< The in-game time value, in milliseconds */
+lasr_global* shared_globals = NULL;
 
 /**
  * Defines the behaviour of the map cache.
@@ -225,6 +229,84 @@ static void pcall_fix_traceback(lua_State* L, const char* func)
     lua_pushfstring(L, "'%s'", func);
     lua_concat(L, 2);
     lua_remove(L, -2); // remove original stacktrace string
+}
+
+/**
+ * Runs a sweep of all tracked shared globals for export.
+ * When the data exchange state allows it, changes to the tracked value will
+ * be pushed to the respective data container.
+ *
+ * @param L The lua Stack
+ *
+ * @param head Reference to the first tracked export in a linked list.
+ */
+static void update_shared_globals(lua_State* L, lasr_global* head)
+{
+    double number_value;
+    char const* str_value;
+    size_t lstring_len;
+    int container_state;
+    int container_held;
+
+    /* Track parent for dynamic cleanup */
+    lasr_global* prev = NULL;
+
+    while (head) {
+        container_held = atomic_load(&head->held);
+        if (!container_held) {
+            /* Unregister the global if the autosplitter is the only thing
+             * holding onto it (nothing to receive values so it's garbage.) */
+            if (!prev) {
+                shared_globals = head->next;
+                lasr_global_release(head);
+                head = shared_globals;
+            } else {
+                prev->next = head->next;
+                lasr_global_release(head);
+                head = prev->next;
+            }
+            continue;
+        }
+
+        container_state = atomic_load(&head->state);
+        switch (container_state) {
+            case LASR_STATE_OWNED:
+            case LASR_STATE_NEEDED:
+                goto next_global;
+        }
+
+        lua_getglobal(L, head->key); /* push var to stack */
+        lstring_len = 0;
+
+        switch (lua_type(L, -1)) { /* retrieve data type (of var at top of stack) */
+            case LUA_TBOOLEAN:
+            case LUA_TNUMBER:
+                number_value = lua_tonumber(L, -1);
+                export_atomic_global(head, number_value, LASR_TYPE_ATOMIC);
+                break;
+
+            case LUA_TSTRING:
+                str_value = lua_tolstring(L, -1, &lstring_len);
+                export_dynamic_global(head, str_value, lstring_len);
+                break;
+
+            default:
+                /* Treat other types as nil */
+                if (atomic_load(&head->value.type) != LASR_TYPE_NIL) {
+                    /* Only prints whenever the value changes */
+                    LOG_DEBUGF("Unsupported type for lua export: `%s`", head->key);
+                }
+            case LUA_TNIL:
+                number_value = 0.0f; // Not used if NIL type, suppress compiler warning
+                export_atomic_global(head, number_value, LASR_TYPE_NIL);
+                break;
+        }
+
+        lua_pop(L, 1);
+    next_global:
+        prev = head;
+        head = head->next;
+    }
 }
 
 /**
@@ -636,6 +718,9 @@ void run_auto_splitter(void)
             reset(L);
         }
 
+        /* Export any tracked globals that have changed */
+        update_shared_globals(L, shared_globals);
+
         // Clear the memory maps cache if needed
         maps_cache_cycles_value--;
         if (maps_cache_cycles_value < 1) {
@@ -654,4 +739,12 @@ void run_auto_splitter(void)
     }
 
     lua_close(L);
+
+    /* Drop all shared global containers when autosplitter stops */
+    lasr_global* globals_ptr = shared_globals;
+    while (globals_ptr) {
+        shared_globals = globals_ptr->next;
+        lasr_global_release(globals_ptr);
+        globals_ptr = shared_globals;
+    }
 }
