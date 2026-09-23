@@ -6,22 +6,6 @@
 #include <string.h>
 #include <sys/stat.h>
 
-/**
- * Returns the fallback CSS theme integrated in LibreSplit
- */
-static inline const unsigned char* fallback_css_data(void)
-{
-    return _binary____src_fallback_css_start;
-}
-
-/**
- * Returns the length of the fallback CSS theme integrated in LibreSplit
- */
-static inline size_t fallback_css_data_len(void)
-{
-    return (size_t)((uintptr_t)_binary____src_fallback_css_end - (uintptr_t)_binary____src_fallback_css_start);
-}
-
 static const char reset_rules[] = ".window.main-window{ all: unset; }\n"
                                   ".window.main-window .libresplit-content,\n"
                                   ".window.main-window .libresplit-content * { all: unset; }";
@@ -208,11 +192,9 @@ void ls_app_load_theme_with_fallback(LSAppWindow* win, const char* name, const c
 
     if (!load_theme_css(win, win->style, name, NULL)) {
         // Load default theme from embedded CSS as fallback
-        GBytes* fallback_css = g_bytes_new_static(fallback_css_data(), fallback_css_data_len());
         gulong error_handler = g_signal_connect(win->style, "parsing-error", G_CALLBACK(capture_css_error), &gerror);
-        gtk_css_provider_load_from_bytes(GTK_CSS_PROVIDER(win->style), fallback_css);
+        gtk_css_provider_load_from_resource(GTK_CSS_PROVIDER(win->style), LIBRESPLIT_RESOURCES_PREFIX "fallback.css");
         g_signal_handler_disconnect(win->style, error_handler);
-        g_bytes_unref(fallback_css);
         if (gerror != NULL) {
             g_printerr("Error loading default theme CSS: %s\n", gerror->message);
             g_error_free(gerror);
