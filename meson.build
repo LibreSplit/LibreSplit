@@ -105,7 +105,7 @@ libresplit_ctl_sources = files(
 )
 
 gnome = import('gnome')
-resources = gnome.compile_resources(
+libresplit_resources = gnome.compile_resources(
     'libresplit-resources',
     'assets/libresplit.gresource.xml',
     source_dir: 'assets/resources',
@@ -125,7 +125,7 @@ shared_c_flags = [
 executable(
     'libresplit',
     libresplit_sources,
-    resources,
+    libresplit_resources,
     dependencies: [threads, gtk, gtk_x11, luajit, x11, jansson, openssl],
     c_args: shared_c_flags,
     install: true,
