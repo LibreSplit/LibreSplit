@@ -55,6 +55,7 @@ libresplit_sources = files(
     'src/gui/timer.c',
 
     # GUI
+    'src/gui/folders.c',
     'src/gui/utils.c',
     'src/gui/welcome_box.c',
     'src/gui/widgets/alert.c',
