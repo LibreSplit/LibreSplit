@@ -21,7 +21,7 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#include "src/gui/widgets/dialog.h"
+#include "gui/widgets/dialog.h"
 #include <inttypes.h>
 #include <string.h>
 #include <unistd.h>
@@ -32,7 +32,7 @@
 #include <gdk/x11/gdkx.h>
 #include <gtk/gtk.h>
 
-#include "bind.h"
+#include "keybinds/bind.h"
 
 /* Uncomment the next line to print a debug trace. */
 /* #define DEBUG */

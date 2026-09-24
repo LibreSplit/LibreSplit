@@ -1,6 +1,6 @@
-#include "settings.h"
-#include "src/gui/app_window.h"
-#include "src/logging.h"
+#include "lasr/settings.h"
+#include "gui/app_window.h"
+#include "logging.h"
 
 #include <glib.h>
 #include <lauxlib.h>

@@ -1,4 +1,4 @@
-#include "bitwise.h"
+#include "lasr/functions/bitwise.h"
 
 #include <stdio.h>
 

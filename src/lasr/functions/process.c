@@ -1,7 +1,6 @@
-#include "process.h"
-
-#include "../utils.h"
-#include "src/lasr/maps/maps.h"
+#include "lasr/functions/process.h"
+#include "lasr/maps/maps.h"
+#include "lasr/utils.h"
 
 #include <stdatomic.h>
 #include <stdio.h>

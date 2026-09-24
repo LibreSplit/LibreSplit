@@ -1,6 +1,6 @@
 #pragma once
 
-#include "src/gui/app_window.h"
+#include "gui/app_window.h"
 #include "timer.h"
 
 /**

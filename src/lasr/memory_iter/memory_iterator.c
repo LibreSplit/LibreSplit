@@ -1,6 +1,6 @@
-#include "memory_iterator.h"
-#include "src/lasr/utils.h"
-#include "src/logging.h"
+#include "lasr/memory_iter/memory_iterator.h"
+#include "lasr/utils.h"
+#include "logging.h"
 #include <errno.h>
 #include <stdbool.h>
 #include <stddef.h>

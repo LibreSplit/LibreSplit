@@ -2,11 +2,10 @@
  *
  * Implementation of the settings management
  */
-#include "settings.h"
-#include "src/gui/backends/x11.h"
-
-#include "definitions.h"
-#include "utils.h"
+#include "settings/settings.h"
+#include "gui/backends/x11.h"
+#include "settings/definitions.h"
+#include "settings/utils.h"
 
 #include <linux/limits.h>
 #include <pwd.h>

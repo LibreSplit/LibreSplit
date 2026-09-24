@@ -1,7 +1,8 @@
-#include "dialog.h"
-#include "src/gui/app_window.h"
-#include "src/gui/backends/x11.h"
-#include "src/logging.h"
+#include "gui/widgets/dialog.h"
+#include "gui/app_window.h"
+#include "gui/backends/x11.h"
+#include "gui/widgets/dialog.h"
+#include "logging.h"
 #include <stdatomic.h>
 #include <sys/stat.h>
 

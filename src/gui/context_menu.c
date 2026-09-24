@@ -1,9 +1,11 @@
-#include "src/gui/actions.h"
-#include "src/gui/app_window.h"
-#include "src/gui/backends/x11.h"
-#include "src/gui/widgets/help_dialog.h"
-#include "src/gui/widgets/settings_dialog.h"
-#include "src/lasr/auto-splitter.h"
+#include "gui/actions.h"
+#include "gui/app_window.h"
+#include "gui/backends/x11.h"
+#include "gui/widgets/help_dialog.h"
+#include "gui/widgets/settings_dialog.h"
+#include "lasr/auto-splitter.h"
+#include "plugins/plugin_loading.h"
+#include <gio/gmenumodel.h>
 #include <gtk/gtk.h>
 
 // standardized cross-platform cursor names
@@ -181,6 +183,11 @@ static void create_context_menu(LSAppWindow* win, gpointer app)
     GMenu* menu = g_menu_new();
     GMenu* section = g_menu_new();
 
+    // TODO: [Penaz] [2026-09-16] Allow for dynamic insertion of
+    // ^ popover items via plugin call
+    // ^ GTK3 version used
+    // ^ create_plugin_context_menus(menu_plugins);
+
     g_action_map_add_action_entries(G_ACTION_MAP(win),
         context_menu_actions,
         G_N_ELEMENTS(context_menu_actions),
@@ -207,7 +214,14 @@ static void create_context_menu(LSAppWindow* win, gpointer app)
     if (is_x11_display()) {
         g_menu_append(section, "Always on Top", "win.always-on-top");
     }
+    g_object_unref(section);
 
+    section = g_menu_new();
+    create_plugin_context_menus(section, GTK_WIDGET(win));
+    g_menu_append_section(menu, NULL, G_MENU_MODEL(section));
+    g_object_unref(section);
+
+    section = g_menu_new();
     g_menu_append(section, "Settings", "win.settings");
     g_menu_append(section, "About and help", "win.about-and-help");
     g_menu_append_section(menu, NULL, G_MENU_MODEL(section));

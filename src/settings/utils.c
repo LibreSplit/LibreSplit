@@ -1,6 +1,6 @@
-#include "utils.h"
-#include "src/gui/widgets/alert.h"
-#include "src/logging.h"
+#include "settings/utils.h"
+#include "gui/widgets/alert.h"
+#include "logging.h"
 #include <linux/limits.h>
 #include <pwd.h>
 #include <stdio.h>
@@ -112,6 +112,7 @@ void check_directories(void)
     char themes_directory[PATH_MAX];
     char splits_directory[PATH_MAX];
     char runs_directory[PATH_MAX];
+    char plugins_directory[PATH_MAX];
 
     strcpy(auto_splitters_directory, libresplit_directory);
     strcat(auto_splitters_directory, "/auto-splitters");
@@ -124,6 +125,9 @@ void check_directories(void)
 
     strcpy(runs_directory, libresplit_directory);
     strcat(runs_directory, "/runs");
+
+    strcpy(plugins_directory, libresplit_data_directory);
+    strcat(plugins_directory, "/plugins");
 
     // Make the libresplit data directory if it doesn't exist
     if (!mkdir_p(libresplit_data_directory, 0755, "LibreSplit Data")) {

@@ -1,5 +1,5 @@
-#include "definitions.h"
-#include "src/gui/theming.h"
+#include "settings/definitions.h"
+#include "gui/theming.h"
 
 static const char* const appearance_choices[] = {
     [APPEARANCE_SYSTEM] = "System",

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "src/gui/app_window.h"
-#include "src/gui/widgets/dialog.h"
+#include "gui/app_window.h"
+#include "gui/widgets/dialog.h"
 #include <glib.h>
 #include <gtk/gtk.h>
 #include <stdbool.h>
