@@ -557,8 +557,6 @@ gboolean ls_app_window_draw(gpointer data)
 static void ls_app_window_init(LSAppWindow* win)
 {
     LOG_DEBUG("Initializing LibreSplit Window");
-    const char* theme;
-    const char* theme_variant;
     int i;
 
     win->display = gdk_display_get_default();
@@ -589,12 +587,6 @@ static void ls_app_window_init(LSAppWindow* win)
     win->keybinds.toggle_decorations = parse_keybind(cfg.keybinds.toggle_decorations.value.s);
     win->keybinds.toggle_win_on_top = parse_keybind(cfg.keybinds.toggle_win_on_top.value.s);
     set_window_decorations(win);
-
-    // Load theme
-    LOG_DEBUG("Loading Theme...");
-    theme = cfg.libresplit.theme.value.s;
-    theme_variant = cfg.libresplit.theme_variant.value.s;
-    ls_app_load_theme_with_fallback(win, theme, theme_variant);
 
     // Load window junk
     add_class(GTK_WIDGET(win), "window");

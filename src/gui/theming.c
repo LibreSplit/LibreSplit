@@ -146,6 +146,19 @@ static bool load_theme_css(const LSAppWindow* win, GtkCssProvider* provider, con
     return true;
 }
 
+static void load_fallback_theme(LSAppWindow* win)
+{
+    GError* gerror = NULL;
+    gulong error_handler = g_signal_connect(win->style, "parsing-error", G_CALLBACK(capture_css_error), &gerror);
+    gtk_css_provider_load_from_resource(GTK_CSS_PROVIDER(win->style), LIBRESPLIT_RESOURCES_PREFIX "fallback.css");
+    g_signal_handler_disconnect(win->style, error_handler);
+    if (gerror != NULL) {
+        g_printerr("Error loading default theme CSS: %s\n", gerror->message);
+        g_error_free(gerror);
+        gerror = NULL;
+    }
+}
+
 /**
  * Loads a specific theme, with a fallback to the default theme
  *
@@ -155,6 +168,8 @@ static bool load_theme_css(const LSAppWindow* win, GtkCssProvider* provider, con
  */
 void ls_app_load_theme_with_fallback(LSAppWindow* win, const char* name, const char* variant)
 {
+    LOG_DEBUG("Loading Theme...");
+
     // Remove old variant
     if (win->style_variant) {
         gtk_style_context_remove_provider_for_display(win->display, GTK_STYLE_PROVIDER(win->style_variant));
@@ -190,17 +205,10 @@ void ls_app_load_theme_with_fallback(LSAppWindow* win, const char* name, const c
             GTK_STYLE_PROVIDER_PRIORITY_USER_THEME);
     }
 
-    if (!load_theme_css(win, win->style, name, NULL)) {
+    // only try to load the theme if one is actually defined.
+    if (!name || name[0] == '\0' || !load_theme_css(win, win->style, name, NULL)) {
         // Load default theme from embedded CSS as fallback
-        gulong error_handler = g_signal_connect(win->style, "parsing-error", G_CALLBACK(capture_css_error), &gerror);
-        gtk_css_provider_load_from_resource(GTK_CSS_PROVIDER(win->style), LIBRESPLIT_RESOURCES_PREFIX "fallback.css");
-        g_signal_handler_disconnect(win->style, error_handler);
-        if (gerror != NULL) {
-            g_printerr("Error loading default theme CSS: %s\n", gerror->message);
-            g_error_free(gerror);
-            gerror = NULL;
-        }
-
+        load_fallback_theme(win);
         return;
     }
 
