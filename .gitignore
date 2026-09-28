@@ -1,8 +1,29 @@
 build/
-.vscode/
 .cache/
 compile_commands.json
 
 # AppImage stuff
 AppDir/
 *.AppImage
+
+# Code Editor Configs
+/.zed/
+/.vscode/
+/.nvim.lua
+/.nvimrc
+/.exrc
+/.nvim/
+/.neoconf.json
+/.dir-locals.el
+/.dir-locals-2.el
+/.projectile
+/.idea/
+/.fleet/
+/.vs/
+/.helix/
+/.cursor/
+/.windsurf/
+/.settings/
+/.nova/
+/.project
+/.classpath
