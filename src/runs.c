@@ -15,7 +15,7 @@ typedef enum LSGrowResult {
 static void ls_runs_clear_failure_show(ls_runs* self, GtkWindow* win);
 
 /**
- * @brief Sets today's date to the date buffer in YYYY-MM-DD format.
+ * @brief Sets today's date (UTC) to the date buffer in YYYY-MM-DD format.
  *
  * @param date Pointer to a string of at least length 16.
  * @return bool Whether or not fetching today's date was successful.
@@ -28,13 +28,13 @@ static bool set_date(char* date)
         return false;
     }
 
-    struct tm local_time;
-    if (localtime_r(&now, &local_time) == NULL) {
-        LOG_WARN("failed to format time in the user's locale");
+    struct tm utc_time;
+    if (gmtime_r(&now, &utc_time) == NULL) {
+        LOG_WARN("failed to format time as UTC");
         return false;
     }
 
-    if (strftime(date, 16, "%Y-%m-%d", &local_time) == 0) {
+    if (strftime(date, 16, "%Y-%m-%d", &utc_time) == 0) {
         LOG_WARN("failed to store the formatted time in the date buffer, the result might be longer than date's size");
         return false;
     }

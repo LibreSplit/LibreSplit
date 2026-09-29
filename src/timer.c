@@ -1815,9 +1815,22 @@ void json_time_set(json_t* ref, const ls_time* time)
  */
 void ls_run_set_time(char* time_buf)
 {
-    time_t rawtime;
-    struct tm* timeinfo;
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(time_buf, 64, "%Y-%m-%d_%H-%M-%S", timeinfo);
+    time_t rawtime = time(NULL);
+    if (rawtime == (time_t)-1) {
+        LOG_WARNF("failed to set run time: %s", g_strerror(errno));
+        time_buf[0] = '\0';
+        return;
+    }
+
+    struct tm utc_time;
+    if (gmtime_r(&rawtime, &utc_time) == NULL) {
+        LOG_WARN("failed to format run time as UTC");
+        time_buf[0] = '\0';
+        return;
+    }
+
+    if (strftime(time_buf, 64, "%Y-%m-%d_%H-%M-%S", &utc_time) == 0) {
+        LOG_WARN("failed to store the formatted time in the time buffer");
+        time_buf[0] = '\0';
+    }
 }
