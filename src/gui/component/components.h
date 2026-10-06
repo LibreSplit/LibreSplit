@@ -41,4 +41,8 @@ typedef struct LSComponentAvailable {
 // A NULL-terminated array of all available components
 extern LSComponentAvailable ls_components[];
 
+bool ls_component_is_valid(const char* name);
+LSComponentAvailable* ls_component_get(const char* name);
+void ls_component_destroy(gpointer data);
+
 #endif /* __COMPONENTS_H__ */
