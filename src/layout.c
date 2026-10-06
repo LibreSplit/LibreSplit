@@ -19,25 +19,25 @@ static bool validate_layout(json_t* root)
     json_array_foreach(root, index, entry)
     {
         if (!json_is_object(entry)) {
-            LOG_ERRF(VALIDATION_PREFIX, "Invalid entry at %zu was not a layout object", index);
+            LOG_ERRF(VALIDATION_PREFIX "Invalid entry at %zu was not a layout object", index);
             return false;
         }
 
         json_t* name = json_object_get(entry, "name");
         if (!json_is_string(name)) {
-            LOG_ERRF(VALIDATION_PREFIX, "Invalid entry at %zu invalid name", index);
+            LOG_ERRF(VALIDATION_PREFIX "Invalid entry at %zu invalid name", index);
             return false;
         }
 
         const char* name_val = json_string_value(name);
         if (!ls_component_is_valid(name_val)) {
-            LOG_ERRF(VALIDATION_PREFIX, "Invalid entry at %zu unknown component %s", index, name_val);
+            LOG_ERRF(VALIDATION_PREFIX "Invalid entry at %zu unknown component %s", index, name_val);
             return false;
         }
 
         json_t* enabled = json_object_get(entry, "enabled");
         if (!json_is_boolean(enabled)) {
-            LOG_ERRF(VALIDATION_PREFIX, "Invalid entry at %zu invalid or missing enabled value", index);
+            LOG_ERRF(VALIDATION_PREFIX "Invalid entry at %zu invalid or missing enabled value", index);
             return false;
         }
 
@@ -48,7 +48,7 @@ static bool validate_layout(json_t* root)
         }
 
         if (!json_is_object(settings)) {
-            LOG_ERRF(VALIDATION_PREFIX, "Invalid entry at %zu invalid settings entry", index);
+            LOG_ERRF(VALIDATION_PREFIX "Invalid entry at %zu invalid settings entry", index);
             return false;
         }
 
@@ -57,7 +57,7 @@ static bool validate_layout(json_t* root)
         json_object_foreach(settings, key, val)
         {
             if (!json_is_string(val) && !json_is_boolean(val) && !json_is_number(val)) {
-                LOG_ERRF(VALIDATION_PREFIX, "Invalid entry at %zu invalid settings entry %s must be primitive and not null", index, key);
+                LOG_ERRF(VALIDATION_PREFIX "Invalid entry at %zu invalid settings entry %s must be primitive and not null", index, key);
                 return false;
             }
         }
@@ -187,7 +187,7 @@ bool ls_load_layout(LSAppWindow* win, const char* path)
     json_error_t json_error;
     json_t* layout = json_load_file(path, 0, &json_error);
     if (!layout) {
-        LOG_WARNF("Unable to load default layout: Invalid JSON at line %d: %s", json_error.line, json_error.text);
+        LOG_WARNF("Unable to load layout: Invalid JSON at line %d: %s", json_error.line, json_error.text);
         return ls_load_default_layout(win);
     }
 
