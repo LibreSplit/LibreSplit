@@ -67,20 +67,29 @@ static bool validate_layout(json_t* root)
 }
 
 /**
- * @brief Removes a component widget from the main window UI.
+ * @brief Removes old component widgets from the previous layout and destroys them.
  *
- * @param data The component.
- * @param user_data The main window.
+ * @param win The current main app window.
  */
-static void remove_component(gpointer data, gpointer user_data)
+static void components_cleanup(LSAppWindow* win)
 {
-    LSComponent* component = data;
-    LSAppWindow* win = user_data;
+    GList* widgets = NULL;
+    for (GList* elem = win->components; elem; elem = elem->next) {
+        LSComponent* component = elem->data;
+        if (!component) {
+            continue;
+        }
 
-    GtkWidget* widget = component->ops->widget(component);
-    if (widget) {
-        gtk_box_remove(GTK_BOX(win->box), widget);
+        GtkWidget* widget = component->ops->widget(component);
+        if (widget) {
+            widgets = g_list_append(widgets, g_object_ref(widget));
+            gtk_box_remove(GTK_BOX(win->box), widget);
+        }
     }
+
+    g_list_free_full(win->components, ls_component_destroy);
+    g_list_free_full(widgets, g_object_unref);
+    win->components = NULL;
 }
 
 static void init_layout(LSAppWindow* win, json_t* layout)
@@ -88,9 +97,7 @@ static void init_layout(LSAppWindow* win, json_t* layout)
     // Create all available components (TODO: change this in the future)
     LOG_DEBUG("Creating components...");
     if (win->components) {
-        g_list_foreach(win->components, remove_component, win);
-        g_list_free_full(win->components, ls_component_destroy);
-        win->components = NULL;
+        components_cleanup(win);
     }
 
     size_t index;
