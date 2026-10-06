@@ -149,6 +149,7 @@ bool ls_load_default_layout(LSAppWindow* win)
     const char* contents = g_bytes_get_data(data, &length);
     json_error_t json_error;
     json_t* layout = json_loadb(contents, length, 0, &json_error);
+    g_bytes_unref(data);
     if (!layout) {
         LOG_ERRF("Unable to load default layout: Invalid JSON at line %d: %s", json_error.line, json_error.text);
         return false;
