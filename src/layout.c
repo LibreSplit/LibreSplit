@@ -3,6 +3,7 @@
 #include "gui/component/components.h"
 #include "logging.h"
 #include "settings/utils.h"
+#include <sys/stat.h>
 
 #define VALIDATION_PREFIX "The loaded layout was incorrectly formatted: "
 
@@ -139,5 +140,25 @@ bool ls_load_layout(LSAppWindow* win, const char* path)
         return ls_load_default_layout(win);
     }
 
+    struct stat st = { 0 };
+    if (stat(path, &st) == -1) {
+        LOG_INFOF("Layout at: '%s' does not exist", path);
+        return ls_load_default_layout(win);
+    }
+
+    json_error_t json_error;
+    json_t* layout = json_load_file(path, 0, &json_error);
+    if (!layout) {
+        LOG_ERRF("Unable to load default layout: Invalid JSON at line %d: %s", json_error.line, json_error.text);
+        return false;
+    }
+
+    if (!validate_layout(layout)) {
+        json_decref(layout);
+        return false;
+    }
+
+    init_layout(win, layout);
+    json_decref(layout);
     return true;
 }
