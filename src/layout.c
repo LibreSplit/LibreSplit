@@ -66,11 +66,29 @@ static bool validate_layout(json_t* root)
     return true;
 }
 
+/**
+ * @brief Removes a component widget from the main window UI.
+ *
+ * @param data The component.
+ * @param user_data The main window.
+ */
+static void remove_component(gpointer data, gpointer user_data)
+{
+    LSComponent* component = data;
+    LSAppWindow* win = user_data;
+
+    GtkWidget* widget = component->ops->widget(component);
+    if (widget) {
+        gtk_box_remove(GTK_BOX(win->box), widget);
+    }
+}
+
 static void init_layout(LSAppWindow* win, json_t* layout)
 {
     // Create all available components (TODO: change this in the future)
     LOG_DEBUG("Creating components...");
     if (win->components) {
+        g_list_foreach(win->components, remove_component, win);
         g_list_free_full(win->components, ls_component_destroy);
         win->components = NULL;
     }
@@ -97,7 +115,7 @@ static void init_layout(LSAppWindow* win, json_t* layout)
             if (widget) {
                 gtk_widget_set_margin_start(widget, WINDOW_PAD);
                 gtk_widget_set_margin_end(widget, WINDOW_PAD);
-                gtk_box_append(GTK_BOX(win->box), component->ops->widget(component));
+                gtk_box_append(GTK_BOX(win->box), widget);
             }
 
             win->components = g_list_append(win->components, component);
