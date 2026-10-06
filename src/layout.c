@@ -94,7 +94,6 @@ static void components_cleanup(LSAppWindow* win)
 
 static void init_layout(LSAppWindow* win, json_t* layout)
 {
-    // Create all available components (TODO: change this in the future)
     LOG_DEBUG("Creating components...");
     if (win->components) {
         components_cleanup(win);
@@ -130,6 +129,12 @@ static void init_layout(LSAppWindow* win, json_t* layout)
     }
 }
 
+/**
+ * @brief Loads the default layout.
+ *
+ * @param win The current main app window.
+ * @return bool Whether or not the operation was successful.
+ */
 bool ls_load_default_layout(LSAppWindow* win)
 {
     GError* error = NULL;
@@ -159,6 +164,13 @@ bool ls_load_default_layout(LSAppWindow* win)
     return true;
 }
 
+/**
+ * @brief Loads the layout at the specified path. On failure, fallsback to the default layout.
+ *
+ * @param win The current main app window.
+ * @param path Path to the layout file to load.
+ * @return bool Whether or not the operation was successful.
+ */
 bool ls_load_layout(LSAppWindow* win, const char* path)
 {
     if (path == NULL || path[0] == '\0') {
@@ -174,13 +186,13 @@ bool ls_load_layout(LSAppWindow* win, const char* path)
     json_error_t json_error;
     json_t* layout = json_load_file(path, 0, &json_error);
     if (!layout) {
-        LOG_ERRF("Unable to load default layout: Invalid JSON at line %d: %s", json_error.line, json_error.text);
-        return false;
+        LOG_WARNF("Unable to load default layout: Invalid JSON at line %d: %s", json_error.line, json_error.text);
+        return ls_load_default_layout(win);
     }
 
     if (!validate_layout(layout)) {
         json_decref(layout);
-        return false;
+        return ls_load_default_layout(win);
     }
 
     init_layout(win, layout);
