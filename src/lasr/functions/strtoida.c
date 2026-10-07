@@ -1,4 +1,4 @@
-#include "strtoida.h"
+#include "lasr/functions/strtoida.h"
 #include <lua.h>
 #include <stdio.h>
 #include <stdlib.h>

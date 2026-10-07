@@ -1,8 +1,8 @@
 #include "runs.h"
+#include "gui/game.h"
+#include "gui/widgets/dialog.h"
 #include "logging.h"
-#include "src/gui/game.h"
-#include "src/gui/widgets/dialog.h"
-#include "src/settings/utils.h"
+#include "settings/utils.h"
 #include <string.h>
 #include <sys/stat.h>
 

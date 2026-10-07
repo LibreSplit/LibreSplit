@@ -1,4 +1,4 @@
-#include "alert.h"
+#include "gui/widgets/alert.h"
 
 /**
  * @brief Presents an error alert to the user

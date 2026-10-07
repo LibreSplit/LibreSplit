@@ -1,8 +1,7 @@
-#include "process.h"
-
-#include "../utils.h"
-#include "src/lasr/maps/maps.h"
-#include "src/logging.h"
+#include "lasr/functions/process.h"
+#include "lasr/maps/maps.h"
+#include "lasr/utils.h"
+#include "logging.h"
 
 #include <ctype.h>
 #include <dirent.h>

@@ -1,7 +1,6 @@
-#include "maps.h"
-
-#include "src/lasr/utils.h"
-#include "src/logging.h"
+#include "lasr/maps/maps.h"
+#include "lasr/utils.h"
+#include "logging.h"
 
 #include <fcntl.h>
 #include <linux/fs.h>

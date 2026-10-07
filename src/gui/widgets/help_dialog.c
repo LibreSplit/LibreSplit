@@ -1,7 +1,7 @@
-#include "help_dialog.h"
-#include "alert.h"
-#include "src/gui/app_window.h"
-#include "src/logging.h"
+#include "gui/widgets/help_dialog.h"
+#include "gui/app_window.h"
+#include "gui/widgets/alert.h"
+#include "logging.h"
 #include <gtk/gtk.h>
 #include <stdio.h>
 

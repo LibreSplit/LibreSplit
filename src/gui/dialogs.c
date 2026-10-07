@@ -1,6 +1,6 @@
-#include "src/gui/dialogs.h"
-#include "src/lasr/auto-splitter.h"
-#include "src/logging.h"
+#include "gui/dialogs.h"
+#include "lasr/auto-splitter.h"
+#include "logging.h"
 #include <gio/gio.h>
 #include <glib.h>
 #include <gtk/gtk.h>

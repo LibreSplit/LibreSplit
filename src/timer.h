@@ -1,7 +1,9 @@
 #pragma once
 
-#include "src/lasr/settings.h"
-#include "src/settings/definitions.h"
+#include "lasr/settings.h"
+#include "plugins/plugin_api.h"
+#include "settings/definitions.h"
+#include "timer_structs.h"
 #include <jansson.h>
 #include <stdatomic.h>
 #include <stdbool.h>
@@ -14,27 +16,6 @@
 #define MAX_TIMESTAMP_LENGTH 256
 
 extern AppConfig cfg;
-
-/**
- * @brief time structure for storing both the real time and game time
- * for any time representation. (i.e. splits, segments, wr etc)
- */
-typedef struct ls_time {
-    long long real_time; /*!< Real time means the actual real world elapsed time */
-    long long game_time; /*!< Game time is the internal time controlled either by the autosplitter, or derived from real_time - load_time */
-} ls_time;
-
-/**
- * @brief enum used for selecting comparison methods. This should correspond to the ls_time struct
- * and have one enum value per ls_time member. The enum value is also stored in the splits file
- * as the game's comparison method for determining which time value is authoritative for PBs and the like.
- * Therefore, all enums should always explicitly declare their backed value to prevent drift
- * or split file incompatibilities.
- */
-typedef enum ls_time_method {
-    LS_REAL_TIME = 0, /*!< LS_REAL_TIME corresponds to ls_time.real_time */
-    LS_GAME_TIME = 1, /*!< LS_GAME_TIME corresponds to ls_time.game_time */
-} ls_time_method;
 
 /**
  * @brief The game struct representing a user's loaded splits file.
@@ -102,6 +83,31 @@ typedef struct ls_timer {
     int* finished_count;
     char start_time[64];
 } ls_timer;
+
+typedef int (*timer_hook_func)(const ls_state* timer);
+
+/**
+ * A registry for hook functions for each timer action.
+ */
+typedef struct _TimerHookRegistry {
+    int count; /*!< Current count of functions in the registry */
+    int size; /*!< Current size of the registry array */
+    timer_hook_func* functions; /*!< Array of fuctions */
+    bool active; /*!< Whether the registry is correctly initialized */
+} TimerHookRegistry;
+
+extern TimerHookRegistry start_hooks;
+extern TimerHookRegistry stop_hooks;
+extern TimerHookRegistry split_hooks;
+extern TimerHookRegistry reset_hooks;
+extern TimerHookRegistry cancel_hooks;
+extern TimerHookRegistry skip_hooks;
+extern TimerHookRegistry unsplit_hooks;
+extern TimerHookRegistry pause_hooks;
+extern TimerHookRegistry unpause_hooks;
+
+void init_timer_registries(void);
+void free_timer_registries(void);
 
 extern atomic_bool run_started;
 

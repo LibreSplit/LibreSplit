@@ -1,6 +1,6 @@
 #pragma once
 
-#include "definitions.h"
+#include "settings/definitions.h"
 
 #include <jansson.h>
 

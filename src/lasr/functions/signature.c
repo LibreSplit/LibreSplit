@@ -1,10 +1,10 @@
-#include "signature.h"
+#include "lasr/functions/signature.h"
+#include "lasr/maps/maps.h"
+#include "lasr/memory_iter/memory_iterator.h"
+#include "lasr/utils.h"
+#include "logging.h"
 
-#include "../../logging.h"
-#include "../maps/maps.h"
-#include "../memory_iter/memory_iterator.h"
-#include "../utils.h"
-
+#include <assert.h>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <lua.h>
