@@ -33,6 +33,8 @@ x11 = dependency('x11')
 jansson = dependency('jansson')
 openssl = dependency('openssl')
 
+includes = include_directories('include')
+
 libresplit_sources = files(
     'src/gui/actions.c',
     'src/gui/app_window.c',
@@ -67,6 +69,11 @@ libresplit_sources = files(
     # Keybinds
     'src/keybinds/keybinds.c',
     'src/keybinds/keybinds_callbacks.c',
+
+    # Plugins
+    'src/plugins/plugin_loading.c',
+    'src/plugins/plugin_utils.c',
+
 
     # LASR
     'src/lasr/auto-splitter.c',
@@ -130,6 +137,7 @@ executable(
     dependencies: [threads, gtk, gtk_x11, luajit, x11, jansson, openssl],
     c_args: shared_c_flags,
     install: true,
+    include_directories: includes,
 )
 
 executable(
@@ -137,6 +145,7 @@ executable(
     libresplit_ctl_sources,
     c_args: shared_c_flags,
     install: true,
+    include_directories: includes,
 )
 
 message('prefix: ' + get_option('prefix')) # /usr/local by default

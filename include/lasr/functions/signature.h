@@ -1,6 +1,6 @@
 #pragma once
 
-#include "src/lasr/utils.h"
+#include "lasr/utils.h"
 #include <lua.h>
 #include <stdbool.h>
 #include <stddef.h>

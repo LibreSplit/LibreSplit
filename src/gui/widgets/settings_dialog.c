@@ -1,10 +1,10 @@
-#include "settings_dialog.h"
-#include "alert.h"
-#include "src/gui/app_window.h"
-#include "src/gui/theming.h"
-#include "src/logging.h"
-#include "src/settings/definitions.h"
-#include "src/settings/settings.h"
+#include "gui/widgets/settings_dialog.h"
+#include "gui/app_window.h"
+#include "gui/theming.h"
+#include "gui/widgets/alert.h"
+#include "logging.h"
+#include "settings/definitions.h"
+#include "settings/settings.h"
 
 #include <gdk/gdk.h>
 #include <glib-object.h>

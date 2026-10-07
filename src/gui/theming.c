@@ -1,7 +1,7 @@
-#include "theming.h"
-#include "src/gui/app_window.h"
-#include "src/gui/widgets/alert.h"
-#include "src/logging.h"
+#include "gui/theming.h"
+#include "gui/app_window.h"
+#include "gui/widgets/alert.h"
+#include "logging.h"
 #include <linux/limits.h>
 #include <string.h>
 #include <sys/stat.h>

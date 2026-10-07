@@ -2,7 +2,7 @@
  *
  * Implementation of the "World Record" component
  */
-#include "components.h"
+#include "gui/component/components.h"
 
 /**
  * @brief The component representing the saved World Record

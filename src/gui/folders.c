@@ -1,6 +1,6 @@
-#include "folders.h"
-#include "src/logging.h"
-#include "src/settings/utils.h"
+#include "gui/folders.h"
+#include "logging.h"
+#include "settings/utils.h"
 #include <glib.h>
 #include <stdio.h>
 

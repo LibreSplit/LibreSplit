@@ -2,7 +2,7 @@
  *
  * Implementation of the "Sum of best segments" component
  */
-#include "components.h"
+#include "gui/component/components.h"
 
 /**
  * @brief The component representing a sum of the best segments.
