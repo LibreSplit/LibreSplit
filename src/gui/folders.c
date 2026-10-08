@@ -20,6 +20,7 @@ typedef struct DirectoryTypeMap {
 static const struct DirectoryTypeMap type_map[] = {
     { FOLDERS_SPLITS_DIR, Config },
     { FOLDERS_AUTO_SPLITTERS_DIR, Config },
+    { FOLDERS_LAYOUTS_DIR, Config },
     { FOLDERS_THEMES_DIR, Config },
     { FOLDERS_LOGS_DIR, Data },
 };

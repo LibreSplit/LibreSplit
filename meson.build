@@ -50,12 +50,12 @@ libresplit_sources = files(
     'src/gui/component/wr.c',
     'src/gui/context_menu.c',
     'src/gui/dialogs.c',
-    'src/gui/game.c',
-    'src/gui/theming.c',
-    'src/gui/timer.c',
 
     # GUI
     'src/gui/folders.c',
+    'src/gui/game.c',
+    'src/gui/theming.c',
+    'src/gui/timer.c',
     'src/gui/utils.c',
     'src/gui/welcome_box.c',
     'src/gui/widgets/alert.c',
@@ -87,6 +87,7 @@ libresplit_sources = files(
     'src/lasr/memory_iter/memory_iterator.c',
     'src/lasr/settings.c',
     'src/lasr/utils.c',
+    'src/layout.c',
     'src/logging.c',
     'src/main.c',
     'src/runs.c',

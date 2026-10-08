@@ -77,6 +77,14 @@ static ls_game* create_snapshot(const ls_game* game)
         }
     }
 
+    if (game->layout_file) {
+        snapshot->layout_file = strdup(game->layout_file);
+        if (!snapshot->layout_file) {
+            LOG_ERR("snapshot creation: unable to duplicate `layout_file` in memory");
+            goto create_snapshot_failed;
+        }
+    }
+
     if (game->theme) {
         snapshot->theme = strdup(game->theme);
         if (!snapshot->theme) {

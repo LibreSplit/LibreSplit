@@ -214,6 +214,7 @@ static void create_context_menu(LSAppWindow* win, gpointer app)
     GMenu* folder_menu = g_menu_new();
     g_menu_append(folder_menu, "Splits", "win.open-default-folder::" FOLDERS_SPLITS_DIR);
     g_menu_append(folder_menu, "Auto Splitters", "win.open-default-folder::" FOLDERS_AUTO_SPLITTERS_DIR);
+    g_menu_append(folder_menu, "Layouts", "win.open-default-folder::" FOLDERS_LAYOUTS_DIR);
     g_menu_append(folder_menu, "Themes", "win.open-default-folder::" FOLDERS_THEMES_DIR);
     g_menu_append(folder_menu, "Logs", "win.open-default-folder::" FOLDERS_LOGS_DIR);
 

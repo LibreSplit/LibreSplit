@@ -8,7 +8,6 @@
 #include <glib-object.h>
 #include <gtk/gtk.h>
 
-#define LIBRESPLIT_RESOURCES_PREFIX "/org/libresplit/LibreSplit/"
 #define WINDOW_PAD (8)
 
 /** forward declaration of ls_run from timer.h */

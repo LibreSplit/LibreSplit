@@ -52,6 +52,7 @@ typedef struct ls_game {
     char* theme;
     char* theme_variant;
     char* auto_splitter_file;
+    char* layout_file;
     ls_time_method comparison_method;
     int attempt_count;
     int finished_count;
