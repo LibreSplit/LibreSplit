@@ -3,7 +3,7 @@
 set -eu
 
 pacman -Syu --needed --noconfirm \
-    base-devel meson gtk4 glib-networking gvfs libx11 jansson luajit openssl \
+    base-devel meson gtk4 glib-networking gvfs libx11 jansson lua54 openssl \
     desktop-file-utils patchelf wget xorg-server-xvfb zsync
 
 tools_url=https://raw.githubusercontent.com/pkgforge-dev/Anylinux-AppImages/refs/heads/main/useful-tools

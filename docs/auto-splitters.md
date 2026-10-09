@@ -338,10 +338,14 @@ end
 * In this example we are checking for the scene, of course, the address is completely arbitrary and doesnt mean anything for this example. Specifically we are checking if we are entering the MenuScene scene.
 
 # `gameTime`
+
 ### **When using `gameTime`, `isLoading` has to ALWAYS return true**
+
 Function that is used to set the current timer time when `useGameTime` is `true` (`false` by default)
+
 * The return value of this function should be the current time in milliseconds
 * Runs every 1000 / `refreshRate` milliseconds.
+
 ```lua
 process('GameBlaBlaBla.exe')
 
@@ -399,6 +403,14 @@ end
 ```
 * In this example we added `IGT`, which is the variable in which the game keeps track of how long you've played for by some way or another, later this IGT variable is used as a return value to the `gameTime` function. Also the `useGameTime` is set to true to be able to use this feature
 
+You **must** make sure that gameTime returns an integer result, or LibreSplit will throw an error. In case it does try surrounding the result with a floor function:
+
+```lua
+function gameTime()
+    return math.floor(IGT)
+end
+```
+
 
 ## readAddress
 * `readAddress` is the second function that LibreSplit defines for us and its globally available, its job is to read the memory value of a specified address.
@@ -410,7 +422,7 @@ end
     5. `int`: signed 32 bit integer
     6. `uint`: unsigned 32 bit integer
     7. `long`: signed 64 bit integer
-    8. `ulong`: unsigned 64 bit integer
+    8. `ulong`: unsigned 64 bit integer* (see [**Unsigned 64 bit integers**](#unsigned-64-bit-integers) below)
     9. `float`: 32 bit floating point number
     10. `double`: 64 bit floating point number
     11. `bool`: Boolean (true or false)
@@ -426,6 +438,61 @@ end
     * A Pointer Path is a list of Offsets + a Base Address. The auto splitter reads the value at the base address and interprets the value as yet another address. It adds the first offset to this address and reads the value of the calculated address. It does this over and over until there are no more offsets. At that point, it has found the value it was searching for. This resembles the way objects are stored in memory. Every object has a clearly defined layout where each variable has a consistent offset within the object, so you basically follow these variables from object to object.
 
         * Cheat Engine is a tool that allows you to easily find Addresses and Pointer Paths for those Addresses, so you don't need to debug the game to figure out the structure of the memory.
+
+* It is OPTIONALLY possible to also pass in a table with a `pointerSize` key as the last argument after your memory offsets/pointer paths.
+  * LibreSplit will generally try to detect the pointer sizes that your game uses and handle memory reads for your game accordingly. This should work for most games.
+    However, if you experience any issues such as detection errors or the detection itself being incorrect, you may specify the correct pointer size yourself to solve for this.
+    See this example to force 32-bit memory reads:
+
+```lua
+function state()
+    isLoading = readAddress("bool", "UnityPlayer.dll", 0x019B4878, 0xD0, 0x8, 0x60, 0xA0, 0x18, 0xA0, { pointerSize = POINTER_SIZE_32 });
+end
+```
+
+  * You may use the global constants `POINTER_SIZE_32` or `POINTER_SIZE_64` to specify the `pointerSize` optional argument of `readAddress`
+  * Setting this override does not affect other reads so if you need to use the override on each call you must specify it for each call.
+
+### Unsigned 64 bit integers
+Lua stores its integers as *signed* 64-bit integers. This means that unsigned 32-bit integers can be properly stored and represented.
+However, *unsigned* 64-bit integers may overflow. Although the values overflow, the underlying bits are still correct. This means
+if you need to perform operations on really large addresses (for example) you can get back the address and continue working with them
+so long as they remain integers throughout. The following operations should all also work correctly, preserving the bits meaning the values
+can be properly represented when LibreSplit works with them internally:
+
+- + (addition)
+- - (subtraction)
+- * (multiplication)
+- -x (negative value)
+- & (bitwise AND)
+- | (bitwise OR)
+- ~ (bitwise XOR)
+- ~x (bitwise NOT)
+- << (left shift)
+- >> (right shift)
+- == (equality compares bits)
+- -= (not equals compares bits)
+
+The following will not work:
+- / (division)
+  - converts to a float from the signed value
+- // (floor division)
+  - see above
+- % (modulo operation)
+  - see above
+- ^ (power of / exponentiation)
+  - uses floating point arithmetic from signed value
+- <, <=, >, >=
+  - uses the signed values for comparison
+
+Unsigned comparisons can be performed using Lua's built-in `math.ult` function:
+
+```lua
+math.ult(a, b)       -- unsigned a < b
+math.ult(b, a)       -- unsigned a > b
+not math.ult(b, a)   -- unsigned a <= b
+not math.ult(a, b)   -- unsigned a >= b
+```
 
 ## sig_scan
 

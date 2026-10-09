@@ -461,9 +461,11 @@ gboolean ls_app_window_step(gpointer data)
         //     win->timer->usingGameTime);
 
         if (atomic_load(&auto_splitter_enabled)) {
-            if (atomic_load(&call_start)) {
+            if (atomic_load(&call_start) && !atomic_load(&call_reset) && !is_saving()) {
                 timer_start(win);
-                atomic_store(&call_start, 0);
+                if (win->timer->running) {
+                    atomic_store(&call_start, 0);
+                }
             }
             if (atomic_load(&call_split)) {
                 timer_split(win);

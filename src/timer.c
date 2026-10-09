@@ -1287,6 +1287,7 @@ void ls_timer_release(ls_timer* timer)
 static void reset_timer(ls_timer* timer)
 {
     LOG_DEBUG("Resetting timer...");
+    atomic_store(&call_start, false);
     timer->started = 0;
     atomic_store(&run_started, false);
     timer->running = 0;

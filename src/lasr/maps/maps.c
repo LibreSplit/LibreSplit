@@ -28,13 +28,13 @@ static MapsBlock* current = NULL; // Current block being filled
  * Append a ProcessMap entry to the internal block list.
  * @param e The ProcessMap entry to append.
  */
-static void append_entry(ProcessMap e)
+static bool append_entry(ProcessMap e)
 {
     if (!current || current->used == MAPS_CACHE_BLOCK_SIZE) {
         MapsBlock* new_block = malloc(sizeof(MapsBlock));
         if (!new_block) {
             perror("Failed to allocate memory for maps block");
-            exit(EXIT_FAILURE);
+            return false;
         }
 
         new_block->used = 0;
@@ -53,6 +53,7 @@ static void append_entry(ProcessMap e)
     }
 
     current->entries[current->used++] = e;
+    return true;
 }
 /**
  * Flatten the internal linked list of MapsBlock into a contiguous array.
@@ -64,13 +65,20 @@ static void append_entry(ProcessMap e)
  */
 static ProcessMap* maps_flatten(size_t* out_count)
 {
+    *out_count = 0;
     size_t total = 0;
     for (MapsBlock* b = head; b; b = b->next)
         total += b->used;
 
+    if (total == 0) {
+        return NULL;
+    }
+
     ProcessMap* arr = malloc(total * sizeof(ProcessMap));
-    if (!arr)
-        abort();
+    if (!arr) {
+        perror("Failed to allocate memory for maps array");
+        return NULL;
+    }
 
     size_t idx = 0;
     for (MapsBlock* b = head; b; b = b->next) {
@@ -102,11 +110,9 @@ void maps_clearCache(void)
     head = NULL;
     current = NULL;
 
-    if (maps_cache) {
-        free(maps_cache);
-        maps_cache = NULL;
-        maps_cache_size = 0;
-    }
+    free(maps_cache);
+    maps_cache = NULL;
+    maps_cache_size = 0;
 }
 
 #ifdef IOCTL_MAPS
@@ -183,13 +189,23 @@ static size_t maps_getAll_ioctl(void)
             strncpy(map.name, q.vma_name_addr ? map_name : "", sizeof(map.name));
             map.name[sizeof(map.name) - 1] = '\0';
             map_name[0] = '\0';
-            append_entry(map);
+            if (!append_entry(map)) {
+                close(f);
+                maps_clearCache();
+                return 0;
+            }
+
             // Advance past this mapping
             q.query_addr = q.vma_end;
         }
+
         close(f);
         maps_cache = maps_flatten(&maps_cache_size);
+        if (!maps_cache) {
+            maps_clearCache();
+        }
     }
+
     return maps_cache_size;
 }
 
@@ -255,13 +271,22 @@ static size_t maps_getAll_legacy(void)
     while (fgets(current_line, sizeof(current_line), f) != NULL) {
         ProcessMap map = { 0 };
         if (maps_parseMapsLine(current_line, &map)) {
-            append_entry(map);
+            if (!append_entry(map)) {
+                fclose(f);
+                maps_clearCache();
+                return 0;
+            }
         } else {
             printf("Failed to parse maps line: %s\n", current_line);
         }
     }
+
     fclose(f);
     maps_cache = maps_flatten(&maps_cache_size);
+    if (!maps_cache) {
+        maps_clearCache();
+    }
+
     return maps_cache_size;
 }
 
