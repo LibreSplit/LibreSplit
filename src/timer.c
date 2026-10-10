@@ -749,7 +749,7 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
         goto game_create_error;
     }
     if (ref) {
-        uint32_t last_id = 1;
+        uint32_t last_id = 0;
         game->split_count = json_array_size(ref);
 
         int split_count = game->split_count + 1; // +1 for the final split to end cursor on
@@ -808,7 +808,7 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
 
                 last_id = game->split_ids[i];
             } else {
-                game->split_ids[i] = last_id++;
+                game->split_ids[i] = ++last_id;
             }
 
             split_ref = json_object_get(split, "title");
