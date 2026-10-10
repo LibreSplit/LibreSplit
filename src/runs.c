@@ -485,13 +485,21 @@ ls_attempt* ls_runs_new_attempt(ls_timer* timer, const char* reason)
         goto ls_runs_new_attempt_failed;
     }
 
+    attempt->split_ids = calloc(1, curr_split * sizeof(uint32_t));
+    if (attempt->split_ids == NULL) {
+        LOG_WARN("unable to allocate `split_ids` for the attempt");
+        goto ls_runs_new_attempt_failed;
+    }
+
     attempt->split_titles = calloc(1, curr_split * sizeof(char*));
     if (attempt->split_titles == NULL) {
-        LOG_WARN("unable to allocate `segment_times` for the attempt");
+        LOG_WARN("unable to allocate `split_titles` for the attempt");
         goto ls_runs_new_attempt_failed;
     }
 
     for (unsigned int i = 0; i < curr_split; ++i) {
+        attempt->split_ids[i] = timer->game->split_ids[i];
+
         // Accept empty split titles before trying to allocate memory for them.
         if (timer->game->split_titles[i] == NULL) {
             attempt->split_titles[i] = NULL;
@@ -617,6 +625,9 @@ bool ls_runs_save(const ls_runs* snapshot, const ls_game* game, GtkWindow* win)
 
         for (size_t j = 0; j < attempt->curr_split; ++j) {
             json_t* split = json_object();
+
+            // ID
+            json_object_set_new(split, "id", json_integer(attempt->split_ids[j]));
 
             // Title
             json_object_set_new(split, "title", json_string(attempt->split_titles[j]));
