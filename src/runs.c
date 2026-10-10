@@ -107,6 +107,7 @@ static void ls_attempt_release(ls_attempt* attempt)
     free(attempt->split_times);
     free(attempt->segment_times);
     free(attempt->reason);
+    free(attempt->split_ids);
 
     if (attempt->split_titles) {
         for (unsigned int i = 0; i < attempt->curr_split; ++i) {
