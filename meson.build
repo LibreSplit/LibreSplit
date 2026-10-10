@@ -50,11 +50,12 @@ libresplit_sources = files(
     'src/gui/component/wr.c',
     'src/gui/context_menu.c',
     'src/gui/dialogs.c',
+
+    # GUI
+    'src/gui/folders.c',
     'src/gui/game.c',
     'src/gui/theming.c',
     'src/gui/timer.c',
-
-    # GUI
     'src/gui/utils.c',
     'src/gui/welcome_box.c',
     'src/gui/widgets/alert.c',
@@ -86,6 +87,7 @@ libresplit_sources = files(
     'src/lasr/memory_iter/memory_iterator.c',
     'src/lasr/settings.c',
     'src/lasr/utils.c',
+    'src/layout.c',
     'src/logging.c',
     'src/main.c',
     'src/runs.c',
@@ -104,13 +106,12 @@ libresplit_ctl_sources = files(
     'src/shared.c',
 )
 
-ld = find_program('ld', required: true)
-css_o = custom_target(
-    'fallback-css-o',
-    input: 'src/fallback.css',
-    output: 'fallback.o',
-    command: [ld, '-r', '-b', 'binary', '-o', '@OUTPUT@', '@INPUT@'],
-    build_by_default: true,
+gnome = import('gnome')
+libresplit_resources = gnome.compile_resources(
+    'libresplit-resources',
+    'assets/libresplit.gresource.xml',
+    source_dir: 'assets/resources',
+    c_name: 'libresplit',
 )
 
 shared_c_flags = [
@@ -126,7 +127,7 @@ shared_c_flags = [
 executable(
     'libresplit',
     libresplit_sources,
-    objects: [css_o],
+    libresplit_resources,
     dependencies: [threads, gtk, gtk_x11, luajit, x11, jansson, openssl],
     c_args: shared_c_flags,
     install: true,
@@ -234,6 +235,5 @@ else
     message('cppcheck not found, skipping linting test')
 endif
 
-gnome = import('gnome')
 #gnome.post_install(update_desktop_database: true, gtk_update_icon_cache: true)
 gnome.post_install(gtk_update_icon_cache: true)

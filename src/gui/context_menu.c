@@ -1,9 +1,15 @@
 #include "src/gui/actions.h"
 #include "src/gui/app_window.h"
 #include "src/gui/backends/x11.h"
+#include "src/gui/folders.h"
 #include "src/gui/widgets/help_dialog.h"
 #include "src/gui/widgets/settings_dialog.h"
 #include "src/lasr/auto-splitter.h"
+#include <gio/gio.h>
+#include <gio/gmenu.h>
+#include <gio/gmenumodel.h>
+#include <glib-object.h>
+#include <glib.h>
 #include <gtk/gtk.h>
 
 // standardized cross-platform cursor names
@@ -28,6 +34,7 @@ static const GActionEntry context_menu_actions[] = {
     { "always-on-top", NULL, NULL, "false", menu_toggle_win_on_top },
     { "settings", show_settings_dialog },
     { "about-and-help", show_help_dialog },
+    { "open-default-folder", launch_fm_dir, "s" },
     { "quit", quit_activated },
 };
 
@@ -204,10 +211,26 @@ static void create_context_menu(LSAppWindow* win, gpointer app)
     g_object_unref(section);
 
     section = g_menu_new();
+    GMenu* folder_menu = g_menu_new();
+    g_menu_append(folder_menu, "Splits", "win.open-default-folder::" FOLDERS_SPLITS_DIR);
+    g_menu_append(folder_menu, "Auto Splitters", "win.open-default-folder::" FOLDERS_AUTO_SPLITTERS_DIR);
+    g_menu_append(folder_menu, "Layouts", "win.open-default-folder::" FOLDERS_LAYOUTS_DIR);
+    g_menu_append(folder_menu, "Themes", "win.open-default-folder::" FOLDERS_THEMES_DIR);
+    g_menu_append(folder_menu, "Logs", "win.open-default-folder::" FOLDERS_LOGS_DIR);
+
+    g_menu_append_submenu(section, "Default Directories", G_MENU_MODEL(folder_menu));
+    g_menu_append_section(menu, NULL, G_MENU_MODEL(section));
+    g_object_unref(folder_menu);
+    g_object_unref(section);
+
     if (is_x11_display()) {
+        section = g_menu_new();
         g_menu_append(section, "Always on Top", "win.always-on-top");
+        g_menu_append_section(menu, NULL, G_MENU_MODEL(section));
+        g_object_unref(section);
     }
 
+    section = g_menu_new();
     g_menu_append(section, "Settings", "win.settings");
     g_menu_append(section, "About and help", "win.about-and-help");
     g_menu_append_section(menu, NULL, G_MENU_MODEL(section));
@@ -218,7 +241,7 @@ static void create_context_menu(LSAppWindow* win, gpointer app)
     g_menu_append_section(menu, NULL, G_MENU_MODEL(section));
     g_object_unref(section);
 
-    win->context_menu = gtk_popover_menu_new_from_model(G_MENU_MODEL(menu));
+    win->context_menu = gtk_popover_menu_new_from_model_full(G_MENU_MODEL(menu), GTK_POPOVER_MENU_NESTED);
     gtk_widget_set_halign(win->context_menu, GTK_ALIGN_START);
     gtk_popover_set_has_arrow(GTK_POPOVER(win->context_menu), FALSE);
     gtk_widget_set_parent(win->context_menu, GTK_WIDGET(win));

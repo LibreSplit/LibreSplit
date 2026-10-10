@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+    <gresource prefix="/org/libresplit/LibreSplit">
+        <file>layouts/default.json</file>
+        <file>themes/fallback.css</file>
+    </gresource>
+</gresources>

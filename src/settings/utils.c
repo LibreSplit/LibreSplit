@@ -109,12 +109,16 @@ void check_directories(void)
     }
 
     char auto_splitters_directory[PATH_MAX];
+    char layouts_directory[PATH_MAX];
     char themes_directory[PATH_MAX];
     char splits_directory[PATH_MAX];
     char runs_directory[PATH_MAX];
 
     strcpy(auto_splitters_directory, libresplit_directory);
     strcat(auto_splitters_directory, "/auto-splitters");
+
+    strcpy(layouts_directory, libresplit_directory);
+    strcat(layouts_directory, "/layouts");
 
     strcpy(themes_directory, libresplit_directory);
     strcat(themes_directory, "/themes");
@@ -140,6 +144,9 @@ void check_directories(void)
 
     // Make the autosplitters directory if it doesn't exist
     create_default_directory("autosplitters directory", auto_splitters_directory, 0755, NULL);
+
+    // Make the layouts directory if it doesn't exist
+    create_default_directory("layouts directory", layouts_directory, 0755, NULL);
 
     // Make the themes directory if it doesn't exist
     create_default_directory("themes directory", themes_directory, 0755, NULL);

@@ -1,0 +1,30 @@
+[
+    {
+        "name": "title",
+        "enabled": true
+    },
+    {
+        "name": "splits",
+        "enabled": true
+    },
+    {
+        "name": "detailed-timer",
+        "enabled": true
+    },
+    {
+        "name": "prev-segment",
+        "enabled": true
+    },
+    {
+        "name": "best-sum",
+        "enabled": true
+    },
+    {
+        "name": "pb",
+        "enabled": true
+    },
+    {
+        "name": "wr",
+        "enabled": true
+    }
+]

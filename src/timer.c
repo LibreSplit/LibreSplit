@@ -400,6 +400,9 @@ void ls_game_release(ls_game* game)
     free(game->icon_path);
     game->icon_path = 0;
 
+    free(game->layout_file);
+    game->layout_file = 0;
+
     free(game->theme);
     game->theme = 0;
 
@@ -633,6 +636,21 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
             // len contains the full string length, subtract the category, the null byte and the space.
             strcpy(game->title + (len - cat_len - 2), " ");
             strcpy(game->title + (len - cat_len - 1), game->category);
+        }
+    }
+    // copy layout
+    ref = json_object_get(json, "layout");
+    if (ref) {
+        if (!json_is_string(ref)) {
+            error = 1;
+            LOG_ERR("Invalid layout path: must be a string");
+            goto game_create_error;
+        }
+
+        game->layout_file = strdup(json_string_value(ref));
+        if (!game->layout_file) {
+            error = 1;
+            goto game_create_error;
         }
     }
     // copy theme
@@ -1176,6 +1194,10 @@ int ls_game_save(const ls_game* game)
         json_array_append_new(splits, split);
     }
     json_object_set_new(json, "splits", splits);
+    if (game->layout_file) {
+        json_object_set_new(json, "layout",
+            json_string(game->layout_file));
+    }
     if (game->theme) {
         json_object_set_new(json, "theme", json_string(game->theme));
     }
@@ -1815,9 +1837,22 @@ void json_time_set(json_t* ref, const ls_time* time)
  */
 void ls_run_set_time(char* time_buf)
 {
-    time_t rawtime;
-    struct tm* timeinfo;
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-    strftime(time_buf, 64, "%Y-%m-%d_%H-%M-%S", timeinfo);
+    time_t rawtime = time(NULL);
+    if (rawtime == (time_t)-1) {
+        LOG_WARNF("failed to set run time: %s", g_strerror(errno));
+        time_buf[0] = '\0';
+        return;
+    }
+
+    struct tm utc_time;
+    if (gmtime_r(&rawtime, &utc_time) == NULL) {
+        LOG_WARN("failed to format run time as UTC");
+        time_buf[0] = '\0';
+        return;
+    }
+
+    if (strftime(time_buf, 64, "%Y-%m-%d_%H-%M-%S", &utc_time) == 0) {
+        LOG_WARN("failed to store the formatted time in the time buffer");
+        time_buf[0] = '\0';
+    }
 }

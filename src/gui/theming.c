@@ -2,25 +2,10 @@
 #include "src/gui/app_window.h"
 #include "src/gui/widgets/alert.h"
 #include "src/logging.h"
+#include "src/settings/utils.h"
 #include <linux/limits.h>
 #include <string.h>
 #include <sys/stat.h>
-
-/**
- * Returns the fallback CSS theme integrated in LibreSplit
- */
-static inline const unsigned char* fallback_css_data(void)
-{
-    return _binary____src_fallback_css_start;
-}
-
-/**
- * Returns the length of the fallback CSS theme integrated in LibreSplit
- */
-static inline size_t fallback_css_data_len(void)
-{
-    return (size_t)((uintptr_t)_binary____src_fallback_css_end - (uintptr_t)_binary____src_fallback_css_start);
-}
 
 static const char reset_rules[] = ".window.main-window{ all: unset; }\n"
                                   ".window.main-window .libresplit-content,\n"
@@ -162,6 +147,19 @@ static bool load_theme_css(const LSAppWindow* win, GtkCssProvider* provider, con
     return true;
 }
 
+static void load_fallback_theme(LSAppWindow* win)
+{
+    GError* gerror = NULL;
+    gulong error_handler = g_signal_connect(win->style, "parsing-error", G_CALLBACK(capture_css_error), &gerror);
+    gtk_css_provider_load_from_resource(GTK_CSS_PROVIDER(win->style), LIBRESPLIT_RESOURCES_PREFIX "themes/fallback.css");
+    g_signal_handler_disconnect(win->style, error_handler);
+    if (gerror != NULL) {
+        g_printerr("Error loading default theme CSS: %s\n", gerror->message);
+        g_error_free(gerror);
+        gerror = NULL;
+    }
+}
+
 /**
  * Loads a specific theme, with a fallback to the default theme
  *
@@ -171,6 +169,8 @@ static bool load_theme_css(const LSAppWindow* win, GtkCssProvider* provider, con
  */
 void ls_app_load_theme_with_fallback(LSAppWindow* win, const char* name, const char* variant)
 {
+    LOG_DEBUG("Loading Theme...");
+
     // Remove old variant
     if (win->style_variant) {
         gtk_style_context_remove_provider_for_display(win->display, GTK_STYLE_PROVIDER(win->style_variant));
@@ -206,19 +206,10 @@ void ls_app_load_theme_with_fallback(LSAppWindow* win, const char* name, const c
             GTK_STYLE_PROVIDER_PRIORITY_USER_THEME);
     }
 
-    if (!load_theme_css(win, win->style, name, NULL)) {
+    // only try to load the theme if one is actually defined.
+    if (!name || name[0] == '\0' || !load_theme_css(win, win->style, name, NULL)) {
         // Load default theme from embedded CSS as fallback
-        GBytes* fallback_css = g_bytes_new_static(fallback_css_data(), fallback_css_data_len());
-        gulong error_handler = g_signal_connect(win->style, "parsing-error", G_CALLBACK(capture_css_error), &gerror);
-        gtk_css_provider_load_from_bytes(GTK_CSS_PROVIDER(win->style), fallback_css);
-        g_signal_handler_disconnect(win->style, error_handler);
-        g_bytes_unref(fallback_css);
-        if (gerror != NULL) {
-            g_printerr("Error loading default theme CSS: %s\n", gerror->message);
-            g_error_free(gerror);
-            gerror = NULL;
-        }
-
+        load_fallback_theme(win);
         return;
     }
 

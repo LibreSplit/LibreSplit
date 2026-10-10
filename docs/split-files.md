@@ -16,12 +16,13 @@ You can use splits located in [the resource repository](https://github.com/Libre
 | `start_delay`            | string (timestamp) | Non-negative delay until timer starts               |
 | `world_record`           | time               | Best known [time](#time-object)                     |
 | `splits`                 | array              | Array of [split objects](#split-object)             |
+| `layout`                 | string             | Optional path to a custom layout for this game      |
 | `theme`                  | string             | Window theme                                        |
 | `theme_variant`          | string             | Window theme variant                                |
-| `width`                  | int                | Window width                                        |
-| `height`                 | int                | Window height                                       |
 | `auto_splitter`          | string             | Path to your auto splitter Lua script               |
 | `auto_splitter_settings` | object             | Optional settings for your auto splitter            |
+| `width`                  | int                | Window width                                        |
+| `height`                 | int                | Window height                                       |
 
 Most of the above keys are optional.
 `comparison_method` determines which time is authoritative for determining things like PBs and best splits.

@@ -11,6 +11,7 @@
 #include "src/keybinds/bind.h"
 #include "src/keybinds/keybinds_callbacks.h"
 #include "src/lasr/auto-splitter.h"
+#include "src/layout.h"
 #include "src/logging.h"
 #include "src/runs.h"
 #include "src/settings/settings.h"
@@ -174,6 +175,7 @@ void ls_app_window_open(LSAppWindow* win, const char* file)
             }
         }
 
+        ls_load_layout(win, win->game->layout_file);
         atomic_store(&auto_splitter_enabled, cfg.libresplit.auto_splitter_enabled.value.b);
         ls_app_window_show_game(win);
     }
@@ -274,19 +276,6 @@ static void ls_app_window_size_allocate(GtkWidget* widget, int width, int height
     LSAppWindow* win = LS_APP_WINDOW(widget);
     if (win->context_menu != NULL) {
         gtk_popover_present(GTK_POPOVER(win->context_menu));
-    }
-}
-
-/**
- * @brief Call the component's delete method when the window is being disposed.
- *
- * @param data The component to cleanup.
- */
-static void ls_component_destroy(gpointer data)
-{
-    LSComponent* component = data;
-    if (component && component->ops && component->ops->delete) {
-        component->ops->delete(component);
     }
 }
 
@@ -557,9 +546,6 @@ gboolean ls_app_window_draw(gpointer data)
 static void ls_app_window_init(LSAppWindow* win)
 {
     LOG_DEBUG("Initializing LibreSplit Window");
-    const char* theme;
-    const char* theme_variant;
-    int i;
 
     win->display = gdk_display_get_default();
     win->reset_style = NULL;
@@ -589,12 +575,6 @@ static void ls_app_window_init(LSAppWindow* win)
     win->keybinds.toggle_decorations = parse_keybind(cfg.keybinds.toggle_decorations.value.s);
     win->keybinds.toggle_win_on_top = parse_keybind(cfg.keybinds.toggle_win_on_top.value.s);
     set_window_decorations(win);
-
-    // Load theme
-    LOG_DEBUG("Loading Theme...");
-    theme = cfg.libresplit.theme.value.s;
-    theme_variant = cfg.libresplit.theme_variant.value.s;
-    ls_app_load_theme_with_fallback(win, theme, theme_variant);
 
     // Load window junk
     add_class(GTK_WIDGET(win), "window");
@@ -649,23 +629,6 @@ static void ls_app_window_init(LSAppWindow* win)
     gtk_widget_set_margin_bottom(win->box, 0);
     gtk_widget_set_vexpand(win->box, TRUE);
     gtk_box_append(GTK_BOX(win->container), win->box);
-
-    // Create all available components (TODO: change this in the future)
-    LOG_DEBUG("Creating components...");
-    win->components = NULL;
-    for (i = 0; ls_components[i].name != NULL; i++) {
-        LSComponent* component = ls_components[i].new();
-        if (component) {
-            GtkWidget* widget = component->ops->widget(component);
-            if (widget) {
-                gtk_widget_set_margin_start(widget, WINDOW_PAD);
-                gtk_widget_set_margin_end(widget, WINDOW_PAD);
-                gtk_box_append(GTK_BOX(win->box),
-                    component->ops->widget(component));
-            }
-            win->components = g_list_append(win->components, component);
-        }
-    }
 
     // NOTE: This always creates an empty footer, no matter how many
     //  ^ "footers" are available, which may give issues with theming
