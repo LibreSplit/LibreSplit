@@ -27,6 +27,7 @@ typedef struct ls_attempt {
     char* reason;
     size_t split_count;
     size_t curr_split;
+    uint32_t* split_ids;
     char** split_titles;
     ls_time* split_times;
     ls_time* segment_times;
