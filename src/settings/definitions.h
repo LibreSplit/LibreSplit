@@ -62,7 +62,7 @@ typedef struct HistoryConfig {
 } HistoryConfig;
 
 typedef struct LoggingConfig {
-    ConfigEntry print_to_console;
+    ConfigEntry write_to_file;
     ConfigEntry rotate_after_days;
 } LoggingConfig;
 

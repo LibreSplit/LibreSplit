@@ -192,8 +192,6 @@ void logMessage(const char* fmt, ...)
     pthread_mutex_lock(&logQueue.lock);
     // If the queue is full, wait (bottleneck)
     while ((logQueue.tail + 1) % LOG_QUEUE_SIZE == logQueue.head) {
-        // NOTE: [Penaz] [2026-09-30] It might be more sane to drop new logs
-        // ^ instead of blocking any other possible calling thread. (Early return)
         pthread_cond_wait(&logQueue.cond, &logQueue.lock);
     }
     // Create a timestamp for the log
@@ -207,7 +205,8 @@ void logMessage(const char* fmt, ...)
     // Put the timestamp first...
     snprintf(logQueue.message_queue[logQueue.tail], LOG_STR_LEN, "%s | ", timestamp);
     // The remaining space is for the message
-    vsnprintf(logQueue.message_queue[logQueue.tail] + strlen(timestamp) + 3, LOG_STR_LEN - strlen(timestamp) - 1, fmt, args);
+	size_t prefix_len = strlen(timestamp) + 3;
+    vsnprintf(logQueue.message_queue[logQueue.tail] + prefix_len, LOG_STR_LEN - prefix_len, fmt, args);
     va_end(args);
     logQueue.tail = (logQueue.tail + 1) % LOG_QUEUE_SIZE;
 
@@ -229,13 +228,14 @@ static void pop_message(FILE* logfile)
     // We don't empty the whole queue to avoid being a bottleneck for the
     // addition of new messages.
     // Log to console
-    if (cfg.logging.print_to_console.value.b) {
-        printf("%s", logQueue.message_queue[logQueue.head]);
-    }
-    // Log to file
-    fprintf(logfile, "%s", logQueue.message_queue[logQueue.head]);
-    // Flush the file immediately to disk, in case something crashes
-    fflush(logfile);
+    printf("%s", logQueue.message_queue[logQueue.head]);
+	if (cfg.logging.write_to_file.value.b) {
+		// Log to file
+		fprintf(logfile, "%s", logQueue.message_queue[logQueue.head]);
+		// Flush the file immediately to disk, in case something crashes
+		fflush(logfile);
+	}
+
     logQueue.head = (logQueue.head + 1) % LOG_QUEUE_SIZE;
 }
 

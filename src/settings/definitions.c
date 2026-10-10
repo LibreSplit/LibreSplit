@@ -166,11 +166,11 @@ AppConfig cfg = {
         },
     },
     .logging = {
-        .print_to_console = {
-            .key = "print_to_console",
+        .write_to_file = {
+            .key = "write_to_file",
             .type = CFG_BOOL,
             .value.b = true,
-            .desc = "Print logs on console's standard output too",
+            .desc = "Write logs to a local .log file too",
         },
         .rotate_after_days = {
             .key = "rotate_after_days",
