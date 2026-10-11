@@ -165,12 +165,27 @@ AppConfig cfg = {
             .desc = "Last Auto Splitter Folder Opened",
         },
     },
+    .logging = {
+        .write_to_file = {
+            .key = "write_to_file",
+            .type = CFG_BOOL,
+            .value.b = true,
+            .desc = "Write logs to a local .log file too",
+        },
+        .max_log_files = {
+            .key = "max_log_files",
+            .type = CFG_INT,
+            .value.i = 5,
+            .desc = "Maximum number of historical log files to keep (limit of 9)",
+        },
+    }
 };
 
 const SectionInfo sections[] = {
     { "libresplit", &cfg.libresplit, sizeof(cfg.libresplit) / sizeof(ConfigEntry), true },
     { "keybinds", &cfg.keybinds, sizeof(cfg.keybinds) / sizeof(ConfigEntry), true },
     { "history", &cfg.history, sizeof(cfg.history) / sizeof(ConfigEntry), false },
+    { "logging", &cfg.logging, sizeof(cfg.logging) / sizeof(ConfigEntry), true },
 };
 
 const size_t sections_count = sizeof(sections) / sizeof(sections[0]);

@@ -7,6 +7,6 @@
 #define FOLDERS_LAYOUTS_DIR "layouts"
 #define FOLDERS_THEMES_DIR "themes"
 // TODO: Define a logs directory when it moves out of the root data path
-#define FOLDERS_LOGS_DIR ""
+#define FOLDERS_LOGS_DIR "logs"
 
 void launch_fm_dir(GSimpleAction* action, GVariant* parameter, gpointer app);

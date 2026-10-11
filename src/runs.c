@@ -3,6 +3,7 @@
 #include "src/gui/game.h"
 #include "src/gui/widgets/dialog.h"
 #include "src/settings/utils.h"
+#include "src/utils.h"
 #include <string.h>
 #include <sys/stat.h>
 
@@ -13,34 +14,6 @@ typedef enum LSGrowResult {
 } LSGrowResult;
 
 static void ls_runs_clear_failure_show(ls_runs* self, GtkWindow* win);
-
-/**
- * @brief Sets today's date (UTC) to the date buffer in YYYY-MM-DD format.
- *
- * @param date Pointer to a string of at least length 16.
- * @return bool Whether or not fetching today's date was successful.
- */
-static bool set_date(char* date)
-{
-    time_t now = time(NULL);
-    if (now == (time_t)-1) {
-        LOG_WARNF("failed to set time: %s", g_strerror(errno));
-        return false;
-    }
-
-    struct tm utc_time;
-    if (gmtime_r(&now, &utc_time) == NULL) {
-        LOG_WARN("failed to format time as UTC");
-        return false;
-    }
-
-    if (strftime(date, 16, "%Y-%m-%d", &utc_time) == 0) {
-        LOG_WARN("failed to store the formatted time in the date buffer, the result might be longer than date's size");
-        return false;
-    }
-
-    return true;
-}
 
 /**
  * @brief Creates a new attempts array and assigns it to
