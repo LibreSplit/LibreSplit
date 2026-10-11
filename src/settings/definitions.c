@@ -172,11 +172,11 @@ AppConfig cfg = {
             .value.b = true,
             .desc = "Write logs to a local .log file too",
         },
-        .rotate_after_days = {
-            .key = "rotate_after_days",
+        .max_log_files = {
+            .key = "max_log_files",
             .type = CFG_INT,
-            .value.i = 7,
-            .desc = "Delete logs older than x days",
+            .value.i = 5,
+            .desc = "Maximum number of historical log files to keep (limit of 9)",
         },
     }
 };

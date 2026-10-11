@@ -63,7 +63,7 @@ typedef struct HistoryConfig {
 
 typedef struct LoggingConfig {
     ConfigEntry write_to_file;
-    ConfigEntry rotate_after_days;
+    ConfigEntry max_log_files;
 } LoggingConfig;
 
 typedef struct AppConfig {

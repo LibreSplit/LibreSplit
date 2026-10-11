@@ -5,6 +5,7 @@
 
 #define LOG_QUEUE_SIZE 100
 #define LOG_STR_LEN 512
+#define LOG_FILE_SIZE_LIMIT 2097152 // 2-MiB
 
 extern atomic_bool exit_requested;
 
