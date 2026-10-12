@@ -20,7 +20,7 @@ ssize_t process_vm_readv(pid_t pid,
  * \struct game_process The game process read by the Auto Splitter
  */
 typedef struct game_process {
-    const char* name; /*!< The name of the process */
+    char* name; /*!< A copy of the name of the process */
     unsigned int pid; /*!< The PID of the process */
     uintptr_t base_address; /*!< The detected base address of the process */
     uintptr_t dll_address; /*!< The detected base address of the last requested module */
@@ -34,7 +34,14 @@ typedef struct ProcessMap {
     char name[PATH_MAX + 1];
 } ProcessMap;
 
+typedef enum PointerSize {
+    POINTER_SIZE_UNKNOWN = 0,
+    POINTER_SIZE_32 = 32,
+    POINTER_SIZE_64 = 64,
+} PointerSize;
+
 bool restart_auto_splitter(void);
 uintptr_t find_base_address(const char* module);
 bool handle_memory_error(uint32_t err);
 const char* value_to_c_string(lua_State* L, int index);
+PointerSize detect_pointer_size(uint64_t module_address, int32_t* err);

@@ -50,14 +50,14 @@ current.minutes = readAddress(...)
 
 ### Bitwise Binary Operators
 
-LuaJIT doesn't yet support bitwise binary operators, in the meantime we implemented some functions that will bring such features into LibreSplit:
+Lua 5.4 and newer support bitwise binary operators, here's how to use them:
 
-- `b_and(a, b)`: Performs a bitwise "and" between the integers `a` and `b`;
-- `b_or(a, b)`: Performs a bitwise "or" between the integers `a` and `b`;
-- `b_xor(a, b)`: Performs a bitwise "exclusive or" between the integers `a` and `b`;
-- `b_not(a)`: Performs a bitwise "not" on the integer `a`;
-- `b_lshift(a, b)`: Performs a bitwise "left shift" on the integer `a` by `b`;
-- `b_rshift(a, b)`: Performs a bitwise "right shift" on the integer `a` by `b`;
+- `a & b`: Performs a bitwise "and" between the integers `a` and `b`;
+- `a | b`: Performs a bitwise "or" between the integers `a` and `b`;
+- `a ~ b`: Performs a bitwise "exclusive or" between the integers `a` and `b`;
+- `~a`: Performs a bitwise "not" on the integer `a`;
+- `a << b`: Performs a bitwise "left shift" on the integer `a` by `b`;
+- `a >> b`: Performs a bitwise "right shift" on the integer `a` by `b`;
 
 ## A small trick to find items in table
 
@@ -112,3 +112,20 @@ print(signature)
 local speedrundata_pointer = sig_scan(signature, 0)
 -- Continue with the auto splitter
 ```
+
+## Pointer chains in heap and data mappings
+
+When using `readAddress` in heap or other data mappings outside of the base game, we will be unable to detect the correct pointer size to use for memory reads.
+For any named mapping such as `[heap]` or some other data file, you must pass in the correct `pointerSize` to use explicitly for it to work. Without it,
+detection will fail and return nil.
+
+Example:
+
+```lua
+local value = readAddress("int", "[heap]", 0x100, 0x20, {
+    pointerSize = POINTER_SIZE_64
+})
+```
+
+This follows a 64-bit pointer stored at offset `0x100` in the heap mapping, adds `0x20`, and reads a signed 32-bit integer there.
+Use `POINTER_SIZE_32` for a chain of 32-bit pointers.

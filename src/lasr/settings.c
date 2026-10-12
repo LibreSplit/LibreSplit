@@ -5,7 +5,6 @@
 #include <glib.h>
 #include <lauxlib.h>
 #include <limits.h>
-#include <math.h>
 #include <strings.h>
 
 static GHashTable* settings;
@@ -83,13 +82,12 @@ static bool is_valid_string(lua_State* L, int index)
  */
 static SettingType get_setting_type(lua_State* L, int index)
 {
-    if (lua_type(L, index) != LUA_TNUMBER) {
+    if (!lua_isinteger(L, index)) {
         return SETTING_INVALID;
     }
 
-    lua_Number val = lua_tonumber(L, index);
     lua_Integer type = lua_tointeger(L, index);
-    if (val != (lua_Number)type || type < SETTING_BOOLEAN || type >= SETTING_INVALID) {
+    if (type < SETTING_BOOLEAN || type >= SETTING_INVALID) {
         return SETTING_INVALID;
     }
 
@@ -119,21 +117,16 @@ static const char* setting_set_val(lua_State* L, int index, SettingType type, Se
 
         case SETTING_INTEGER:
             {
-                if (lua_type(L, index) != LUA_TNUMBER) {
+                if (!lua_isinteger(L, index)) {
                     return "invalid value type set for default integer setting";
                 }
 
-                lua_Number num = lua_tonumber(L, index);
-                if (!isfinite(num) || (long double)num < LONG_MIN || (long double)num > LONG_MAX) {
+                lua_Integer intval = lua_tointeger(L, index);
+                if (intval < LONG_MIN || intval > LONG_MAX) {
                     return "invalid value set for default integer setting: out of range";
                 }
 
-                long intval = (long)num;
-                if (num != (lua_Number)intval) {
-                    return "invalid value set for default integer setting: not an integer";
-                }
-
-                val->int_val = intval;
+                val->int_val = (long)intval;
                 break;
             }
 
@@ -350,7 +343,7 @@ void lasr_settings_register(lua_State* L)
     };
 
     lua_newtable(L);
-    luaL_register(L, NULL, functions);
+    luaL_setfuncs(L, functions, 0);
     if (!settings) {
         lua_pushvalue(L, -1);
         lua_pushcclosure(L, define_setting, 1);
