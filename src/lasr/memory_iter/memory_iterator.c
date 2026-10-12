@@ -2,6 +2,7 @@
 #include "src/lasr/utils.h"
 #include "src/logging.h"
 #include <errno.h>
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -64,7 +65,7 @@ int mem_next(MemoryIterator* iterator, uint8_t* err)
     }
     if (iterator->cursor < iterator->start) {
         LOG_ERRF(
-            "Programming Error: Iterator cursor address has a lower value (%x) than its starting memory address (%x)",
+            "Programming Error: Iterator cursor address has a lower value (%" PRIxPTR ") than its starting memory address (%" PRIxPTR ")",
             iterator->cursor,
             iterator->start);
         return 0;
@@ -108,7 +109,7 @@ int mem_next(MemoryIterator* iterator, uint8_t* err)
                 LOG_DEBUG("Read interrupted by EINTR");
             }
             LOG_DEBUGF("Memory read error, errno is %d (%s)", errno, strerror(errno));
-            LOG_DEBUGF("Cursor: %x, Start: %x, End: %x, Overlap: %x", iterator->cursor, iterator->start, iterator->end, iterator->overlap);
+            LOG_DEBUGF("Cursor: %" PRIxPTR ", Start: %" PRIxPTR ", End: %" PRIxPTR ", Overlap: %td", iterator->cursor, iterator->start, iterator->end, iterator->overlap);
             *err = 3;
         } else if (nread == 0) {
             // No bytes read. We stop here

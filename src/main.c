@@ -129,6 +129,9 @@ int main(int argc, char* argv[])
         return EXIT_SUCCESS;
     }
 
+    // Set the initial values to the logging thread's cfg copy.
+    update_logging_config();
+
     LOG_INFO("Creating Auto-Splitter Thread");
     pthread_t t1; // Auto-splitter thread
     pthread_create(&t1, NULL, &ls_auto_splitter, NULL);
@@ -143,8 +146,12 @@ int main(int argc, char* argv[])
 
     int status = g_application_run(G_APPLICATION(g_app), argc, argv);
 
+    atomic_store(&exit_requested, 1);
     pthread_join(t1, NULL);
     pthread_join(t2, NULL);
+
+    // After the other logging consumers join it's safe to close the logger.
+    close_logger();
     pthread_join(t3, NULL);
 
     g_clear_object(&g_app);

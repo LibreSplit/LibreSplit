@@ -61,10 +61,16 @@ typedef struct HistoryConfig {
     ConfigEntry last_auto_splitter_folder;
 } HistoryConfig;
 
+typedef struct LoggingConfig {
+    ConfigEntry write_to_file;
+    ConfigEntry max_log_files;
+} LoggingConfig;
+
 typedef struct AppConfig {
     LibreSplitConfig libresplit;
     KeybindConfig keybinds;
     HistoryConfig history;
+    LoggingConfig logging;
 } AppConfig;
 
 /* For each section we point at the first `ConfigEntry` member inside the

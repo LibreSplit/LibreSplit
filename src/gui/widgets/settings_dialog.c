@@ -193,6 +193,8 @@ static void save_gui_settings(GtkButton* button, gpointer app)
         }
     }
 
+    update_logging_config();
+
     // Call the normal save_settings thing
     if (config_save()) {
         // on success, set decorations in case the setting changed.

@@ -420,7 +420,6 @@ void ls_app_window_destroy(GtkWidget* widget, gpointer data)
         }
         g_list_free(snapshot);
     }
-    close_logger();
     g_application_quit(G_APPLICATION(app));
 }
 
