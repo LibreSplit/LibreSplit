@@ -413,6 +413,10 @@ void ls_game_release(ls_game* game)
     game->auto_splitter_file = 0;
     ls_auto_splitter_settings_release(game);
 
+    if (game->split_ids) {
+        free(game->split_ids);
+        game->split_ids = 0;
+    }
     if (game->split_titles) {
         for (unsigned int i = 0; i < game->split_count; ++i) {
             if (game->split_titles[i]) {
@@ -745,10 +749,17 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
         goto game_create_error;
     }
     if (ref) {
+        uint32_t last_id = 0;
         game->split_count = json_array_size(ref);
 
         int split_count = game->split_count + 1; // +1 for the final split to end cursor on
 
+        // allocate ids
+        game->split_ids = calloc(split_count, sizeof(uint32_t));
+        if (!game->split_ids) {
+            error = 1;
+            goto game_create_error;
+        }
         // allocate titles
         game->split_titles = calloc(split_count, sizeof(char*));
         if (!game->split_titles) {
@@ -787,6 +798,19 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
             json_t* split;
             json_t* split_ref;
             split = json_array_get(ref, i);
+            split_ref = json_object_get(split, "id");
+            if (split_ref) {
+                game->split_ids[i] = json_integer_value(split_ref);
+                if (!game->split_ids[i]) {
+                    error = 1;
+                    goto game_create_error;
+                }
+
+                last_id = game->split_ids[i];
+            } else {
+                game->split_ids[i] = ++last_id;
+            }
+
             split_ref = json_object_get(split, "title");
             if (split_ref) {
                 game->split_titles[i] = strdup(
@@ -1172,6 +1196,7 @@ int ls_game_save(const ls_game* game)
     }
     for (unsigned int i = 0; i < game->split_count; ++i) {
         json_t* split = json_object();
+        json_object_set_new(split, "id", json_integer(game->split_ids[i]));
         json_object_set_new(split, "title", json_string(game->split_titles[i]));
         json_object_set_new(split, "icon", json_string(game->split_icon_paths[i]));
 

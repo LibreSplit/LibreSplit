@@ -153,8 +153,14 @@ static ls_game* create_snapshot(const ls_game* game)
         return snapshot;
     }
 
-    if (!game->split_titles || !game->split_icon_paths || !game->split_times || !game->segment_times || !game->best_splits || !game->best_segments) {
+    if (!game->split_ids || !game->split_titles || !game->split_icon_paths || !game->split_times || !game->segment_times || !game->best_splits || !game->best_segments) {
         LOG_ERR("snapshot creation: positive split_count with empty split array(s)");
+        goto create_snapshot_failed;
+    }
+
+    snapshot->split_ids = calloc(game->split_count, sizeof(uint32_t));
+    if (!snapshot->split_ids) {
+        LOG_ERR("snapshot creation: unable to allocate memory for `split_ids`");
         goto create_snapshot_failed;
     }
 
@@ -194,6 +200,7 @@ static ls_game* create_snapshot(const ls_game* game)
         goto create_snapshot_failed;
     }
 
+    memcpy(snapshot->split_ids, game->split_ids, game->split_count * sizeof(uint32_t));
     memcpy(snapshot->split_times, game->split_times, game->split_count * sizeof(ls_time));
     memcpy(snapshot->segment_times, game->segment_times, game->split_count * sizeof(ls_time));
     memcpy(snapshot->best_splits, game->best_splits, game->split_count * sizeof(ls_time));

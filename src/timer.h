@@ -5,6 +5,7 @@
 #include <jansson.h>
 #include <stdatomic.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #define LS_INFO_BEHIND_TIME (1 << 0)
 #define LS_INFO_LOSING_TIME (1 << 1)
@@ -60,6 +61,7 @@ typedef struct ls_game {
     int height;
     ls_time world_record;
     long long start_delay;
+    uint32_t* split_ids;
     char** split_titles;
     char** split_icon_paths; // null if no icons
     bool contains_icons;
