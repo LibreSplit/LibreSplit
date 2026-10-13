@@ -56,8 +56,18 @@ static bool validate_layout(json_t* root)
         json_t* val;
         json_object_foreach(settings, key, val)
         {
-            if (!json_is_string(val) && !json_is_boolean(val) && !json_is_number(val)) {
-                LOG_ERRF(VALIDATION_PREFIX "Invalid entry at %zu invalid settings entry %s must be primitive and not null", index, key);
+            if (json_is_array(val)) {
+                size_t setting_index;
+                json_t* setting_val;
+                json_array_foreach(val, setting_index, setting_val)
+                {
+                    if (!json_is_string(val) && !json_is_boolean(val) && !json_is_number(val)) {
+                        LOG_ERRF(VALIDATION_PREFIX "Invalid entry at %zu invalid settings entry %s[%zu] must be primitive and not null", index, key, setting_index);
+                        return false;
+                    }
+                }
+            } else if (!json_is_string(val) && !json_is_boolean(val) && !json_is_number(val)) {
+                LOG_ERRF(VALIDATION_PREFIX "Invalid entry at %zu invalid settings entry %s must be primitive and not null or an array of valid primitives", index, key);
                 return false;
             }
         }
