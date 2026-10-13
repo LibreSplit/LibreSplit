@@ -32,6 +32,7 @@ static const LSComponentOption text_alignment_options[] = {
     { .key = LS_TEXT_ALIGN_LEFT_WITH_ICON, .label = "Left with Icon" }, // left with icon, centered without.
     { .key = LS_TEXT_ALIGN_LEFT, .label = "Left" },
     { .key = LS_TEXT_ALIGN_CENTER, .label = "Center" },
+    { .key = LS_TEXT_ALIGN_RIGHT, .label = "Right" },
     { 0 }
 };
 
@@ -39,7 +40,7 @@ static const LSComponentSetting title_settings[] = {
     { .key = "show_game", .label = "Show Game Name", .val = { .type = LS_COMPONENT_SETTING_BOOLEAN, .bool_val = true } },
     { .key = "show_category", .label = "Show Category Name", .val = { .type = LS_COMPONENT_SETTING_BOOLEAN, .bool_val = true } },
     { .key = "single_line", .label = "Show Text on One Line", .val = { .type = LS_COMPONENT_SETTING_BOOLEAN, .bool_val = true } },
-    { .key = "text_alignment", .label = "Text Alignment", .options = text_alignment_options, .val = { .type = LS_COMPONENT_SETTING_INTEGER, .int_val = LS_TEXT_ALIGN_CENTER } },
+    { .key = "text_alignment", .label = "Text Alignment", .options = text_alignment_options, .val = { .type = LS_COMPONENT_SETTING_OPTIONS, .int_val = LS_TEXT_ALIGN_CENTER } },
     { .key = "show_attempts", .label = "Show Attempts Count", .val = { .type = LS_COMPONENT_SETTING_BOOLEAN, .bool_val = true } },
     { .key = "show_finished", .label = "Show Finished Runs Count", .val = { .type = LS_COMPONENT_SETTING_BOOLEAN, .bool_val = true } },
     { .key = "show_icon", .label = "Show Game Icon", .val = { .type = LS_COMPONENT_SETTING_BOOLEAN, .bool_val = true } },
