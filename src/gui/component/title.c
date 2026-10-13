@@ -135,40 +135,29 @@ static void title_show_game(LSComponent* self_, const ls_game* game,
 {
     LSTitle* self = (LSTitle*)self_;
 
-    size_t title_len = 0;
     const char* game_name = game->name ? game->name : "";
     const char* category = game->category ? game->category : "";
-    size_t game_len = strlen(game_name);
-    size_t cat_len = strlen(category);
     bool single_line = ls_component_settings_get(self_, "single_line")->bool_val;
     bool show_game = ls_component_settings_get(self_, "show_game")->bool_val;
-    if (show_game) {
-        title_len += game_len;
-    }
-
     bool show_category = ls_component_settings_get(self_, "show_category")->bool_val;
-    if (show_category) {
-        title_len += cat_len;
-        if (show_game) {
-            // The space or new line
-            title_len++;
-        }
+    if (!show_game) {
+        game_name = "";
     }
 
-    if (title_len > 0) {
-        char* title = calloc(1, title_len + 1);
-        if (show_game) {
-            snprintf(title, game_len + 1, "%s", game_name);
-            if (show_category) {
-                snprintf(title + game_len, cat_len + 2, "%c%s", single_line ? ' ' : '\n', category);
-            }
-        } else {
-            snprintf(title, cat_len + 1, "%s", category);
-        }
+    if (!show_category) {
+        category = "";
+    }
 
+    if (*game_name && *category) {
+        char* title = g_strdup_printf("%s%c%s", game_name, single_line ? ' ' : '\n', category);
         gtk_label_set_text(GTK_LABEL(self->title), title);
-        free(title);
+        g_free(title);
+    } else {
+        gtk_label_set_text(GTK_LABEL(self->title), *game_name ? game_name : category);
     }
+
+    gtk_widget_set_valign(self->attempt_count, single_line ? GTK_ALIGN_START : GTK_ALIGN_CENTER);
+    gtk_widget_set_valign(self->finished_count, single_line ? GTK_ALIGN_START : GTK_ALIGN_CENTER);
 
     bool show_attempts = ls_component_settings_get(self_, "show_attempts")->bool_val;
     if (show_attempts) {
@@ -188,9 +177,12 @@ static void title_show_game(LSComponent* self_, const ls_game* game,
 static void title_draw(LSComponent* self_, const ls_game* game, const ls_timer* timer)
 {
     LSTitle* self = (LSTitle*)self_;
+
     bool show_attempts = ls_component_settings_get(self_, "show_attempts")->bool_val;
     bool show_finished = ls_component_settings_get(self_, "show_finished")->bool_val;
     bool show_icon = ls_component_settings_get(self_, "show_icon")->bool_val;
+    gtk_widget_set_visible(gtk_widget_get_parent(self->attempt_count), show_attempts || show_finished);
+
     if (show_icon) {
         if (game->icon_path && !self->icon) {
             GString* icon_css_src = g_string_new(".title-icon { background-repeat: no-repeat; background-position: center; min-width: 20px; min-height: 20px; background-size: 20px; margin-right: 4px;");
@@ -214,7 +206,6 @@ static void title_draw(LSComponent* self_, const ls_game* game, const ls_timer* 
 
             self->icon = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
             add_class(self->icon, "title-icon");
-            gtk_widget_set_size_request(self->icon, 20, 20);
             gtk_box_prepend(GTK_BOX(self->start), self->icon);
         }
     } else if (self->icon) {
