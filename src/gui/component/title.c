@@ -12,7 +12,7 @@
 typedef struct LSTitle {
     LSComponent base; /*!< The base struct that is extended */
     GtkWidget* header; /*!< The container for the title */
-    GtkWidget* start; /*!< Container for the icon and left aligned title */
+    GtkWidget* start; /*!< Container for the icon and left/right aligned title */
     GtkWidget* icon; /*!< The container for the icon */
     GtkWidget* title; /*!< The label containing the title itself */
     GtkWidget* attempt_count; /*!< The label containing the number of attempts. */
@@ -21,11 +21,25 @@ typedef struct LSTitle {
 } LSTitle;
 extern LSComponentOps ls_title_operations; // defined at the end of the file
 
+typedef enum LSTextAlignment {
+    LS_TEXT_ALIGN_LEFT_WITH_ICON,
+    LS_TEXT_ALIGN_LEFT,
+    LS_TEXT_ALIGN_CENTER,
+    LS_TEXT_ALIGN_RIGHT
+} LSTextAlignment;
+
+static const LSComponentOption text_alignment_options[] = {
+    { .key = LS_TEXT_ALIGN_LEFT_WITH_ICON, .label = "Left with Icon" }, // left with icon, centered without.
+    { .key = LS_TEXT_ALIGN_LEFT, .label = "Left" },
+    { .key = LS_TEXT_ALIGN_CENTER, .label = "Center" },
+    { 0 }
+};
+
 static const LSComponentSetting title_settings[] = {
     { .key = "show_game", .label = "Show Game Name", .val = { .type = LS_COMPONENT_SETTING_BOOLEAN, .bool_val = true } },
     { .key = "show_category", .label = "Show Category Name", .val = { .type = LS_COMPONENT_SETTING_BOOLEAN, .bool_val = true } },
     { .key = "single_line", .label = "Show Text on One Line", .val = { .type = LS_COMPONENT_SETTING_BOOLEAN, .bool_val = true } },
-    { .key = "text_alignment", .label = "Text Alignment", .val = { .type = LS_COMPONENT_SETTING_INTEGER, .int_val = 2 } },
+    { .key = "text_alignment", .label = "Text Alignment", .options = text_alignment_options, .val = { .type = LS_COMPONENT_SETTING_INTEGER, .int_val = LS_TEXT_ALIGN_CENTER } },
     { .key = "show_attempts", .label = "Show Attempts Count", .val = { .type = LS_COMPONENT_SETTING_BOOLEAN, .bool_val = true } },
     { .key = "show_finished", .label = "Show Finished Runs Count", .val = { .type = LS_COMPONENT_SETTING_BOOLEAN, .bool_val = true } },
     { .key = "show_icon", .label = "Show Game Icon", .val = { .type = LS_COMPONENT_SETTING_BOOLEAN, .bool_val = true } },
@@ -212,22 +226,24 @@ static void title_draw(LSComponent* self_, const ls_game* game, const ls_timer* 
         title_clear_game(self_);
     }
 
-    long alignment = ls_component_settings_get(self_, "text_alignment")->int_val;
-    bool align_left = alignment == 1 || (alignment == 0 && self->icon);
-    if (align_left && gtk_widget_get_parent(self->title) == self->header) {
+    LSTextAlignment alignment = ls_component_settings_get(self_, "text_alignment")->int_val;
+    bool align_left = alignment == LS_TEXT_ALIGN_LEFT || (alignment == LS_TEXT_ALIGN_LEFT_WITH_ICON && self->icon);
+    bool align_right = alignment == LS_TEXT_ALIGN_RIGHT;
+
+    if ((align_left || align_right) && gtk_widget_get_parent(self->title) == self->header) {
         g_object_ref(self->title);
         gtk_center_box_set_center_widget(GTK_CENTER_BOX(self->header), NULL);
         gtk_box_append(GTK_BOX(self->start), self->title);
         g_object_unref(self->title);
-    } else if (!align_left && gtk_widget_get_parent(self->title) == self->start) {
+    } else if (!align_left && !align_right && gtk_widget_get_parent(self->title) == self->start) {
         g_object_ref(self->title);
         gtk_box_remove(GTK_BOX(self->start), self->title);
         gtk_center_box_set_center_widget(GTK_CENTER_BOX(self->header), self->title);
         g_object_unref(self->title);
     }
 
-    gtk_label_set_xalign(GTK_LABEL(self->title), align_left ? 0.0f : 0.5f);
-    gtk_label_set_justify(GTK_LABEL(self->title), align_left ? GTK_JUSTIFY_LEFT : GTK_JUSTIFY_CENTER);
+    gtk_label_set_xalign(GTK_LABEL(self->title), align_left ? 0.0f : (align_right ? 1.0f : 0.5f));
+    gtk_label_set_justify(GTK_LABEL(self->title), align_left ? GTK_JUSTIFY_LEFT : (align_right ? GTK_JUSTIFY_RIGHT : GTK_JUSTIFY_CENTER));
 
     if (show_attempts && show_finished) {
         char attempt_str[64];

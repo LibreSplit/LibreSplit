@@ -149,6 +149,24 @@ static bool read_setting(const json_t* json, LSComponentSettingType type, LSComp
         *value = (LSComponentSettingValue) { .type = LS_COMPONENT_SETTING_BOOLEAN, .bool_val = json_is_true(json) };
     } else if (json_is_integer(json)) {
         *value = (LSComponentSettingValue) { .type = LS_COMPONENT_SETTING_INTEGER, .int_val = json_integer_value(json) };
+        if (type == LS_COMPONENT_SETTING_OPTIONS) {
+            if (value->int_val < 0) {
+                return false;
+            }
+
+            bool valid = false;
+            for (const LSComponentOption* option = defaults->options; option && option->label; ++option) {
+                if ((size_t)value->int_val == option->key) {
+                    value->type = LS_COMPONENT_SETTING_OPTIONS;
+                    valid = true;
+                    break;
+                }
+            }
+
+            if (!valid) {
+                return false;
+            }
+        }
     } else if (json_is_real(json)) {
         *value = (LSComponentSettingValue) { .type = LS_COMPONENT_SETTING_NUMBER, .num_val = json_real_value(json) };
     } else if (json_is_string(json)) {

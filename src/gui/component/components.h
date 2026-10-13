@@ -14,6 +14,7 @@ typedef struct LSComponentOps LSComponentOps; // forward declaration
 
 typedef enum LSComponentSettingType {
     LS_COMPONENT_SETTING_BOOLEAN,
+    LS_COMPONENT_SETTING_OPTIONS,
     LS_COMPONENT_SETTING_INTEGER,
     LS_COMPONENT_SETTING_NUMBER,
     LS_COMPONENT_SETTING_STRING,
@@ -23,6 +24,11 @@ typedef enum LSComponentSettingType {
 
 typedef struct LSComponentSettingValue LSComponentSettingValue;
 typedef struct LSComponentSetting LSComponentSetting;
+
+typedef struct LSComponentOption {
+    size_t key;
+    const char* label;
+} LSComponentOption;
 
 struct LSComponentSettingValue {
     LSComponentSettingType type;
@@ -40,7 +46,8 @@ struct LSComponentSettingValue {
 
 typedef struct LSComponentSetting {
     const char* key;
-    const char* label; // for defaults only
+    const char* label; /*!< for defaults only */
+    const LSComponentOption* options; /*!< for defaults only, NULL terminated array */
     LSComponentSettingValue val;
 } LSComponentSetting;
 
