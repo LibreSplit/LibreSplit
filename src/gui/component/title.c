@@ -12,6 +12,7 @@
 typedef struct LSTitle {
     LSComponent base; /*!< The base struct that is extended */
     GtkWidget* header; /*!< The container for the title */
+    GtkWidget* start; /*!< Container for the icon and left aligned title */
     GtkWidget* icon; /*!< The container for the icon */
     GtkWidget* title; /*!< The label containing the title itself */
     GtkWidget* attempt_count; /*!< The label containing the number of attempts. */
@@ -23,8 +24,10 @@ extern LSComponentOps ls_title_operations; // defined at the end of the file
 static const LSComponentSetting title_settings[] = {
     { .key = "show_game", .label = "Show Game Name", .val = { .type = LS_COMPONENT_SETTING_BOOLEAN, .bool_val = true } },
     { .key = "show_category", .label = "Show Category Name", .val = { .type = LS_COMPONENT_SETTING_BOOLEAN, .bool_val = true } },
-    { .key = "show_finished", .label = "Show Finished Runs Count", .val = { .type = LS_COMPONENT_SETTING_BOOLEAN, .bool_val = true } },
+    { .key = "single_line", .label = "Show Text on One Line", .val = { .type = LS_COMPONENT_SETTING_BOOLEAN, .bool_val = true } },
+    { .key = "text_alignment", .label = "Text Alignment", .val = { .type = LS_COMPONENT_SETTING_INTEGER, .int_val = 2 } },
     { .key = "show_attempts", .label = "Show Attempts Count", .val = { .type = LS_COMPONENT_SETTING_BOOLEAN, .bool_val = true } },
+    { .key = "show_finished", .label = "Show Finished Runs Count", .val = { .type = LS_COMPONENT_SETTING_BOOLEAN, .bool_val = true } },
     { .key = "show_icon", .label = "Show Game Icon", .val = { .type = LS_COMPONENT_SETTING_BOOLEAN, .bool_val = true } },
     { NULL }
 };
@@ -41,11 +44,15 @@ LSComponent* ls_component_title_new(void)
     if (!self) {
         return NULL;
     }
+
     self->base.ops = &ls_title_operations;
 
     self->header = gtk_center_box_new();
     gtk_center_box_set_shrink_center_last(GTK_CENTER_BOX(self->header), FALSE);
     add_class(self->header, "header");
+
+    self->start = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+    gtk_center_box_set_start_widget(GTK_CENTER_BOX(self->header), self->start);
 
     self->title = gtk_label_new(NULL);
     add_class(self->title, "title");
@@ -89,7 +96,7 @@ static void title_clear_game(LSComponent* self_)
     }
 
     if (self->icon) {
-        gtk_center_box_set_start_widget(GTK_CENTER_BOX(self->header), NULL);
+        gtk_box_remove(GTK_BOX(self->start), self->icon);
         self->icon = NULL;
     }
 }
@@ -133,6 +140,7 @@ static void title_show_game(LSComponent* self_, const ls_game* game,
     const char* category = game->category ? game->category : "";
     size_t game_len = strlen(game_name);
     size_t cat_len = strlen(category);
+    bool single_line = ls_component_settings_get(self_, "single_line")->bool_val;
     bool show_game = ls_component_settings_get(self_, "show_game")->bool_val;
     if (show_game) {
         title_len += game_len;
@@ -142,7 +150,7 @@ static void title_show_game(LSComponent* self_, const ls_game* game,
     if (show_category) {
         title_len += cat_len;
         if (show_game) {
-            // The space
+            // The space or new line
             title_len++;
         }
     }
@@ -152,7 +160,7 @@ static void title_show_game(LSComponent* self_, const ls_game* game,
         if (show_game) {
             snprintf(title, game_len + 1, "%s", game_name);
             if (show_category) {
-                snprintf(title + game_len, cat_len + 2, " %s", category);
+                snprintf(title + game_len, cat_len + 2, "%c%s", single_line ? ' ' : '\n', category);
             }
         } else {
             snprintf(title, cat_len + 1, "%s", category);
@@ -207,11 +215,28 @@ static void title_draw(LSComponent* self_, const ls_game* game, const ls_timer* 
             self->icon = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
             add_class(self->icon, "title-icon");
             gtk_widget_set_size_request(self->icon, 20, 20);
-            gtk_center_box_set_start_widget(GTK_CENTER_BOX(self->header), self->icon);
+            gtk_box_prepend(GTK_BOX(self->start), self->icon);
         }
     } else if (self->icon) {
         title_clear_game(self_);
     }
+
+    long alignment = ls_component_settings_get(self_, "text_alignment")->int_val;
+    bool align_left = alignment == 1 || (alignment == 0 && self->icon);
+    if (align_left && gtk_widget_get_parent(self->title) == self->header) {
+        g_object_ref(self->title);
+        gtk_center_box_set_center_widget(GTK_CENTER_BOX(self->header), NULL);
+        gtk_box_append(GTK_BOX(self->start), self->title);
+        g_object_unref(self->title);
+    } else if (!align_left && gtk_widget_get_parent(self->title) == self->start) {
+        g_object_ref(self->title);
+        gtk_box_remove(GTK_BOX(self->start), self->title);
+        gtk_center_box_set_center_widget(GTK_CENTER_BOX(self->header), self->title);
+        g_object_unref(self->title);
+    }
+
+    gtk_label_set_xalign(GTK_LABEL(self->title), align_left ? 0.0f : 0.5f);
+    gtk_label_set_justify(GTK_LABEL(self->title), align_left ? GTK_JUSTIFY_LEFT : GTK_JUSTIFY_CENTER);
 
     if (show_attempts && show_finished) {
         char attempt_str[64];
