@@ -40,6 +40,7 @@ struct LSComponentSettingValue {
 
 typedef struct LSComponentSetting {
     const char* key;
+    const char* label; // for defaults only
     LSComponentSettingValue val;
 } LSComponentSetting;
 

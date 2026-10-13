@@ -23,6 +23,7 @@ See the [GTK 4 CSS properties documentation](https://docs.gtk.org/gtk4/css-prope
 | `.libresplit-content`         | LibreSplit's timer content container - this is like the top level `<div>` element whose parent is `<body>` that all the components are a descendant of   |
 | `.header`                     | The header, containing title and attempt counters                                                                                                        |
 | `.title`                      | The title of the category (set in the splits json file)                                                                                                  |
+| `.title-icon`                 | Game Icon for the title                                                                                                                                  |
 | `.attempt-count`              | Counter for attempts in top right corner (#attempts_finished / attempts_total)                                                                           |
 | `.delta`                      | Difference between current time and PB, appears at -30s to PB. Should be overwritten by .behind, .losing, .behind.losing, .best-split, and .best-segment |
 | `.time`                       | All time fields from the main big timer, the splits times, and the times of personal best and sum of bests and other things in the footer                |

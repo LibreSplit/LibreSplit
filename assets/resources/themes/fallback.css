@@ -20,6 +20,12 @@
 	font-size: 11pt;
 }
 
+.title-icon {
+	min-width: 20px;
+	min-height: 20px;
+	margin-right: 4px;
+}
+
 .attempt-count {
 	color: #2196F3;
 	font-size: 9pt;

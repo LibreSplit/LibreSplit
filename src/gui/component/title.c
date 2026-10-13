@@ -12,11 +12,22 @@
 typedef struct LSTitle {
     LSComponent base; /*!< The base struct that is extended */
     GtkWidget* header; /*!< The container for the title */
+    GtkWidget* icon; /*!< The container for the icon */
     GtkWidget* title; /*!< The label containing the title itself */
     GtkWidget* attempt_count; /*!< The label containing the number of attempts. */
     GtkWidget* finished_count; /*<! The label containing the number of finished runs. */
+    GtkCssProvider* icon_css_provider; /*<! CSS provider for displaying the game icon. */
 } LSTitle;
 extern LSComponentOps ls_title_operations; // defined at the end of the file
+
+static const LSComponentSetting title_settings[] = {
+    { .key = "show_game", .label = "Show Game Name", .val = { .type = LS_COMPONENT_SETTING_BOOLEAN, .bool_val = true } },
+    { .key = "show_category", .label = "Show Category Name", .val = { .type = LS_COMPONENT_SETTING_BOOLEAN, .bool_val = true } },
+    { .key = "show_finished", .label = "Show Finished Runs Count", .val = { .type = LS_COMPONENT_SETTING_BOOLEAN, .bool_val = true } },
+    { .key = "show_attempts", .label = "Show Attempts Count", .val = { .type = LS_COMPONENT_SETTING_BOOLEAN, .bool_val = true } },
+    { .key = "show_icon", .label = "Show Game Icon", .val = { .type = LS_COMPONENT_SETTING_BOOLEAN, .bool_val = true } },
+    { NULL }
+};
 
 /**
  * Constructor
@@ -26,7 +37,7 @@ LSComponent* ls_component_title_new(void)
     LSTitle* self;
     GtkWidget* counts;
 
-    self = malloc(sizeof(LSTitle));
+    self = calloc(1, sizeof(LSTitle));
     if (!self) {
         return NULL;
     }
@@ -63,12 +74,34 @@ LSComponent* ls_component_title_new(void)
 }
 
 /**
+ * Clears the icon when the game changes.
+ *
+ * @param self_ The Title component itself.
+ */
+static void title_clear_game(LSComponent* self_)
+{
+    LSTitle* self = (LSTitle*)self_;
+    if (self->icon_css_provider) {
+        gtk_style_context_remove_provider_for_display(
+            gtk_widget_get_display(self->header),
+            GTK_STYLE_PROVIDER(self->icon_css_provider));
+        g_clear_object(&self->icon_css_provider);
+    }
+
+    if (self->icon) {
+        gtk_center_box_set_start_widget(GTK_CENTER_BOX(self->header), NULL);
+        self->icon = NULL;
+    }
+}
+
+/**
  * Destructor
  *
  * @param self The component to destroy
  */
 static void title_delete(LSComponent* self)
 {
+    title_clear_game(self);
     free(self);
 }
 
@@ -93,11 +126,46 @@ static GtkWidget* title_widget(LSComponent* self)
 static void title_show_game(LSComponent* self_, const ls_game* game,
     const ls_timer* timer)
 {
-    char str[64];
     LSTitle* self = (LSTitle*)self_;
-    gtk_label_set_text(GTK_LABEL(self->title), game->title);
-    sprintf(str, "#%d", game->attempt_count);
-    gtk_label_set_text(GTK_LABEL(self->attempt_count), str);
+
+    size_t title_len = 0;
+    size_t game_len = strlen(game->name);
+    size_t cat_len = strlen(game->category);
+    bool show_game = ls_component_settings_get(self_, "show_game")->bool_val;
+    if (show_game) {
+        title_len += game_len;
+    }
+
+    bool show_category = ls_component_settings_get(self_, "show_category")->bool_val;
+    if (show_category) {
+        title_len += cat_len;
+        if (show_game) {
+            // The space
+            title_len++;
+        }
+    }
+
+    if (title_len > 0) {
+        char* title = calloc(1, title_len + 1);
+        if (show_game) {
+            snprintf(title, game_len + 1, "%s", game->name);
+            if (show_category) {
+                snprintf(title + game_len, cat_len + 2, " %s", game->category);
+            }
+        } else {
+            snprintf(title, cat_len + 1, "%s", game->category);
+        }
+
+        gtk_label_set_text(GTK_LABEL(self->title), title);
+        free(title);
+    }
+
+    bool show_attempts = ls_component_settings_get(self_, "show_attempts")->bool_val;
+    if (show_attempts) {
+        char str[65];
+        sprintf(str, "#%d", game->attempt_count);
+        gtk_label_set_text(GTK_LABEL(self->attempt_count), str);
+    }
 }
 
 /**
@@ -109,21 +177,66 @@ static void title_show_game(LSComponent* self_, const ls_game* game,
  */
 static void title_draw(LSComponent* self_, const ls_game* game, const ls_timer* timer)
 {
-    char attempt_str[64];
-    char finished_str[64];
-    char combi_str[64];
     LSTitle* self = (LSTitle*)self_;
-    sprintf(attempt_str, "%d", game->attempt_count);
-    sprintf(finished_str, "#%d", game->finished_count);
-    strcpy(combi_str, finished_str);
-    strcat(combi_str, "/");
-    strcat(combi_str, attempt_str);
-    gtk_label_set_text(GTK_LABEL(self->attempt_count), combi_str);
+    bool show_attempts = ls_component_settings_get(self_, "show_attempts")->bool_val;
+    bool show_finished = ls_component_settings_get(self_, "show_finished")->bool_val;
+    bool show_icon = ls_component_settings_get(self_, "show_icon")->bool_val;
+    if (show_icon) {
+        if (game->icon_path && !self->icon) {
+            GString* icon_css_src = g_string_new(".title-icon { background-repeat: no-repeat; background-position: center; min-width: 20px; min-height: 20px; background-size: 20px; margin-right: 4px;");
+            char* icon = icon_uri(game->path, game->icon_path);
+            if (icon) {
+                g_string_append(icon_css_src, " background-image: url(");
+                append_quoted_uri(icon_css_src, icon);
+                g_string_append(icon_css_src, ");");
+                g_free(icon);
+            }
+
+            g_string_append(icon_css_src, " }");
+
+            self->icon_css_provider = gtk_css_provider_new();
+            gtk_css_provider_load_from_string(self->icon_css_provider, icon_css_src->str);
+            gtk_style_context_add_provider_for_display(
+                gtk_widget_get_display(self->header),
+                GTK_STYLE_PROVIDER(self->icon_css_provider),
+                GTK_STYLE_PROVIDER_PRIORITY_USER);
+            g_string_free(icon_css_src, TRUE);
+
+            self->icon = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+            add_class(self->icon, "title-icon");
+            gtk_widget_set_size_request(self->icon, 20, 20);
+            gtk_center_box_set_start_widget(GTK_CENTER_BOX(self->header), self->icon);
+        }
+    } else if (self->icon) {
+        title_clear_game(self_);
+    }
+
+    if (show_attempts && show_finished) {
+        char attempt_str[64];
+        char finished_str[65];
+        char combi_str[130];
+        sprintf(attempt_str, "%d", game->attempt_count);
+        sprintf(finished_str, "#%d", game->finished_count);
+        strcpy(combi_str, finished_str);
+        strcat(combi_str, "/");
+        strcat(combi_str, attempt_str);
+        gtk_label_set_text(GTK_LABEL(self->attempt_count), combi_str);
+    } else if (show_attempts) {
+        char attempt_str[65];
+        sprintf(attempt_str, "#%d", game->attempt_count);
+        gtk_label_set_text(GTK_LABEL(self->attempt_count), attempt_str);
+    } else if (show_finished) {
+        char finished_str[65];
+        sprintf(finished_str, "#%d", game->finished_count);
+        gtk_label_set_text(GTK_LABEL(self->attempt_count), finished_str);
+    }
 }
 
 LSComponentOps ls_title_operations = {
+    .settings = title_settings,
     .delete = title_delete,
     .widget = title_widget,
     .show_game = title_show_game,
+    .clear_game = title_clear_game,
     .draw = title_draw
 };
