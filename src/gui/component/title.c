@@ -129,8 +129,10 @@ static void title_show_game(LSComponent* self_, const ls_game* game,
     LSTitle* self = (LSTitle*)self_;
 
     size_t title_len = 0;
-    size_t game_len = strlen(game->name);
-    size_t cat_len = strlen(game->category);
+    const char* game_name = game->name ? game->name : "";
+    const char* category = game->category ? game->category : "";
+    size_t game_len = strlen(game_name);
+    size_t cat_len = strlen(category);
     bool show_game = ls_component_settings_get(self_, "show_game")->bool_val;
     if (show_game) {
         title_len += game_len;
@@ -148,12 +150,12 @@ static void title_show_game(LSComponent* self_, const ls_game* game,
     if (title_len > 0) {
         char* title = calloc(1, title_len + 1);
         if (show_game) {
-            snprintf(title, game_len + 1, "%s", game->name);
+            snprintf(title, game_len + 1, "%s", game_name);
             if (show_category) {
-                snprintf(title + game_len, cat_len + 2, " %s", game->category);
+                snprintf(title + game_len, cat_len + 2, " %s", category);
             }
         } else {
-            snprintf(title, cat_len + 1, "%s", game->category);
+            snprintf(title, cat_len + 1, "%s", category);
         }
 
         gtk_label_set_text(GTK_LABEL(self->title), title);
