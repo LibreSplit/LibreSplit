@@ -32,6 +32,55 @@ typedef struct LSSplits {
 } LSSplits;
 extern LSComponentOps ls_splits_operations;
 
+typedef enum LSTimeAccuracy {
+    LS_TIME_ACCURACY_SECONDS,
+    LS_TIME_ACCURACY_TENTHS,
+    LS_TIME_ACCURACY_HUNDREDTHS,
+    LS_TIME_ACCURACY_MILLISECONDS
+} LSTimeAccuracy;
+
+static const LSComponentOption time_accuracy_options[] = {
+    { .key = LS_TIME_ACCURACY_SECONDS, .label = "Seconds" },
+    { .key = LS_TIME_ACCURACY_TENTHS, .label = "Tenths" },
+    { .key = LS_TIME_ACCURACY_HUNDREDTHS, .label = "Hundredths" },
+    { .key = LS_TIME_ACCURACY_MILLISECONDS, .label = "Milliseconds" },
+    { 0 }
+};
+
+static const LSComponentSetting splits_settings[] = {
+    { .key = "always_show_last_split", .label = "Always Show Last Split", .val = { .type = LS_COMPONENT_SETTING_BOOLEAN, .bool_val = true } },
+    { .key = "split_time_accuracy", .label = "Split Time Accuracy", .options = time_accuracy_options, .val = { .type = LS_COMPONENT_SETTING_OPTIONS, .int_val = LS_TIME_ACCURACY_HUNDREDTHS } },
+    { .key = "segment_time_accuracy", .label = "Segment Time Accuracy", .options = time_accuracy_options, .val = { .type = LS_COMPONENT_SETTING_OPTIONS, .int_val = LS_TIME_ACCURACY_HUNDREDTHS } },
+    { .key = "delta_time_accuracy", .label = "Delta Time Accuracy", .options = time_accuracy_options, .val = { .type = LS_COMPONENT_SETTING_OPTIONS, .int_val = LS_TIME_ACCURACY_HUNDREDTHS } },
+    { NULL }
+};
+
+static void splits_time_string(char* string, long long time, int accuracy, bool delta)
+{
+    if (delta) {
+        ls_delta_string(string, time);
+    } else {
+        ls_split_string(string, time, 0);
+    }
+
+    if (time == LLONG_MAX) {
+        return;
+    }
+
+    char* fraction = strchr(string, '.');
+    if (!fraction) {
+        fraction = string + strlen(string);
+    }
+
+    *fraction = '\0';
+
+    if (accuracy != LS_TIME_ACCURACY_SECONDS && !(delta && (time <= -60000000LL || time >= 60000000LL))) {
+        char subseconds[7];
+        sprintf(subseconds, "%06lld", llabs(time % 1000000LL));
+        sprintf(fraction, ".%.*s", accuracy, subseconds);
+    }
+}
+
 void free_all(LSSplits* self_)
 {
     LSSplits* self = (LSSplits*)self_;
@@ -136,7 +185,21 @@ static void scroll_to_bottom(GtkAdjustment* adjustment, gpointer data)
 static void splits_trailer(LSComponent* self_)
 {
     LSSplits* self = (LSSplits*)self_;
+    bool always_show_last_split = ls_component_settings_get(self_, "always_show_last_split")->bool_val;
     int last = self->split_count - 1;
+    if (!always_show_last_split) {
+        g_clear_signal_handler(&self->scroll_changed_handler, self->split_adjust);
+        if (gtk_widget_get_parent(self->split_rows[last]) == self->split_last) {
+            g_object_ref(self->split_rows[last]);
+            gtk_box_remove(GTK_BOX(self->split_last), self->split_rows[last]);
+            gtk_box_append(GTK_BOX(self->splits), self->split_rows[last]);
+            g_object_unref(self->split_rows[last]);
+        }
+
+        gtk_widget_set_visible(self->split_last, FALSE);
+        return;
+    }
+
     double curr_scroll = gtk_adjustment_get_value(self->split_adjust);
     double lower = gtk_adjustment_get_lower(self->split_adjust);
     double upper = gtk_adjustment_get_upper(self->split_adjust);
@@ -169,6 +232,7 @@ static void splits_trailer(LSComponent* self_)
             gtk_widget_set_visible(self->split_last, FALSE);
         }
     }
+
     g_object_unref(self->split_rows[last]);
 }
 
@@ -184,6 +248,8 @@ static void splits_show_game(LSComponent* self_, const ls_game* game,
 {
     LSSplits* self = (LSSplits*)self_;
     char str[256];
+
+    int split_time_accuracy = ls_component_settings_get(self_, "split_time_accuracy")->int_val;
     self->split_count = game->split_count;
 
     self->split_rows = calloc(self->split_count, sizeof(GtkWidget*));
@@ -277,7 +343,7 @@ static void splits_show_game(LSComponent* self_, const ls_game* game,
             self->split_times[i]);
 
         if (ls_time_get_by_method(game->split_times[i], game->comparison_method)) {
-            ls_split_string(str, ls_time_get_by_method(game->split_times[i], game->comparison_method), 0);
+            splits_time_string(str, ls_time_get_by_method(game->split_times[i], game->comparison_method), split_time_accuracy, false);
             gtk_label_set_text(GTK_LABEL(self->split_times[i]), str);
         }
     }
@@ -345,7 +411,10 @@ static void splits_clear_game(LSComponent* self_)
 static void splits_draw(LSComponent* self_, const ls_game* game, const ls_timer* timer)
 {
     LSSplits* self = (LSSplits*)self_;
+    int split_time_accuracy = ls_component_settings_get(self_, "split_time_accuracy")->int_val;
+    int delta_time_accuracy = ls_component_settings_get(self_, "delta_time_accuracy")->int_val;
     char str[256];
+
     for (unsigned int i = 0; i < self->split_count; ++i) {
         if (i == timer->curr_split
             && timer->started) {
@@ -364,12 +433,12 @@ static void splits_draw(LSComponent* self_, const ls_game* game, const ls_timer*
             add_class(self->split_times[i], "done");
             if (ls_time_get_by_method(timer->split_times[i], game->comparison_method)) {
                 add_class(self->split_times[i], "time");
-                ls_split_string(str, ls_time_get_by_method(timer->split_times[i], game->comparison_method), 0);
+                splits_time_string(str, ls_time_get_by_method(timer->split_times[i], game->comparison_method), split_time_accuracy, false);
                 gtk_label_set_text(GTK_LABEL(self->split_times[i]), str);
             }
         } else if (ls_time_get_by_method(game->split_times[i], game->comparison_method)) {
             add_class(self->split_times[i], "time");
-            ls_split_string(str, ls_time_get_by_method(game->split_times[i], game->comparison_method), 0);
+            splits_time_string(str, ls_time_get_by_method(game->split_times[i], game->comparison_method), split_time_accuracy, false);
             gtk_label_set_text(GTK_LABEL(self->split_times[i]), str);
         }
 
@@ -402,7 +471,7 @@ static void splits_draw(LSComponent* self_, const ls_game* game, const ls_timer*
             }
             if (ls_time_get_by_method(timer->split_deltas[i], game->comparison_method)) {
                 add_class(self->split_deltas[i], "delta");
-                ls_delta_string(str, ls_time_get_by_method(timer->split_deltas[i], game->comparison_method));
+                splits_time_string(str, ls_time_get_by_method(timer->split_deltas[i], game->comparison_method), delta_time_accuracy, true);
                 gtk_label_set_text(GTK_LABEL(self->split_deltas[i]), str);
             }
         }
@@ -514,6 +583,7 @@ void splits_unsplit(LSComponent* self, const ls_timer* timer)
 }
 
 LSComponentOps ls_splits_operations = {
+    .settings = splits_settings,
     .delete = splits_delete,
     .widget = splits_widget,
     .show_game = splits_show_game,
