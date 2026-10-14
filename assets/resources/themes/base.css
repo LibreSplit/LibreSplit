@@ -1,0 +1,25 @@
+.window.main-window {
+	all: unset;
+}
+
+.window.main-window .libresplit-content,
+.window.main-window .libresplit-content * {
+	all: unset;
+}
+
+.window.main-window .libresplit-content {
+	margin-top: 8px;
+	margin-bottom: 8px;
+}
+
+.window.main-window .libresplit-content .layout-component {
+	margin-left: 8px;
+	margin-right: 8px;
+}
+
+.window.main-window .split-time + .split-time,
+.window.main-window .split-time + .split-delta,
+.window.main-window .split-delta + .split-time,
+.window.main-window .split-delta + .split-delta {
+	margin-left: 16px;
+}

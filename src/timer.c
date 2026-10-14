@@ -194,6 +194,89 @@ inline bool is_time_valid(long long time)
 }
 
 /**
+ * @brief Returns pace flags for a timing method.
+ *
+ * @param timer The current timer.
+ * @param index The segment index to get pace flag for.
+ * @param method The comparison method to use.
+ * @return int The pace flags for the specified segment.
+ */
+int ls_timer_get_split_pace(const ls_timer* timer, unsigned int index, ls_time_method method)
+{
+    if (index >= timer->game->split_count
+        || !is_time_valid(ls_time_get_by_method(timer->split_times[index], method))
+        || !is_time_valid(ls_time_get_by_method(timer->game->split_times[index], method))) {
+        return 0;
+    }
+
+    long long delta = ls_time_get_by_method(timer->split_deltas[index], method);
+    long long previous_delta = 0;
+    for (unsigned int i = index; i > 0; --i) {
+        if (is_time_valid(ls_time_get_by_method(timer->split_times[i - 1], method))
+            && is_time_valid(ls_time_get_by_method(timer->game->split_times[i - 1], method))) {
+            previous_delta = ls_time_get_by_method(timer->split_deltas[i - 1], method);
+            break;
+        }
+    }
+
+    return (delta > 0 ? LS_INFO_BEHIND_TIME : 0)
+        | (delta > previous_delta ? LS_INFO_LOSING_TIME : 0);
+}
+
+/**
+ * @brief Classifies the run independently of game-time loading.
+ *
+ * @param timer The current game timer.
+ * @param method The comparison method to use.
+ * @return ls_timer_status The current run status.
+ */
+ls_timer_status ls_timer_get_status(const ls_timer* timer, ls_time_method method)
+{
+    bool finished = timer->game->split_count && timer->curr_split == timer->game->split_count;
+    long long time = ls_time_get_by_method(ls_timer_get_time(timer, false), method);
+    if ((!timer->started && !finished) || time < 0) {
+        return LS_TIMER_IDLE;
+    }
+
+    if (finished) {
+        long long comparison = ls_time_get_by_method(timer->comparison_time, method);
+        return !is_time_valid(comparison) || time < comparison ? LS_TIMER_BEST : LS_TIMER_BEHIND_LOSING;
+    }
+
+    if (!timer->running) {
+        return LS_TIMER_PAUSED;
+    }
+
+    int pace = ls_timer_get_split_pace(timer, timer->curr_split, method);
+    if (pace & LS_INFO_BEHIND_TIME) {
+        return pace & LS_INFO_LOSING_TIME ? LS_TIMER_BEHIND_LOSING : LS_TIMER_BEHIND_GAINING;
+    }
+
+    return pace & LS_INFO_LOSING_TIME ? LS_TIMER_AHEAD_LOSING : LS_TIMER_AHEAD_GAINING;
+}
+
+/** Returns the current (or final) segment, combining skipped splits. */
+long long ls_timer_get_segment_time(const ls_timer* timer, ls_time_method method)
+{
+    long long time = ls_time_get_by_method(ls_timer_get_time(timer, false), method);
+    unsigned int index = timer->curr_split;
+    if (index && index == timer->game->split_count) {
+        --index;
+    }
+
+    for (unsigned int i = index; i > 0; --i) {
+        long long previous = ls_time_get_by_method(timer->split_times[i - 1], method);
+        bool zero_game_time = method == LS_GAME_TIME && previous == 0
+            && is_time_valid(timer->split_times[i - 1].real_time);
+        if (is_time_valid(previous) || zero_game_time) {
+            return time - previous;
+        }
+    }
+
+    return time;
+}
+
+/**
  * Calculates the sum of best time for the specified timer, using the comparison method specified.
  *
  * @param timer The current timer object
@@ -1318,6 +1401,9 @@ static void reset_timer(ls_timer* timer)
     timer->running = 0;
     atomic_store(&run_running, false);
     timer->curr_split = 0;
+    timer->comparison_time = timer->game->split_count
+        ? timer->game->split_times[timer->game->split_count - 1]
+        : (ls_time) { 0 };
     timer->realTime = -timer->game->start_delay; // Start delay only applies to real time only
     timer->gameTime = 0;
     timer->usingGameTime = false;
@@ -1440,13 +1526,9 @@ void ls_timer_step(ls_timer* timer)
             // calc delta and check it's not an error of LLONG_MAX
             timer->split_deltas[timer->curr_split] = ls_time_subtract(timer->split_times[timer->curr_split], timer->game->split_times[timer->curr_split]);
 
-            // check for behind time
-            long long split_delta = ls_time_get_by_method(timer->split_deltas[timer->curr_split], timer->game->comparison_method);
-            if (split_delta > 0) {
-                timer->split_info[timer->curr_split] |= LS_INFO_BEHIND_TIME;
-            } else {
-                timer->split_info[timer->curr_split] &= ~LS_INFO_BEHIND_TIME;
-            }
+            int pace_mask = LS_INFO_BEHIND_TIME | LS_INFO_LOSING_TIME;
+            timer->split_info[timer->curr_split] = (timer->split_info[timer->curr_split] & ~pace_mask)
+                | ls_timer_get_split_pace(timer, timer->curr_split, timer->game->comparison_method);
             if (!timer->curr_split || timer->split_times[timer->curr_split - 1].real_time) {
                 // calc segment time and delta
                 timer->segment_times[timer->curr_split] = timer->split_times[timer->curr_split];
@@ -1455,19 +1537,6 @@ void ls_timer_step(ls_timer* timer)
                 }
                 // For previous segment in footer
                 timer->segment_deltas[timer->curr_split] = ls_time_subtract(timer->segment_times[timer->curr_split], timer->game->segment_times[timer->curr_split]);
-            }
-            // check for losing time
-            if (timer->curr_split) {
-                long long last_split_delta = ls_time_get_by_method(timer->split_deltas[timer->curr_split - 1], timer->game->comparison_method);
-                if (split_delta > last_split_delta) {
-                    timer->split_info[timer->curr_split] |= LS_INFO_LOSING_TIME;
-                } else {
-                    timer->split_info[timer->curr_split] &= ~LS_INFO_LOSING_TIME;
-                }
-            } else if (split_delta > 0) {
-                timer->split_info[timer->curr_split] |= LS_INFO_LOSING_TIME;
-            } else {
-                timer->split_info[timer->curr_split] &= ~LS_INFO_LOSING_TIME;
             }
         }
     }
@@ -1682,6 +1751,9 @@ int ls_timer_unsplit(ls_timer* timer)
     }
 
     LOG_DEBUG("Undoing a split...");
+    if (timer->curr_split == timer->game->split_count) {
+        timer->comparison_time = timer->game->split_times[timer->curr_split - 1];
+    }
     unsigned int curr = --timer->curr_split;
     for (unsigned int i = curr; i < timer->game->split_count; ++i) {
         timer->split_times[i] = timer->game->split_times[i];

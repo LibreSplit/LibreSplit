@@ -607,8 +607,6 @@ static void ls_app_window_init(LSAppWindow* win)
     LOG_DEBUG("Creating the main window...");
     win->container = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     add_class(win->container, "libresplit-content");
-    gtk_widget_set_margin_top(win->container, WINDOW_PAD);
-    gtk_widget_set_margin_bottom(win->container, WINDOW_PAD);
     gtk_widget_set_vexpand(win->container, TRUE);
     gtk_window_set_child(GTK_WINDOW(win), win->container);
 
@@ -635,8 +633,7 @@ static void ls_app_window_init(LSAppWindow* win)
     LOG_DEBUG("Creating window footer...");
     win->footer = gtk_grid_new();
     add_class(win->footer, "footer");
-    gtk_widget_set_margin_start(win->footer, WINDOW_PAD);
-    gtk_widget_set_margin_end(win->footer, WINDOW_PAD);
+    add_class(win->footer, "layout-component");
     gtk_box_append(GTK_BOX(win->box), win->footer);
 
     LOG_DEBUG("Setting up timers for updating and drawing the window...");

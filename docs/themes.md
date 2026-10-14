@@ -21,6 +21,7 @@ See the [GTK 4 CSS properties documentation](https://docs.gtk.org/gtk4/css-prope
 | `window`                      | Any window of LibreSplit (editing this class might affect other LibreSplit windows)                                                                      |
 | `.window.main-window`         | LibreSplit's main timer window - think of this like the main `<body>` of a standard webpage                                                              |
 | `.libresplit-content`         | LibreSplit's timer content container - this is like the top level `<div>` element whose parent is `<body>` that all the components are a descendant of   |
+| `.layout-component`          | A top-level layout component; use its margins to control spacing around the component.                                                                    |
 | `.header`                     | The header, containing title and attempt counters                                                                                                        |
 | `.title`                      | The title of the category (set in the splits json file)                                                                                                  |
 | `.title-icon`                 | Game Icon for the title                                                                                                                                  |
@@ -33,6 +34,7 @@ See the [GTK 4 CSS properties documentation](https://docs.gtk.org/gtk4/css-prope
 | `.timer-seconds`              | Large main timer seconds                                                                                                                                 |
 | `.timer-millis`               | Large main timer fractional seconds                                                                                                                      |
 | `.delay`                      | Timer not running/in negative time                                                                                                                       |
+| `.paused`                     | An unfinished attempt that has been stopped (excludes game-time loading)                                                                                 |
 | `.splits`                     | Container of the splits                                                                                                                                  |
 | `.split`                      | The splits themselves                                                                                                                                    |
 | `.current-split`              | The split you're currently on                                                                                                                            |

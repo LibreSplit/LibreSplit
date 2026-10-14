@@ -5,7 +5,7 @@
 #include "clock.h"
 #include <limits.h>
 
-static const LSComponentOption timing_method_options[] = {
+const LSComponentOption ls_timer_timing_method_options[] = {
     { .key = LS_COMPONENT_COMPARISON_DEFAULT, .label = "Default" },
     { .key = LS_COMPONENT_COMPARISON_REAL_TIME, .label = "Real Time" },
     { .key = LS_COMPONENT_COMPARISON_GAME_TIME, .label = "Game Time" },
@@ -22,7 +22,7 @@ const LSComponentOption ls_timer_digits_format_options[] = {
     { 0 }
 };
 
-static const LSComponentOption time_accuracy_options[] = {
+const LSComponentOption ls_timer_accuracy_options[] = {
     { .key = LS_TIME_ACCURACY_DEFAULT, .label = "Default" },
     { .key = LS_TIME_ACCURACY_SECONDS, .label = "Seconds" },
     { .key = LS_TIME_ACCURACY_TENTHS, .label = "Tenths" },
@@ -32,12 +32,59 @@ static const LSComponentOption time_accuracy_options[] = {
 };
 
 static const LSComponentSetting timer_settings[] = {
-    { .key = "timing_method", .label = "Timing Method", .options = timing_method_options, .val = { .type = LS_COMPONENT_SETTING_OPTIONS, .int_val = LS_COMPONENT_COMPARISON_DEFAULT } },
+    { .key = "timing_method", .label = "Timing Method", .options = ls_timer_timing_method_options, .val = { .type = LS_COMPONENT_SETTING_OPTIONS, .int_val = LS_COMPONENT_COMPARISON_DEFAULT } },
     { .key = "segment_timer", .label = "Segment Timer", .val = { .type = LS_COMPONENT_SETTING_BOOLEAN, .bool_val = false } },
     { .key = "digits_format", .label = "Digits Format", .options = ls_timer_digits_format_options, .val = { .type = LS_COMPONENT_SETTING_OPTIONS, .int_val = LS_TIMER_DIGITS_SINGLE_SECONDS } },
-    { .key = "accuracy", .label = "Accuracy", .options = time_accuracy_options, .val = { .type = LS_COMPONENT_SETTING_OPTIONS, .int_val = LS_TIME_ACCURACY_DEFAULT } },
+    { .key = "accuracy", .label = "Accuracy", .options = ls_timer_accuracy_options, .val = { .type = LS_COMPONENT_SETTING_OPTIONS, .int_val = LS_TIME_ACCURACY_DEFAULT } },
     { NULL }
 };
+
+ls_time_method ls_component_timer_method(LSComponent* component, ls_time_method default_method)
+{
+    switch (ls_component_settings_get(component, "timing_method")->int_val) {
+        case LS_COMPONENT_COMPARISON_DEFAULT:
+            return default_method;
+        case LS_COMPONENT_COMPARISON_REAL_TIME:
+            return LS_REAL_TIME;
+        case LS_COMPONENT_COMPARISON_GAME_TIME:
+            return LS_GAME_TIME;
+    }
+
+    return default_method;
+}
+
+void ls_timer_set_style(GtkWidget* widget, ls_timer_status status)
+{
+    remove_class(widget, "delay");
+    remove_class(widget, "paused");
+    remove_class(widget, "behind");
+    remove_class(widget, "losing");
+    remove_class(widget, "best-split");
+
+    switch (status) {
+        case LS_TIMER_IDLE:
+            add_class(widget, "delay");
+            break;
+        case LS_TIMER_PAUSED:
+            add_class(widget, "paused");
+            break;
+        case LS_TIMER_AHEAD_GAINING:
+            break;
+        case LS_TIMER_AHEAD_LOSING:
+            add_class(widget, "losing");
+            break;
+        case LS_TIMER_BEHIND_GAINING:
+            add_class(widget, "behind");
+            break;
+        case LS_TIMER_BEHIND_LOSING:
+            add_class(widget, "behind");
+            add_class(widget, "losing");
+            break;
+        case LS_TIMER_BEST:
+            add_class(widget, "best-split");
+            break;
+    }
+}
 
 void ls_timer_string(char* string, char* fraction, long long time, LSTimerDigitsFormat digits_format, LSTimeAccuracy accuracy)
 {
@@ -107,14 +154,10 @@ LSComponent* ls_component_timer_new(void)
     gtk_widget_set_valign(self->time_seconds, GTK_ALIGN_BASELINE_FILL);
     gtk_box_append(GTK_BOX(self->time), self->time_seconds);
 
-    spacer = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-    gtk_widget_set_valign(spacer, GTK_ALIGN_END);
-    gtk_box_append(GTK_BOX(self->time), spacer);
-
     self->time_millis = gtk_label_new(NULL);
     add_class(self->time_millis, "timer-millis");
     gtk_widget_set_valign(self->time_millis, GTK_ALIGN_BASELINE_FILL);
-    gtk_box_append(GTK_BOX(spacer), self->time_millis);
+    gtk_box_append(GTK_BOX(self->time), self->time_millis);
 
     return (LSComponent*)self;
 }
@@ -151,8 +194,7 @@ static void timer_clear_game(LSComponent* self_)
     LSTimer* self = (LSTimer*)self_;
     gtk_label_set_text(GTK_LABEL(self->time_seconds), "");
     gtk_label_set_text(GTK_LABEL(self->time_millis), "");
-    remove_class(self->time, "behind");
-    remove_class(self->time, "losing");
+    ls_timer_set_style(self->time, LS_TIMER_IDLE);
 }
 
 /**
@@ -166,62 +208,13 @@ static void timer_draw(LSComponent* self_, const ls_game* game, const ls_timer* 
 {
     LSTimer* self = (LSTimer*)self_;
     char str[256], millis[256];
-    LSComponentComparisonMethod timing_method = ls_component_settings_get(self_, "timing_method")->int_val;
     bool segment_timer = ls_component_settings_get(self_, "segment_timer")->bool_val;
     LSTimerDigitsFormat digits_format = ls_component_settings_get(self_, "digits_format")->int_val;
     LSTimeAccuracy accuracy = ls_component_settings_get(self_, "accuracy")->int_val;
-    ls_time_method method = game->comparison_method;
-    switch (timing_method) {
-        case LS_COMPONENT_COMPARISON_DEFAULT:
-            break;
-        case LS_COMPONENT_COMPARISON_REAL_TIME:
-            method = LS_REAL_TIME;
-            break;
-        case LS_COMPONENT_COMPARISON_GAME_TIME:
-            method = LS_GAME_TIME;
-            break;
-    }
-
-    unsigned int curr = timer->curr_split;
-    if (curr && curr == game->split_count) {
-        --curr;
-    }
-
-    long long time = ls_time_get_by_method(ls_timer_get_time(timer, false), method);
-    if (segment_timer && curr) {
-        long long previous = ls_time_get_by_method(timer->split_times[curr - 1], method);
-        bool zero_game_time = method == LS_GAME_TIME && previous == 0 && is_time_valid(timer->split_times[curr - 1].real_time);
-        if (!zero_game_time) {
-            time = ls_segment_value(time, previous, false);
-        }
-    }
-
-    remove_class(self->time, "delay");
-    remove_class(self->time, "behind");
-    remove_class(self->time, "losing");
-    remove_class(self->time, "best-split");
-
-    if (curr && curr == game->split_count) {
-        curr = game->split_count - 1;
-    }
-    if (ls_time_get_by_method(ls_timer_get_time(timer, false), game->comparison_method) <= 0) {
-        add_class(self->time, "delay");
-    } else {
-        if (timer->curr_split == game->split_count
-            && timer->split_info[curr]
-                & LS_INFO_BEST_SPLIT) {
-            add_class(self->time, "best-split");
-        } else {
-            if (timer->split_info[curr]
-                & LS_INFO_BEHIND_TIME) {
-                add_class(self->time, "behind");
-            }
-            if (timer->split_info[curr]
-                & LS_INFO_LOSING_TIME) {
-                add_class(self->time, "losing");
-            }
-        }
-    }
+    ls_time_method method = ls_component_timer_method(self_, game->comparison_method);
+    long long time = segment_timer ? ls_timer_get_segment_time(timer, method)
+                                   : ls_time_get_by_method(ls_timer_get_time(timer, false), method);
+    ls_timer_set_style(self->time, ls_timer_get_status(timer, method));
     ls_timer_string(str, millis, time, digits_format, accuracy);
     gtk_label_set_text(GTK_LABEL(self->time_seconds), str);
     gtk_label_set_text(GTK_LABEL(self->time_millis), millis);

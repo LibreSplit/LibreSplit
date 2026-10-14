@@ -140,8 +140,7 @@ static void init_layout(LSAppWindow* win, json_t* layout)
             ls_component_settings_load(component, json_object_get(entry, "settings"));
             GtkWidget* widget = component->ops->widget(component);
             if (widget) {
-                gtk_widget_set_margin_start(widget, WINDOW_PAD);
-                gtk_widget_set_margin_end(widget, WINDOW_PAD);
+                add_class(widget, "layout-component");
                 gtk_box_append(GTK_BOX(win->box), widget);
             }
 

@@ -84,14 +84,15 @@ typedef struct ls_game {
 typedef struct ls_timer {
     bool usingGameTime; /*!< Splitter is using game time instead of real time. Only to be used internally */
     long long gameTime; /*!< The current game time only usable in LASR. Only to be used internally */
-    long long realTime; /*!< Real time. Starts when run start and pauses while loading. Only to be used internally */
+    long long realTime; /*!< Elapsed real time, including loading while the attempt is running */
     int loading; /*!< Currently loading? used for knowing if loadingTime should tick or not. Only to be used internally */
     long long loadingTime; /*!< Time spent loading, used to subtract from real time when trying to get Load-Removed Time. Only to be used internally */
-    int started; /*!< Wether the run has started, either by LASR or manually, keeps being set to true after run finished */
-    bool running; /*!< Whether the runner is currently running. If this is false and started is true then the run finished. Mainly used to check if some actions are valid to perform (splits, pause, etc) */
+    int started; /*!< An attempt has started and has not finished or been reset */
+    bool running; /*!< Whether elapsed time advances; false for stopped, idle, and finished attempts */
     unsigned int curr_split; /*!< Index of the current split, 0 for first split */
     ls_time sum_of_bests; /*!< Sum of best segments */
     ls_time world_record; /*!< World record time */
+    ls_time comparison_time; /*!< Final PB times at the start of this attempt */
     ls_time* split_times;
     ls_time* split_deltas;
     ls_time* segment_times;
@@ -106,9 +107,25 @@ typedef struct ls_timer {
     char start_time[64];
 } ls_timer;
 
+typedef enum ls_timer_status {
+    LS_TIMER_IDLE,
+    LS_TIMER_PAUSED,
+    LS_TIMER_AHEAD_GAINING,
+    LS_TIMER_AHEAD_LOSING,
+    LS_TIMER_BEHIND_GAINING,
+    LS_TIMER_BEHIND_LOSING,
+    LS_TIMER_BEST
+} ls_timer_status;
+
 extern atomic_bool run_started;
 
 ls_time ls_timer_get_time(const ls_timer* timer, bool load_removed);
+
+int ls_timer_get_split_pace(const ls_timer* timer, unsigned int index, ls_time_method method);
+
+ls_timer_status ls_timer_get_status(const ls_timer* timer, ls_time_method method);
+
+long long ls_timer_get_segment_time(const ls_timer* timer, ls_time_method method);
 
 long long ls_time_value(const char* string);
 
