@@ -414,7 +414,7 @@ static void splits_show_game(LSComponent* self_, const ls_game* game,
                 add_class(label, "split-segment-time");
                 gtk_widget_set_halign(label, GTK_ALIGN_END);
                 long long time = ls_splits_segment_time(game->split_times, game->segment_times, i, game->comparison_method);
-                if (time) {
+                if (time != LLONG_MAX) {
                     splits_time_string(str, time, segment_time_accuracy, false);
                     gtk_label_set_text(GTK_LABEL(label), str);
                 }
@@ -520,7 +520,7 @@ static void splits_draw(LSComponent* self_, const ls_game* game, const ls_timer*
                     splits_time_string(str, ls_time_get_by_method(game->split_times[i], game->comparison_method), split_time_accuracy, false);
                     gtk_label_set_text(GTK_LABEL(label), str);
                 }
-            } else if (self->columns[column].type == LS_SPLITS_COLUMN_SPLIT_TIME) {
+            } else if (self->columns[column].type == LS_SPLITS_COLUMN_DELTA) {
                 remove_class(label, "best-split");
                 remove_class(label, "best-segment");
                 remove_class(label, "behind");
@@ -562,14 +562,14 @@ static void splits_draw(LSComponent* self_, const ls_game* game, const ls_timer*
                 if (i < timer->curr_split) {
                     add_class(label, "done");
                     long long time = ls_splits_segment_time(timer->split_times, timer->segment_times, i, game->comparison_method);
-                    if (time) {
+                    if (time != LLONG_MAX) {
                         add_class(label, "time");
                         splits_time_string(str, time, segment_time_accuracy, false);
                         gtk_label_set_text(GTK_LABEL(label), str);
                     }
                 } else {
                     long long time = ls_splits_segment_time(game->split_times, game->segment_times, i, game->comparison_method);
-                    if (time) {
+                    if (time != LLONG_MAX) {
                         add_class(label, "time");
                         splits_time_string(str, time, segment_time_accuracy, false);
                         gtk_label_set_text(GTK_LABEL(label), str);
