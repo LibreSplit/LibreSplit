@@ -171,7 +171,7 @@ static void detailed_timer_draw(LSComponent* self_, const ls_game* game, const l
     if (curr == game->split_count) {
         curr = game->split_count - 1;
     }
-    if (ls_time_get_by_method(ls_timer_get_time(timer, true), game->comparison_method) <= 0) {
+    if (ls_time_get_by_method(ls_timer_get_time(timer, false), game->comparison_method) <= 0) {
         add_class(self->time, "delay");
     } else {
         if (timer->curr_split == game->split_count
@@ -189,7 +189,7 @@ static void detailed_timer_draw(LSComponent* self_, const ls_game* game, const l
             }
         }
     }
-    ls_time_millis_string(str, &millis[1], ls_time_get_by_method(ls_timer_get_time(timer, true), game->comparison_method));
+    ls_time_millis_string(str, &millis[1], ls_time_get_by_method(ls_timer_get_time(timer, false), game->comparison_method));
     if (millis[1] != '\0')
         millis[0] = '.';
     gtk_label_set_text(GTK_LABEL(self->time_seconds), str);

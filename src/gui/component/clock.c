@@ -187,7 +187,7 @@ static void timer_draw(LSComponent* self_, const ls_game* game, const ls_timer* 
         --curr;
     }
 
-    long long time = ls_time_get_by_method(ls_timer_get_time(timer, !segment_timer), method);
+    long long time = ls_time_get_by_method(ls_timer_get_time(timer, false), method);
     if (segment_timer && curr) {
         long long previous = ls_time_get_by_method(timer->split_times[curr - 1], method);
         bool zero_game_time = method == LS_GAME_TIME && previous == 0 && is_time_valid(timer->split_times[curr - 1].real_time);
@@ -204,7 +204,7 @@ static void timer_draw(LSComponent* self_, const ls_game* game, const ls_timer* 
     if (curr && curr == game->split_count) {
         curr = game->split_count - 1;
     }
-    if (ls_time_get_by_method(ls_timer_get_time(timer, true), game->comparison_method) <= 0) {
+    if (ls_time_get_by_method(ls_timer_get_time(timer, false), game->comparison_method) <= 0) {
         add_class(self->time, "delay");
     } else {
         if (timer->curr_split == game->split_count
