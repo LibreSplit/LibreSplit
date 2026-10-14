@@ -81,13 +81,13 @@ LSComponent* ls_component_title_new(void)
     self->attempt_count = gtk_label_new(NULL);
     add_class(self->attempt_count, "attempt-count");
     gtk_widget_set_margin_start(self->attempt_count, 8);
-    gtk_widget_set_valign(self->attempt_count, GTK_ALIGN_START);
+    gtk_widget_set_valign(self->attempt_count, GTK_ALIGN_CENTER);
     gtk_box_append(GTK_BOX(counts), self->attempt_count);
 
     self->finished_count = gtk_label_new(NULL);
     add_class(self->finished_count, "finished_count");
     gtk_widget_set_margin_start(self->finished_count, 8);
-    gtk_widget_set_valign(self->finished_count, GTK_ALIGN_START);
+    gtk_widget_set_valign(self->finished_count, GTK_ALIGN_CENTER);
     gtk_box_append(GTK_BOX(counts), self->finished_count);
 
     gtk_center_box_set_end_widget(GTK_CENTER_BOX(self->header), counts);
@@ -170,9 +170,6 @@ static void title_show_game(LSComponent* self_, const ls_game* game,
     } else {
         gtk_label_set_text(GTK_LABEL(self->title), *game_name ? game_name : category);
     }
-
-    gtk_widget_set_valign(self->attempt_count, single_line ? GTK_ALIGN_START : GTK_ALIGN_CENTER);
-    gtk_widget_set_valign(self->finished_count, single_line ? GTK_ALIGN_START : GTK_ALIGN_CENTER);
 
     bool show_attempts = ls_component_settings_get(self_, "show_attempts")->bool_val;
     if (show_attempts) {
