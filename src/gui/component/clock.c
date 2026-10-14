@@ -12,7 +12,7 @@ static const LSComponentOption timing_method_options[] = {
     { 0 }
 };
 
-static const LSComponentOption digits_format_options[] = {
+const LSComponentOption ls_timer_digits_format_options[] = {
     { .key = LS_TIMER_DIGITS_SINGLE_SECONDS, .label = "1" },
     { .key = LS_TIMER_DIGITS_DOUBLE_SECONDS, .label = "01" },
     { .key = LS_TIMER_DIGITS_SINGLE_MINUTES, .label = "0:01" },
@@ -34,7 +34,7 @@ static const LSComponentOption time_accuracy_options[] = {
 static const LSComponentSetting timer_settings[] = {
     { .key = "timing_method", .label = "Timing Method", .options = timing_method_options, .val = { .type = LS_COMPONENT_SETTING_OPTIONS, .int_val = LS_COMPONENT_COMPARISON_DEFAULT } },
     { .key = "segment_timer", .label = "Segment Timer", .val = { .type = LS_COMPONENT_SETTING_BOOLEAN, .bool_val = false } },
-    { .key = "digits_format", .label = "Digits Format", .options = digits_format_options, .val = { .type = LS_COMPONENT_SETTING_OPTIONS, .int_val = LS_TIMER_DIGITS_SINGLE_SECONDS } },
+    { .key = "digits_format", .label = "Digits Format", .options = ls_timer_digits_format_options, .val = { .type = LS_COMPONENT_SETTING_OPTIONS, .int_val = LS_TIMER_DIGITS_SINGLE_SECONDS } },
     { .key = "accuracy", .label = "Accuracy", .options = time_accuracy_options, .val = { .type = LS_COMPONENT_SETTING_OPTIONS, .int_val = LS_TIME_ACCURACY_DEFAULT } },
     { NULL }
 };

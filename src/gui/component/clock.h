@@ -11,4 +11,6 @@ typedef enum LSTimerDigitsFormat {
     LS_TIMER_DIGITS_DOUBLE_HOURS
 } LSTimerDigitsFormat;
 
+extern const LSComponentOption ls_timer_digits_format_options[];
+
 void ls_timer_string(char* string, char* fraction, long long time, LSTimerDigitsFormat digits_format, LSTimeAccuracy accuracy);

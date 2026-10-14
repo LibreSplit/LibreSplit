@@ -2,7 +2,7 @@
  *
  * Implementation of the splits component.
  */
-#include "components.h"
+#include "clock.h"
 #include <gtk/gtk.h>
 #include <limits.h>
 
@@ -17,6 +17,7 @@ typedef enum LSSplitsColumnType {
 typedef struct LSSplitsColumn {
     LSSplitsColumnType type;
     LSComponentComparisonMethod comparison_method;
+    LSTimerDigitsFormat digits_format;
     GtkWidget** labels;
 } LSSplitsColumn;
 
@@ -70,6 +71,7 @@ static const LSComponentOption comparison_method_options[] = {
 static const LSComponentSetting column_settings[] = {
     { .key = "type", .label = "Column Type", .options = column_type_options, .val = { .type = LS_COMPONENT_SETTING_OPTIONS, .int_val = LS_SPLITS_COLUMN_DELTA } },
     { .key = "comparison_method", .label = "Comparison Method", .options = comparison_method_options, .val = { .type = LS_COMPONENT_SETTING_OPTIONS, .int_val = LS_COMPONENT_COMPARISON_DEFAULT } },
+    { .key = "digits_format", .label = "Digits Format", .options = ls_timer_digits_format_options, .val = { .type = LS_COMPONENT_SETTING_OPTIONS, .int_val = LS_TIMER_DIGITS_SINGLE_SECONDS } },
     { NULL }
 };
 
@@ -92,30 +94,16 @@ static const LSComponentSetting splits_settings[] = {
     { NULL }
 };
 
-static void splits_time_string(char* string, long long time, int accuracy, bool delta)
+static void splits_time_string(char* string, long long time, int accuracy, bool delta, LSTimerDigitsFormat digits_format)
 {
-    if (delta) {
-        ls_delta_string(string, time);
-    } else {
-        ls_split_string(string, time, 0);
+    char fraction[8];
+    if (delta && time >= 0 && time != LLONG_MAX) {
+        *string++ = '+';
     }
 
-    if (accuracy == LS_TIME_ACCURACY_DEFAULT || time == LLONG_MAX) {
-        return;
-    }
-
-    char* fraction = strchr(string, '.');
-    if (!fraction) {
-        fraction = string + strlen(string);
-    }
-
-    *fraction = '\0';
-
-    int decimals = ls_component_time_accuracy_decimals(accuracy);
-    if (decimals > 0 && !(delta && (time <= -60000000LL || time >= 60000000LL))) {
-        char subseconds[7];
-        sprintf(subseconds, "%06lld", llabs(time % 1000000LL));
-        sprintf(fraction, ".%.*s", decimals, subseconds);
+    ls_timer_string(string, fraction, time, digits_format, accuracy);
+    if (!delta || (time > -60000000LL && time < 60000000LL)) {
+        strcat(string, fraction);
     }
 }
 
@@ -361,6 +349,7 @@ static void splits_show_game(LSComponent* self_, const ls_game* game, const ls_t
     for (size_t i = 0; i < self->column_count; ++i) {
         self->columns[i].type = ls_component_settings_array_get(self_, "columns", i, "type")->int_val;
         self->columns[i].comparison_method = ls_component_settings_array_get(self_, "columns", i, "comparison_method")->int_val;
+        self->columns[i].digits_format = ls_component_settings_array_get(self_, "columns", i, "digits_format")->int_val;
         self->columns[i].labels = calloc(self->split_count, sizeof(GtkWidget*));
         if (self->split_count && !self->columns[i].labels) {
             free_all(self);
@@ -425,7 +414,7 @@ static void splits_show_game(LSComponent* self_, const ls_game* game, const ls_t
                 add_class(label, "split-time");
                 gtk_widget_set_halign(label, GTK_ALIGN_END);
                 if (ls_time_get_by_method(game->split_times[i], comparison_method)) {
-                    splits_time_string(str, ls_time_get_by_method(game->split_times[i], comparison_method), split_time_accuracy, false);
+                    splits_time_string(str, ls_time_get_by_method(game->split_times[i], comparison_method), split_time_accuracy, false, self->columns[column].digits_format);
                     gtk_label_set_text(GTK_LABEL(label), str);
                 }
             } else if (self->columns[column].type == LS_SPLITS_COLUMN_SEGMENT_TIME) {
@@ -434,7 +423,7 @@ static void splits_show_game(LSComponent* self_, const ls_game* game, const ls_t
                 gtk_widget_set_halign(label, GTK_ALIGN_END);
                 long long time = ls_splits_segment_time(game->split_times, game->segment_times, i, comparison_method);
                 if (time != LLONG_MAX) {
-                    splits_time_string(str, time, segment_time_accuracy, false);
+                    splits_time_string(str, time, segment_time_accuracy, false, self->columns[column].digits_format);
                     gtk_label_set_text(GTK_LABEL(label), str);
                 }
             }
@@ -533,12 +522,12 @@ static void splits_draw(LSComponent* self_, const ls_game* game, const ls_timer*
                     add_class(label, "done");
                     if (ls_time_get_by_method(timer->split_times[i], comparison_method)) {
                         add_class(label, "time");
-                        splits_time_string(str, ls_time_get_by_method(timer->split_times[i], comparison_method), split_time_accuracy, false);
+                        splits_time_string(str, ls_time_get_by_method(timer->split_times[i], comparison_method), split_time_accuracy, false, self->columns[column].digits_format);
                         gtk_label_set_text(GTK_LABEL(label), str);
                     }
                 } else if (ls_time_get_by_method(game->split_times[i], comparison_method)) {
                     add_class(label, "time");
-                    splits_time_string(str, ls_time_get_by_method(game->split_times[i], comparison_method), split_time_accuracy, false);
+                    splits_time_string(str, ls_time_get_by_method(game->split_times[i], comparison_method), split_time_accuracy, false, self->columns[column].digits_format);
                     gtk_label_set_text(GTK_LABEL(label), str);
                 }
             } else if (self->columns[column].type == LS_SPLITS_COLUMN_DELTA) {
@@ -571,7 +560,7 @@ static void splits_draw(LSComponent* self_, const ls_game* game, const ls_timer*
                     }
                     if (ls_time_get_by_method(timer->split_deltas[i], comparison_method)) {
                         add_class(label, "delta");
-                        splits_time_string(str, ls_time_get_by_method(timer->split_deltas[i], comparison_method), delta_time_accuracy, true);
+                        splits_time_string(str, ls_time_get_by_method(timer->split_deltas[i], comparison_method), delta_time_accuracy, true, self->columns[column].digits_format);
                         gtk_label_set_text(GTK_LABEL(label), str);
                     }
                 }
@@ -585,14 +574,14 @@ static void splits_draw(LSComponent* self_, const ls_game* game, const ls_timer*
                     long long time = ls_splits_segment_time(timer->split_times, timer->segment_times, i, comparison_method);
                     if (time != LLONG_MAX) {
                         add_class(label, "time");
-                        splits_time_string(str, time, segment_time_accuracy, false);
+                        splits_time_string(str, time, segment_time_accuracy, false, self->columns[column].digits_format);
                         gtk_label_set_text(GTK_LABEL(label), str);
                     }
                 } else {
                     long long time = ls_splits_segment_time(game->split_times, game->segment_times, i, comparison_method);
                     if (time != LLONG_MAX) {
                         add_class(label, "time");
-                        splits_time_string(str, time, segment_time_accuracy, false);
+                        splits_time_string(str, time, segment_time_accuracy, false, self->columns[column].digits_format);
                         gtk_label_set_text(GTK_LABEL(label), str);
                     }
                 }
