@@ -12,6 +12,20 @@
 
 typedef struct LSComponentOps LSComponentOps; // forward declaration
 
+typedef enum LSComponentComparisonMethod {
+    LS_COMPONENT_COMPARISON_DEFAULT,
+    LS_COMPONENT_COMPARISON_REAL_TIME,
+    LS_COMPONENT_COMPARISON_GAME_TIME
+} LSComponentComparisonMethod;
+
+typedef enum LSTimeAccuracy {
+    LS_TIME_ACCURACY_DEFAULT,
+    LS_TIME_ACCURACY_SECONDS,
+    LS_TIME_ACCURACY_TENTHS,
+    LS_TIME_ACCURACY_HUNDREDTHS,
+    LS_TIME_ACCURACY_MILLISECONDS
+} LSTimeAccuracy;
+
 typedef enum LSComponentSettingType {
     LS_COMPONENT_SETTING_BOOLEAN,
     LS_COMPONENT_SETTING_OPTIONS,
@@ -86,6 +100,7 @@ extern LSComponentAvailable ls_components[];
 
 bool ls_component_is_valid(const char* name);
 LSComponentAvailable* ls_component_get(const char* name);
+int ls_component_time_accuracy_decimals(LSTimeAccuracy accuracy);
 void ls_component_settings_load(LSComponent* component, const json_t* settings);
 const LSComponentSettingValue* ls_component_settings_get(const LSComponent* component, const char* key);
 const LSComponentSettingValue* ls_component_settings_array_get(const LSComponent* component, const char* array_key, size_t index, const char* key);

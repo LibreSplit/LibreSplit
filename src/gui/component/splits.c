@@ -14,15 +14,9 @@ typedef enum LSSplitsColumnType {
     LS_SPLITS_COLUMN_SEGMENT_TIME
 } LSSplitsColumnType;
 
-typedef enum LSSplitsColumnComparisonMethod {
-    LS_SPLITS_COMPARISON_DEFAULT,
-    LS_SPLITS_COMPARISON_REAL_TIME,
-    LS_SPLITS_COMPARISON_GAME_TIME
-} LSSplitsColumnComparisonMethod;
-
 typedef struct LSSplitsColumn {
     LSSplitsColumnType type;
-    LSSplitsColumnComparisonMethod comparison_method;
+    LSComponentComparisonMethod comparison_method;
     GtkWidget** labels;
 } LSSplitsColumn;
 
@@ -50,14 +44,8 @@ typedef struct LSSplits {
 } LSSplits;
 extern LSComponentOps ls_splits_operations;
 
-typedef enum LSTimeAccuracy {
-    LS_TIME_ACCURACY_SECONDS,
-    LS_TIME_ACCURACY_TENTHS,
-    LS_TIME_ACCURACY_HUNDREDTHS,
-    LS_TIME_ACCURACY_MILLISECONDS
-} LSTimeAccuracy;
-
 static const LSComponentOption time_accuracy_options[] = {
+    { .key = LS_TIME_ACCURACY_DEFAULT, .label = "Default" },
     { .key = LS_TIME_ACCURACY_SECONDS, .label = "Seconds" },
     { .key = LS_TIME_ACCURACY_TENTHS, .label = "Tenths" },
     { .key = LS_TIME_ACCURACY_HUNDREDTHS, .label = "Hundredths" },
@@ -73,15 +61,15 @@ static const LSComponentOption column_type_options[] = {
 };
 
 static const LSComponentOption comparison_method_options[] = {
-    { .key = LS_SPLITS_COMPARISON_DEFAULT, .label = "Default" },
-    { .key = LS_SPLITS_COMPARISON_REAL_TIME, .label = "Real Time" },
-    { .key = LS_SPLITS_COMPARISON_GAME_TIME, .label = "Game Time" },
+    { .key = LS_COMPONENT_COMPARISON_DEFAULT, .label = "Default" },
+    { .key = LS_COMPONENT_COMPARISON_REAL_TIME, .label = "Real Time" },
+    { .key = LS_COMPONENT_COMPARISON_GAME_TIME, .label = "Game Time" },
     { 0 }
 };
 
 static const LSComponentSetting column_settings[] = {
     { .key = "type", .label = "Column Type", .options = column_type_options, .val = { .type = LS_COMPONENT_SETTING_OPTIONS, .int_val = LS_SPLITS_COLUMN_DELTA } },
-    { .key = "comparison_method", .label = "Comparison Method", .options = comparison_method_options, .val = { .type = LS_COMPONENT_SETTING_OPTIONS, .int_val = LS_SPLITS_COMPARISON_DEFAULT } },
+    { .key = "comparison_method", .label = "Comparison Method", .options = comparison_method_options, .val = { .type = LS_COMPONENT_SETTING_OPTIONS, .int_val = LS_COMPONENT_COMPARISON_DEFAULT } },
     { NULL }
 };
 
@@ -97,9 +85,9 @@ static const LSComponentSetting* const default_columns[] = {
 
 static const LSComponentSetting splits_settings[] = {
     { .key = "always_show_last_split", .label = "Always Show Last Split", .val = { .type = LS_COMPONENT_SETTING_BOOLEAN, .bool_val = true } },
-    { .key = "split_time_accuracy", .label = "Split Time Accuracy", .options = time_accuracy_options, .val = { .type = LS_COMPONENT_SETTING_OPTIONS, .int_val = LS_TIME_ACCURACY_HUNDREDTHS } },
-    { .key = "segment_time_accuracy", .label = "Segment Time Accuracy", .options = time_accuracy_options, .val = { .type = LS_COMPONENT_SETTING_OPTIONS, .int_val = LS_TIME_ACCURACY_HUNDREDTHS } },
-    { .key = "delta_time_accuracy", .label = "Delta Time Accuracy", .options = time_accuracy_options, .val = { .type = LS_COMPONENT_SETTING_OPTIONS, .int_val = LS_TIME_ACCURACY_HUNDREDTHS } },
+    { .key = "split_time_accuracy", .label = "Split Time Accuracy", .options = time_accuracy_options, .val = { .type = LS_COMPONENT_SETTING_OPTIONS, .int_val = LS_TIME_ACCURACY_DEFAULT } },
+    { .key = "segment_time_accuracy", .label = "Segment Time Accuracy", .options = time_accuracy_options, .val = { .type = LS_COMPONENT_SETTING_OPTIONS, .int_val = LS_TIME_ACCURACY_DEFAULT } },
+    { .key = "delta_time_accuracy", .label = "Delta Time Accuracy", .options = time_accuracy_options, .val = { .type = LS_COMPONENT_SETTING_OPTIONS, .int_val = LS_TIME_ACCURACY_DEFAULT } },
     { .key = "columns", .label = "Columns", .val = { .type = LS_COMPONENT_SETTING_ARRAY, .array_val = { .values = default_columns, .count = G_N_ELEMENTS(default_columns) } } },
     { NULL }
 };
@@ -112,7 +100,7 @@ static void splits_time_string(char* string, long long time, int accuracy, bool 
         ls_split_string(string, time, 0);
     }
 
-    if (time == LLONG_MAX) {
+    if (accuracy == LS_TIME_ACCURACY_DEFAULT || time == LLONG_MAX) {
         return;
     }
 
@@ -123,21 +111,22 @@ static void splits_time_string(char* string, long long time, int accuracy, bool 
 
     *fraction = '\0';
 
-    if (accuracy != LS_TIME_ACCURACY_SECONDS && !(delta && (time <= -60000000LL || time >= 60000000LL))) {
+    int decimals = ls_component_time_accuracy_decimals(accuracy);
+    if (decimals > 0 && !(delta && (time <= -60000000LL || time >= 60000000LL))) {
         char subseconds[7];
         sprintf(subseconds, "%06lld", llabs(time % 1000000LL));
-        sprintf(fraction, ".%.*s", accuracy, subseconds);
+        sprintf(fraction, ".%.*s", decimals, subseconds);
     }
 }
 
 static ls_time_method ls_splits_column_method(const LSSplitsColumn* column, ls_time_method default_method)
 {
     switch (column->comparison_method) {
-        case LS_SPLITS_COMPARISON_DEFAULT:
+        case LS_COMPONENT_COMPARISON_DEFAULT:
             return default_method;
-        case LS_SPLITS_COMPARISON_REAL_TIME:
+        case LS_COMPONENT_COMPARISON_REAL_TIME:
             return LS_REAL_TIME;
-        case LS_SPLITS_COMPARISON_GAME_TIME:
+        case LS_COMPONENT_COMPARISON_GAME_TIME:
             return LS_GAME_TIME;
     }
 

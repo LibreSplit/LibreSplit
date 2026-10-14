@@ -72,6 +72,24 @@ LSComponentAvailable* ls_component_get(const char* name)
     return NULL;
 }
 
+int ls_component_time_accuracy_decimals(LSTimeAccuracy accuracy)
+{
+    switch (accuracy) {
+        case LS_TIME_ACCURACY_DEFAULT:
+            break;
+        case LS_TIME_ACCURACY_SECONDS:
+            return 0;
+        case LS_TIME_ACCURACY_TENTHS:
+            return 1;
+        case LS_TIME_ACCURACY_HUNDREDTHS:
+            return 2;
+        case LS_TIME_ACCURACY_MILLISECONDS:
+            return 3;
+    }
+
+    return CLAMP(cfg.libresplit.decimals.value.i, 0, 6);
+}
+
 static void setting_value_clear(const LSComponentSettingValue* value)
 {
     if (value->type == LS_COMPONENT_SETTING_STRING) {
