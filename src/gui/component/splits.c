@@ -433,7 +433,7 @@ static void splits_show_game(LSComponent* self_, const ls_game* game,
         self->icons_css_provider = NULL;
     }
 
-    if (icons_css_src->len > 0) {
+    if (icons_css_src && icons_css_src->len > 0) {
         self->icons_css_provider = gtk_css_provider_new();
         gtk_css_provider_load_from_string(
             self->icons_css_provider,
