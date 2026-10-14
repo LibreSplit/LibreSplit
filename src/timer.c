@@ -1322,7 +1322,7 @@ static void reset_timer(ls_timer* timer)
     timer->gameTime = 0;
     timer->usingGameTime = false;
     atomic_store(&run_using_game_time_call, true);
-    timer->loading = false;
+    timer->loading = atomic_load(&auto_splitter_enabled) && atomic_load(&prev_is_loading);
     timer->loadingTime = 0;
     timer->last_tick = 0;
     int size = timer->game->split_count * sizeof(ls_time);

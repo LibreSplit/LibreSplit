@@ -22,7 +22,7 @@ extern atomic_bool run_using_game_time;
 extern atomic_bool run_started;
 extern atomic_bool run_running;
 extern atomic_int lasr_event_requests;
-extern bool prev_is_loading;
+extern atomic_bool prev_is_loading;
 
 /** \enum TimerEvent
  *

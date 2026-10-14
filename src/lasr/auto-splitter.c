@@ -50,7 +50,7 @@ atomic_bool run_using_game_time_call; /*!< True if startup has run and a new val
 atomic_bool run_using_game_time; /*!< True if the auto splitter is requesting to use game time, false for real time */
 atomic_bool run_started = false; /*!< Wheter a run was started or not, same as timer->started but accessible from the auto splitter thread */
 atomic_bool run_running = false; /*!< Wheter we are running or not, same as timer->running but accessible from the auto splitter thread */
-bool prev_is_loading; /*!< The previous frame "is_loading" state */
+atomic_bool prev_is_loading = false; /*!< The previous frame "is_loading" state */
 
 /**
  * Disable possibly dangerous functions in LASR.
@@ -90,8 +90,8 @@ void init_auto_splitter(void)
     atomic_store(&lasr_event_requests, 0);
     atomic_store(&game_time_value, 0);
     atomic_store(&update_game_time, false);
+    atomic_store(&prev_is_loading, false);
     use_game_time = false;
-    prev_is_loading = false;
 
     // lasr initial values
     refresh_rate = 60;
@@ -554,9 +554,9 @@ void is_loading(lua_State* L)
 {
     bool loading;
     if (call_va(L, "isLoading", ">b", &loading)) {
-        if (loading != prev_is_loading) {
+        if (loading != atomic_load(&prev_is_loading)) {
+            atomic_store(&prev_is_loading, loading);
             atomic_store(&toggle_loading, true);
-            prev_is_loading = !prev_is_loading;
         }
     }
 }

@@ -470,8 +470,8 @@ gboolean ls_app_window_step(gpointer data)
                 timer_split(win);
                 atomic_store(&call_split, 0);
             }
-            if (atomic_load(&toggle_loading)) {
-                win->timer->loading = !win->timer->loading;
+            if (atomic_exchange(&toggle_loading, false)) {
+                win->timer->loading = atomic_load(&prev_is_loading);
 
                 if (win->timer->running) {
                     if (win->timer->loading) {
@@ -480,7 +480,6 @@ gboolean ls_app_window_step(gpointer data)
                         timer_unpause(win);
                     }
                 }
-                atomic_store(&toggle_loading, 0);
             }
             if (atomic_load(&call_reset)) {
                 timer_stop_and_reset(win);
