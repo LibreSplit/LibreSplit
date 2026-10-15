@@ -250,6 +250,33 @@ void free_all(LSSplits* self_)
 }
 
 /**
+ * Hides bottom-clipped rows without changing their layout.
+ */
+static void splits_update_opacity(GdkFrameClock* clock, GtkWidget* viewport)
+{
+    GtkWidget* list = gtk_viewport_get_child(GTK_VIEWPORT(viewport));
+    int height = gtk_widget_get_height(viewport);
+    for (GtkWidget* row = gtk_widget_get_first_child(list); row; row = gtk_widget_get_next_sibling(row)) {
+        graphene_rect_t bounds;
+        if (gtk_widget_compute_bounds(row, viewport, &bounds)) {
+            gtk_widget_set_opacity(row, bounds.origin.y + bounds.size.height <= height ? 1.0 : 0.0);
+        }
+    }
+}
+
+static void splits_realize(GtkWidget* viewport, gpointer data)
+{
+    g_signal_connect_object(gtk_widget_get_frame_clock(viewport), "layout",
+        G_CALLBACK(splits_update_opacity), viewport, G_CONNECT_AFTER);
+}
+
+static void splits_unrealize(GtkWidget* viewport, gpointer data)
+{
+    g_signal_handlers_disconnect_matched(gtk_widget_get_frame_clock(viewport), G_SIGNAL_MATCH_ID | G_SIGNAL_MATCH_DATA,
+        g_signal_lookup("layout", GDK_TYPE_FRAME_CLOCK), 0, NULL, NULL, viewport);
+}
+
+/**
  * Constructor
  */
 LSComponent* ls_component_splits_new(void)
@@ -271,6 +298,8 @@ LSComponent* ls_component_splits_new(void)
     gtk_widget_set_hexpand(self->split_scroller, TRUE);
 
     self->split_viewport = gtk_viewport_new(NULL, NULL);
+    g_signal_connect(self->split_viewport, "realize", G_CALLBACK(splits_realize), NULL);
+    g_signal_connect(self->split_viewport, "unrealize", G_CALLBACK(splits_unrealize), NULL);
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(self->split_scroller), self->split_viewport);
 
     self->splits = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
@@ -363,6 +392,7 @@ static void splits_trailer(LSComponent* self_)
                 self->split_rows[last]);
             gtk_box_append(GTK_BOX(self->split_last),
                 self->split_rows[last]);
+            gtk_widget_set_opacity(self->split_rows[last], 1.0);
             gtk_widget_set_visible(self->split_last, TRUE);
         }
     } else {
