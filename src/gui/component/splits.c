@@ -284,6 +284,49 @@ static void splits_unrealize(GtkWidget* viewport, gpointer data)
 }
 
 /**
+ * Scrolls by whole rows using GTK's discrete scroll deltas.
+ */
+static gboolean splits_scroll_rows(GtkEventControllerScroll* controller, double dx, double dy, GtkWidget* viewport)
+{
+    if (dy == 0) {
+        return FALSE;
+    }
+
+    GtkWidget* list = gtk_viewport_get_child(GTK_VIEWPORT(viewport));
+    GtkWidget* first = gtk_widget_get_first_child(list);
+    GtkAdjustment* adjustment = gtk_scrollable_get_vadjustment(GTK_SCROLLABLE(viewport));
+    double value = gtk_adjustment_get_value(adjustment);
+    double remaining = dy > 0 ? dy : -dy;
+    double target = dy > 0 ? gtk_adjustment_get_upper(adjustment) : 0;
+    for (GtkWidget* row = dy > 0 ? first : gtk_widget_get_last_child(list); row;
+        row = dy > 0 ? gtk_widget_get_next_sibling(row) : gtk_widget_get_prev_sibling(row)) {
+        graphene_rect_t bounds;
+        if (!gtk_widget_compute_bounds(row, list, &bounds)) {
+            continue;
+        }
+
+        double top = row == first ? 0 : bounds.origin.y;
+        if (dy > 0 ? top > value + SCROLL_TOLERANCE : top < value - SCROLL_TOLERANCE) {
+            if (--remaining <= 0) {
+                target = top;
+                break;
+            }
+        }
+    }
+
+    gtk_adjustment_set_value(adjustment, target);
+    return TRUE;
+}
+
+/**
+ * Stops leftover scroll events from triggering GTK's default scrolling.
+ */
+static gboolean splits_stop_scroll(GtkEventControllerLegacy* controller, GdkEvent* event, gpointer data)
+{
+    return gdk_event_get_event_type(event) == GDK_SCROLL;
+}
+
+/**
  * Constructor
  */
 LSComponent* ls_component_splits_new(void)
@@ -299,10 +342,15 @@ LSComponent* ls_component_splits_new(void)
     self->split_adjust = gtk_adjustment_new(0., 0., 0., 0., 0., 0.);
 
     self->split_scroller = gtk_scrolled_window_new();
+    gtk_scrolled_window_set_kinetic_scrolling(GTK_SCROLLED_WINDOW(self->split_scroller), FALSE);
     gtk_scrolled_window_set_vadjustment(GTK_SCROLLED_WINDOW(self->split_scroller), self->split_adjust);
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(self->split_scroller), GTK_POLICY_EXTERNAL, GTK_POLICY_EXTERNAL);
     gtk_widget_set_vexpand(self->split_scroller, TRUE);
     gtk_widget_set_hexpand(self->split_scroller, TRUE);
+    GtkEventController* stop_scroll = gtk_event_controller_legacy_new();
+    gtk_event_controller_set_propagation_phase(stop_scroll, GTK_PHASE_CAPTURE);
+    g_signal_connect(stop_scroll, "event", G_CALLBACK(splits_stop_scroll), NULL);
+    gtk_widget_add_controller(self->split_scroller, stop_scroll);
 
     self->split_viewport = gtk_viewport_new(NULL, NULL);
     g_signal_connect(self->split_viewport, "realize", G_CALLBACK(splits_realize), NULL);
@@ -324,6 +372,10 @@ LSComponent* ls_component_splits_new(void)
     self->container = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     gtk_box_append(GTK_BOX(self->container), self->split_scroller);
     gtk_box_append(GTK_BOX(self->container), self->split_last);
+    GtkEventController* scroll = gtk_event_controller_scroll_new(GTK_EVENT_CONTROLLER_SCROLL_VERTICAL | GTK_EVENT_CONTROLLER_SCROLL_DISCRETE);
+    gtk_event_controller_set_propagation_phase(scroll, GTK_PHASE_CAPTURE);
+    g_signal_connect_object(scroll, "scroll", G_CALLBACK(splits_scroll_rows), self->split_viewport, 0);
+    gtk_widget_add_controller(self->container, scroll);
     return (LSComponent*)self;
 }
 
@@ -823,10 +875,30 @@ static void splits_scroll_to_split(LSComponent* self_, const ls_timer* timer)
     }
     min_scroll = split_position.y + curr_scroll - scroller_h + split_h;
     max_scroll = split_position.y + curr_scroll;
-    if (curr_scroll > max_scroll) {
-        gtk_adjustment_set_value(self->split_adjust, max_scroll);
-    } else if (curr_scroll < min_scroll) {
-        gtk_adjustment_set_value(self->split_adjust, min_scroll);
+    bool scroll_up = curr_scroll > max_scroll;
+    if (scroll_up || curr_scroll < min_scroll) {
+        double target = scroll_up ? 0 : gtk_adjustment_get_upper(self->split_adjust);
+        GtkWidget* first = gtk_widget_get_first_child(self->splits);
+        for (GtkWidget* row = first; row; row = gtk_widget_get_next_sibling(row)) {
+            graphene_rect_t bounds;
+            if (!gtk_widget_compute_bounds(row, self->splits, &bounds)) {
+                continue;
+            }
+
+            double top = row == first ? 0 : bounds.origin.y;
+            if (scroll_up) {
+                if (top > max_scroll) {
+                    break;
+                }
+
+                target = top;
+            } else if (top >= min_scroll) {
+                target = top;
+                break;
+            }
+        }
+
+        gtk_adjustment_set_value(self->split_adjust, target);
     }
 }
 
