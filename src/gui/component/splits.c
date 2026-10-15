@@ -250,7 +250,7 @@ void free_all(LSSplits* self_)
 }
 
 /**
- * Hides bottom-clipped rows without changing their layout.
+ * Aligns the top row and hides bottom-clipped rows.
  */
 static void splits_update_opacity(GdkFrameClock* clock, GtkWidget* viewport)
 {
@@ -258,6 +258,8 @@ static void splits_update_opacity(GdkFrameClock* clock, GtkWidget* viewport)
     int allocated_scroll = gtk_adjustment_get_value(adjustment);
     // Scroll coordinates change during allocation, not when the adjustment changes.
     g_object_set_data(G_OBJECT(viewport), "splits-allocated-scroll", GINT_TO_POINTER(allocated_scroll));
+    double scroll_end = gtk_adjustment_get_upper(adjustment) - gtk_adjustment_get_page_size(adjustment);
+    bool align = allocated_scroll > 0 && allocated_scroll < scroll_end - SCROLL_TOLERANCE;
     bool clipped = false;
     GtkWidget* list = gtk_viewport_get_child(GTK_VIEWPORT(viewport));
     int height = gtk_widget_get_height(viewport);
@@ -268,7 +270,13 @@ static void splits_update_opacity(GdkFrameClock* clock, GtkWidget* viewport)
                 continue;
             }
 
-            clipped = bounds.origin.y + bounds.size.height > height;
+            double bottom = bounds.origin.y + bounds.size.height;
+            if (align && bounds.origin.y < 0 && bottom > 0) {
+                gtk_adjustment_set_value(adjustment, allocated_scroll + bounds.origin.y);
+                align = false;
+            }
+
+            clipped = bottom > height;
         }
 
         gtk_widget_set_opacity(row, clipped ? 0.0 : 1.0);
