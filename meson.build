@@ -55,6 +55,7 @@ libresplit_sources = files(
     'src/gui/component/detailed-timer.c',
     'src/gui/component/pb.c',
     'src/gui/component/prev-segment.c',
+    'src/gui/component/run-predict.c',
     'src/gui/component/splits.c',
     'src/gui/component/timer.c',
     'src/gui/component/title.c',

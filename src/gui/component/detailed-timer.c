@@ -35,16 +35,19 @@ extern LSComponentOps ls_detailed_timer_operations;
 /**
  * Constructor
  */
-LSComponent* ls_component_detailed_timer_new(void)
+LSComponent* ls_component_detailed_timer_new(json_t* settings)
 {
     LSDetailedTimer* self;
     GtkWidget* spacer;
 
     self = malloc(sizeof(LSDetailedTimer));
-    if (!self)
+    if (!self) {
         return NULL;
+    }
+
     self->base.ops = &ls_detailed_timer_operations;
-    //
+    ls_component_settings_load((LSComponent*)self, settings);
+
     self->detailed_timer = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
     add_class(self->detailed_timer, "timer-container");
 

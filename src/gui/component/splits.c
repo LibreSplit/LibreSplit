@@ -366,7 +366,7 @@ static gboolean splits_stop_scroll(GtkEventControllerLegacy* controller, GdkEven
 /**
  * Constructor
  */
-LSComponent* ls_component_splits_new(void)
+LSComponent* ls_component_splits_new(json_t* settings)
 {
     LSSplits* self;
     self = calloc(1, sizeof(LSSplits));
@@ -375,6 +375,7 @@ LSComponent* ls_component_splits_new(void)
     }
 
     self->base.ops = &ls_splits_operations;
+    ls_component_settings_load((LSComponent*)self, settings);
 
     self->split_adjust = gtk_adjustment_new(0., 0., 0., 0., 0., 0.);
 

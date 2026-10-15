@@ -16,57 +16,63 @@ Also each split JSON file can apply their own themes by specifying a `theme` key
 
 See the [GTK 4 CSS properties documentation](https://docs.gtk.org/gtk4/css-properties.html) for a list of supported CSS properties. Note that you can also modify the default font-family.
 
-| LibreSplit CSS classes        | Explanation Where needed                                                                                                                                 |
-| ----------------------------- | -----------------------------------------------                                                                                                          |
-| `window`                      | Any window of LibreSplit (editing this class might affect other LibreSplit windows)                                                                      |
-| `.window.main-window`         | LibreSplit's main timer window - think of this like the main `<body>` of a standard webpage                                                              |
-| `.libresplit-content`         | LibreSplit's timer content container - this is like the top level `<div>` element whose parent is `<body>` that all the components are a descendant of   |
-| `.layout-component`          | A top-level layout component; use its margins to control spacing around the component.                                                                    |
-| `.header`                     | The header, containing title and attempt counters                                                                                                        |
-| `.title`                      | The title of the category (set in the splits json file)                                                                                                  |
-| `.title-icon`                 | Game Icon for the title                                                                                                                                  |
-| `.attempt-count`              | Counter for attempts in top right corner (#attempts_finished / attempts_total)                                                                           |
-| `.delta`                      | Difference between current time and PB, appears at -30s to PB. Should be overwritten by .behind, .losing, .behind.losing, .best-split, and .best-segment |
-| `.time`                       | All time fields from the main big timer, the splits times, and the times of personal best and sum of bests and other things in the footer                |
-| `.timer`                      | The large main timer                                                                                                                                     |
-| `.timer-container`            | Container for both the detailed and normal timer                                                                                                         |
-| `.detailed-timer`             | Container for the `segment-pb` and `segment-best` classes                                                                                                |
-| `.timer-seconds`              | Large main timer seconds                                                                                                                                 |
-| `.timer-millis`               | Large main timer fractional seconds                                                                                                                      |
-| `.delay`                      | Timer not running/in negative time                                                                                                                       |
-| `.paused`                     | An unfinished attempt that has been stopped (excludes game-time loading)                                                                                 |
-| `.splits`                     | Container of the splits                                                                                                                                  |
-| `.split`                      | The splits themselves                                                                                                                                    |
-| `.current-split`              | The split you're currently on                                                                                                                            |
-| `.split-title`                | Name of the splits                                                                                                                                       |
-| `.split-icon`                 | Icon for splits                                                                                                                                          |
-| `.split-time`                 | Time for the splits                                                                                                                                      |
-| `.split-delta`                | Comparison time in the split                                                                                                                             |
-| `.split-last`                 | The last split, if its not yet scrolled down to                                                                                                          |
-| `.done`                       | Colour of split timer after that split has been completed                                                                                                |
-| `.behind`                     | Behind the PB but gaining time                                                                                                                           |
-| `.losing`                     | Ahead of PB but losing time                                                                                                                              |
-| `.behind.losing`              | (class combination) Behind PB and losing time                                                                                                            |
-| `.best-segment`               | Fastest time in that segment                                                                                                                             |
-| `.best-split`                 | Fastest pace to that point                                                                                                                               |
-| `.footer`                     | A generic footer that contains sum of bests, prev-segment comparison, world record, and others                                                           |
-| `.sum-of-bests-container`     | The container for the "sum of bests" label and timer                                                                                                     |
-| `.personal-best-container`    | The container for the "personal best" label and timer                                                                                                    |
-| `.prev-segment-container`     | The container for the "previous segment" label and timer                                                                                                 |
-| `.world-record-container`     | The container for the "world record" label and timer                                                                                                     |
-| `.prev-segment-label`         | Text that says "Previous Segment" and changes to "Live Segment"                                                                                          |
-| `.prev-segment`               | Time for Previous Segment (and Live Segment)                                                                                                             |
-| `.segment`                    | Smaller detailed timer for current segment                                                                                                               |
-| `.segment-best`               | Best text within .detailed-timer                                                                                                                         |
-| `.segment-pb`                 | PB text within .detailed-timer                                                                                                                           |
-| `.segment-seconds`            | Smaller detailed timer seconds                                                                                                                           |
-| `.segment-millis`             | Smaller detailed timer fractional seconds                                                                                                                |
-| `.sum-of-bests-label`         | Text that says "Sum of Bests"                                                                                                                            |
-| `.sum-of-bests`               | Time for Sum of Bests                                                                                                                                    |
-| `.personal-best-label`        | Text that says "Personal Best"                                                                                                                           |
-| `.personal-best`              | Time for Personal Best                                                                                                                                   |
-| `.world-record-label`         | Text that says "World Record"                                                                                                                            |
-| `.world-record`               | Time for World Record                                                                                                                                    |
+| LibreSplit CSS classes          | Explanation Where needed                                                                                                                                 |
+| ------------------------------- | -----------------------------------------------                                                                                                          |
+| `window`                        | Any window of LibreSplit (editing this class might affect other LibreSplit windows)                                                                      |
+| `.window.main-window`           | LibreSplit's main timer window - think of this like the main `<body>` of a standard webpage                                                              |
+| `.libresplit-content`           | LibreSplit's timer content container - this is like the top level `<div>` element whose parent is `<body>` that all the components are a descendant of   |
+| `.layout-component`             | A top-level layout component; use its margins to control spacing around the component.                                                                   |
+| `.header`                       | The header, containing title and attempt counters                                                                                                        |
+| `.title`                        | The title of the category (set in the splits json file)                                                                                                  |
+| `.title-icon`                   | Game Icon for the title                                                                                                                                  |
+| `.attempt-count`                | Counter for attempts in top right corner (#attempts_finished / attempts_total)                                                                           |
+| `.delta`                        | Difference between current time and PB, appears at -30s to PB. Should be overwritten by .behind, .losing, .behind.losing, .best-split, and .best-segment |
+| `.time`                         | All time fields from the main big timer, the splits times, and the times of personal best and sum of bests and other things in the footer                |
+| `.timer`                        | The large main timer                                                                                                                                     |
+| `.timer-container`              | Container for both the detailed and normal timer                                                                                                         |
+| `.detailed-timer`               | Container for the `segment-pb` and `segment-best` classes                                                                                                |
+| `.timer-seconds`                | Large main timer seconds                                                                                                                                 |
+| `.timer-millis`                 | Large main timer fractional seconds                                                                                                                      |
+| `.delay`                        | Timer not running/in negative time                                                                                                                       |
+| `.paused`                       | An unfinished attempt that has been stopped (excludes game-time loading)                                                                                 |
+| `.splits`                       | Container of the splits                                                                                                                                  |
+| `.split`                        | The splits themselves                                                                                                                                    |
+| `.current-split`                | The split you're currently on                                                                                                                            |
+| `.split-title`                  | Name of the splits                                                                                                                                       |
+| `.split-icon`                   | Icon for splits                                                                                                                                          |
+| `.split-time`                   | Time for the splits                                                                                                                                      |
+| `.split-delta`                  | Comparison time in the split                                                                                                                             |
+| `.split-last`                   | The last split, if its not yet scrolled down to                                                                                                          |
+| `.done`                         | Colour of split timer after that split has been completed                                                                                                |
+| `.behind`                       | Behind the PB but gaining time                                                                                                                           |
+| `.losing`                       | Ahead of PB but losing time                                                                                                                              |
+| `.behind.losing`                | (class combination) Behind PB and losing time                                                                                                            |
+| `.best-segment`                 | Fastest time in that segment                                                                                                                             |
+| `.best-split`                   | Fastest pace to that point                                                                                                                               |
+| `.footer`                       | A generic footer that contains sum of bests, prev-segment comparison, world record, and others                                                           |
+| `.sum-of-bests-container`       | The container for the "sum of bests" label and timer                                                                                                     |
+| `.best-possible-time-container` | The container for the "best possible time" label and timer                                                                                               |
+| `.current-pace-container`       | The container for the "current pace" label and timer                                                                                                     |
+| `.personal-best-container`      | The container for the "personal best" label and timer                                                                                                    |
+| `.prev-segment-container`       | The container for the "previous segment" label and timer                                                                                                 |
+| `.world-record-container`       | The container for the "world record" label and timer                                                                                                     |
+| `.prev-segment-label`           | Text that says "Previous Segment" and changes to "Live Segment"                                                                                          |
+| `.prev-segment`                 | Time for Previous Segment (and Live Segment)                                                                                                             |
+| `.segment`                      | Smaller detailed timer for current segment                                                                                                               |
+| `.segment-best`                 | Best text within .detailed-timer                                                                                                                         |
+| `.segment-pb`                   | PB text within .detailed-timer                                                                                                                           |
+| `.segment-seconds`              | Smaller detailed timer seconds                                                                                                                           |
+| `.segment-millis`               | Smaller detailed timer fractional seconds                                                                                                                |
+| `.sum-of-bests-label`           | Text that says "Sum of Bests"                                                                                                                            |
+| `.sum-of-bests`                 | Time for Sum of Bests                                                                                                                                    |
+| `.best-possible-time-label`     | Text that says "Best Possible Time"                                                                                                                      |
+| `.best-possible-time`           | Time for Best Possible Time                                                                                                                              |
+| `.current-pace-label`           | Text that says "Current Pace"                                                                                                                            |
+| `.current-pace`                 | Time for Current Pace                                                                                                                                    |
+| `.personal-best-label`          | Text that says "Personal Best"                                                                                                                           |
+| `.personal-best`                | Time for Personal Best                                                                                                                                   |
+| `.world-record-label`           | Text that says "World Record"                                                                                                                            |
+| `.world-record`                 | Time for World Record                                                                                                                                    |
 
 If a split has a `title` key, its UI element receives a class name derived from its title.
 

@@ -19,7 +19,7 @@ extern LSComponentOps ls_pb_operations;
 /**
  * Constructor
  */
-LSComponent* ls_component_pb_new(void)
+LSComponent* ls_component_pb_new(json_t* settings)
 {
     LSPb* self;
     GtkWidget* label;
@@ -28,7 +28,9 @@ LSComponent* ls_component_pb_new(void)
     if (!self) {
         return NULL;
     }
+
     self->base.ops = &ls_pb_operations;
+    ls_component_settings_load((LSComponent*)self, settings);
 
     self->container = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
     add_class(self->container, "footer"); /* hack */

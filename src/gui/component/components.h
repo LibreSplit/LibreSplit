@@ -92,7 +92,7 @@ typedef struct LSComponentOps {
 
 typedef struct LSComponentAvailable {
     char* name;
-    LSComponent* (*new)(void);
+    LSComponent* (*new)(json_t*);
 } LSComponentAvailable;
 
 // A NULL-terminated array of all available components

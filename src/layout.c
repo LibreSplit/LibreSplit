@@ -135,9 +135,8 @@ static void init_layout(LSAppWindow* win, json_t* layout)
             continue;
         }
 
-        LSComponent* component = component_entry->new();
+        LSComponent* component = component_entry->new(json_object_get(entry, "settings"));
         if (component) {
-            ls_component_settings_load(component, json_object_get(entry, "settings"));
             GtkWidget* widget = component->ops->widget(component);
             if (widget) {
                 add_class(widget, "layout-component");

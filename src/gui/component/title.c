@@ -50,7 +50,7 @@ static const LSComponentSetting title_settings[] = {
 /**
  * Constructor
  */
-LSComponent* ls_component_title_new(void)
+LSComponent* ls_component_title_new(json_t* settings)
 {
     LSTitle* self;
     GtkWidget* counts;
@@ -61,6 +61,7 @@ LSComponent* ls_component_title_new(void)
     }
 
     self->base.ops = &ls_title_operations;
+    ls_component_settings_load((LSComponent*)self, settings);
 
     self->header = gtk_center_box_new();
     gtk_center_box_set_shrink_center_last(GTK_CENTER_BOX(self->header), FALSE);

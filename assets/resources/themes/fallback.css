@@ -152,6 +152,8 @@
 
 .prev-segment-label,
 .sum-of-bests-label,
+.best-possible-time-label,
+.current-pace-label,
 .personal-best-label,
 .world-record-label {
 	padding-left: 8px;
@@ -159,6 +161,8 @@
 
 .prev-segment,
 .sum-of-bests,
+.best-possible-time,
+.current-pace,
 .personal-best,
 .world-record {
 	padding-right: 8px;
