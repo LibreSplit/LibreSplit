@@ -254,6 +254,10 @@ void free_all(LSSplits* self_)
  */
 static void splits_update_opacity(GdkFrameClock* clock, GtkWidget* viewport)
 {
+    GtkAdjustment* adjustment = gtk_scrollable_get_vadjustment(GTK_SCROLLABLE(viewport));
+    int allocated_scroll = gtk_adjustment_get_value(adjustment);
+    // Scroll coordinates change during allocation, not when the adjustment changes.
+    g_object_set_data(G_OBJECT(viewport), "splits-allocated-scroll", GINT_TO_POINTER(allocated_scroll));
     bool clipped = false;
     GtkWidget* list = gtk_viewport_get_child(GTK_VIEWPORT(viewport));
     int height = gtk_widget_get_height(viewport);
@@ -296,16 +300,21 @@ static gboolean splits_scroll_rows(GtkEventControllerScroll* controller, double 
     GtkWidget* first = gtk_widget_get_first_child(list);
     GtkAdjustment* adjustment = gtk_scrollable_get_vadjustment(GTK_SCROLLABLE(viewport));
     double value = gtk_adjustment_get_value(adjustment);
+    double allocated_scroll = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(viewport), "splits-allocated-scroll"));
     double remaining = dy > 0 ? dy : -dy;
     double target = dy > 0 ? gtk_adjustment_get_upper(adjustment) : 0;
     for (GtkWidget* row = dy > 0 ? first : gtk_widget_get_last_child(list); row;
         row = dy > 0 ? gtk_widget_get_next_sibling(row) : gtk_widget_get_prev_sibling(row)) {
-        graphene_rect_t bounds;
-        if (!gtk_widget_compute_bounds(row, list, &bounds)) {
+        if (row == first && dy > 0) {
             continue;
         }
 
-        double top = row == first ? 0 : bounds.origin.y;
+        graphene_rect_t bounds;
+        if (!gtk_widget_compute_bounds(row, viewport, &bounds)) {
+            continue;
+        }
+
+        double top = allocated_scroll + bounds.origin.y;
         if (dy > 0 ? top > value + SCROLL_TOLERANCE : top < value - SCROLL_TOLERANCE) {
             if (--remaining <= 0) {
                 target = top;
@@ -841,8 +850,9 @@ static void splits_scroll_to_split(LSComponent* self_, const ls_timer* timer)
     graphene_point_t split_position;
     graphene_rect_t split_bounds;
 
-    if (timer->game->split_count == 0)
+    if (timer->game->split_count == 0) {
         return;
+    }
 
     unsigned int prev = timer->curr_split ? timer->curr_split - 1 : 0;
     unsigned int curr = timer->curr_split;
@@ -850,50 +860,57 @@ static void splits_scroll_to_split(LSComponent* self_, const ls_timer* timer)
     if (prev < 0) {
         prev = 0;
     }
+
     if (curr >= self->split_count) {
         curr = self->split_count - 1;
     }
+
     if (next >= self->split_count) {
         next = self->split_count - 1;
     }
+
     curr_scroll = gtk_adjustment_get_value(self->split_adjust);
+    double allocated_scroll = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(self->split_viewport), "splits-allocated-scroll"));
     if (!gtk_widget_compute_point(
             self->split_titles[prev],
             self->split_viewport,
             &origin, &split_position)) {
         return;
     }
+
     scroller_h = gtk_widget_get_height(self->split_scroller);
     split_h = gtk_widget_get_height(self->split_titles[prev]);
     if (curr != next && curr != prev) {
         split_h += gtk_widget_get_height(self->split_titles[curr]);
     }
+
     if (next != prev) {
         int h = gtk_widget_get_height(self->split_titles[next]);
         if (split_h + h < scroller_h) {
             split_h += h;
         }
     }
-    min_scroll = split_position.y + curr_scroll - scroller_h + split_h;
-    if (!gtk_widget_compute_bounds(self->split_rows[curr], self->splits, &split_bounds)) {
+
+    min_scroll = split_position.y + allocated_scroll - scroller_h + split_h;
+    if (!gtk_widget_compute_bounds(self->split_rows[curr], self->split_viewport, &split_bounds)) {
         return;
     }
 
-    max_scroll = curr == 0 ? 0 : split_bounds.origin.y;
+    max_scroll = allocated_scroll + split_bounds.origin.y;
     if (curr_scroll > max_scroll) {
         gtk_adjustment_set_value(self->split_adjust, max_scroll);
     } else if (curr_scroll < min_scroll) {
-        double target = gtk_adjustment_get_upper(self->split_adjust);
+        double target = max_scroll;
         GtkWidget* first = gtk_widget_get_first_child(self->splits);
         for (GtkWidget* row = first; row; row = gtk_widget_get_next_sibling(row)) {
             graphene_rect_t bounds;
-            if (!gtk_widget_compute_bounds(row, self->splits, &bounds)) {
+            if (!gtk_widget_compute_bounds(row, self->split_viewport, &bounds)) {
                 continue;
             }
 
-            double top = row == first ? 0 : bounds.origin.y;
+            double top = allocated_scroll + bounds.origin.y;
             if (top >= min_scroll) {
-                target = top;
+                target = MIN(top, max_scroll);
                 break;
             }
         }
