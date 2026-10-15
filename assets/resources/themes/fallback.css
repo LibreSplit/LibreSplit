@@ -23,7 +23,6 @@
 .title-icon {
 	min-width: 28px;
 	min-height: 28px;
-	background-size: contain;
 	margin-right: 4px;
 }
 
@@ -117,7 +116,6 @@
 .split-icon {
 	min-width: 20px;
 	min-height: 20px;
-	background-size: contain;
 	margin-right: 4px;
 }
 
