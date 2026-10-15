@@ -451,7 +451,7 @@ static void splits_show_game(LSComponent* self_, const ls_game* game, const ls_t
         }
     }
 
-    GString* icons_css_src = g_string_new(".split-icon { background-repeat: no-repeat; background-position: center; min-width: 20px; min-height: 20px; background-size: 20px; margin-right: 4px; }");
+    GString* icons_css_src = g_string_new(".split-icon { background-repeat: no-repeat; background-position: center; min-width: 20px; min-height: 20px; background-size: contain; margin-right: 4px; }");
 
     for (unsigned int i = 0; i < self->split_count; ++i) {
         self->split_rows[i] = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
@@ -492,6 +492,7 @@ static void splits_show_game(LSComponent* self_, const ls_game* game, const ls_t
             add_class(self->split_icons[i], "split-icon");
             // set size but allow to dinamically change it from css with min-width and min-height
             gtk_widget_set_size_request(self->split_icons[i], 20, 20);
+            gtk_widget_set_valign(self->split_icons[i], GTK_ALIGN_CENTER);
             gtk_box_append(GTK_BOX(self->split_rows[i]), self->split_icons[i]);
         }
 

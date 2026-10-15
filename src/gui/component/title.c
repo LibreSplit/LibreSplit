@@ -197,7 +197,7 @@ static void title_draw(LSComponent* self_, const ls_game* game, const ls_timer* 
 
     if (show_icon) {
         if (game->icon_path && !self->icon) {
-            GString* icon_css_src = g_string_new(".title-icon { background-repeat: no-repeat; background-position: center; min-width: 20px; min-height: 20px; background-size: 20px; margin-right: 4px;");
+            GString* icon_css_src = g_string_new(".title-icon { background-repeat: no-repeat; background-position: center; min-width: 20px; min-height: 20px; background-size: contain; margin-right: 4px;");
             char* icon = icon_uri(game->path, game->icon_path);
             if (icon) {
                 g_string_append(icon_css_src, " background-image: url(");
@@ -218,6 +218,7 @@ static void title_draw(LSComponent* self_, const ls_game* game, const ls_timer* 
 
             self->icon = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
             add_class(self->icon, "title-icon");
+            gtk_widget_set_valign(self->icon, GTK_ALIGN_CENTER);
             gtk_box_prepend(GTK_BOX(self->start), self->icon);
         }
     } else if (self->icon) {
