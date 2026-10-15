@@ -254,13 +254,20 @@ void free_all(LSSplits* self_)
  */
 static void splits_update_opacity(GdkFrameClock* clock, GtkWidget* viewport)
 {
+    bool clipped = false;
     GtkWidget* list = gtk_viewport_get_child(GTK_VIEWPORT(viewport));
     int height = gtk_widget_get_height(viewport);
     for (GtkWidget* row = gtk_widget_get_first_child(list); row; row = gtk_widget_get_next_sibling(row)) {
-        graphene_rect_t bounds;
-        if (gtk_widget_compute_bounds(row, viewport, &bounds)) {
-            gtk_widget_set_opacity(row, bounds.origin.y + bounds.size.height <= height ? 1.0 : 0.0);
+        if (!clipped) {
+            graphene_rect_t bounds;
+            if (!gtk_widget_compute_bounds(row, viewport, &bounds)) {
+                continue;
+            }
+
+            clipped = bounds.origin.y + bounds.size.height > height;
         }
+
+        gtk_widget_set_opacity(row, clipped ? 1.0 : 0.0);
     }
 }
 
