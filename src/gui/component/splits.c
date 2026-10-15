@@ -267,7 +267,7 @@ static void splits_update_opacity(GdkFrameClock* clock, GtkWidget* viewport)
             clipped = bounds.origin.y + bounds.size.height > height;
         }
 
-        gtk_widget_set_opacity(row, clipped ? 1.0 : 0.0);
+        gtk_widget_set_opacity(row, clipped ? 0.0 : 1.0);
     }
 }
 
