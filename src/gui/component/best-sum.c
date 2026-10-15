@@ -14,7 +14,7 @@ typedef struct LSBestSum {
 } LSBestSum;
 extern LSComponentOps ls_best_sum_operations;
 
-#define SUM_OF_BEST_SEGMENTS "Sum of best segments"
+#define SUM_OF_BEST_SEGMENTS "Sum of Best Segments"
 
 /**
  * Constructor

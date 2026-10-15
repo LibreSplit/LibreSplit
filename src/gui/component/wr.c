@@ -15,7 +15,7 @@ typedef struct LSWr {
 } LSWr;
 extern LSComponentOps ls_wr_operations;
 
-#define WORLD_RECORD "World record"
+#define WORLD_RECORD "World Record"
 
 /**
  * Constructor

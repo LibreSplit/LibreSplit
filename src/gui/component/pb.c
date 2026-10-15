@@ -14,7 +14,7 @@ typedef struct LSPb {
 } LSPb;
 extern LSComponentOps ls_pb_operations;
 
-#define PERSONAL_BEST "Personal best"
+#define PERSONAL_BEST "Personal Best"
 
 /**
  * Constructor

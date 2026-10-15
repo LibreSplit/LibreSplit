@@ -15,8 +15,8 @@ typedef struct LSPrevSegment {
 } LSPrevSegment;
 extern LSComponentOps ls_prev_segment_operations;
 
-#define PREVIOUS_SEGMENT "Previous segment"
-#define LIVE_SEGMENT "Live segment"
+#define PREVIOUS_SEGMENT "Previous Segment"
+#define LIVE_SEGMENT "Live Segment"
 
 /**
  * Constructor
