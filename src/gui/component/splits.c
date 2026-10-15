@@ -839,6 +839,7 @@ static void splits_scroll_to_split(LSComponent* self_, const ls_timer* timer)
     double min_scroll, max_scroll;
     const graphene_point_t origin = GRAPHENE_POINT_INIT(0, 0);
     graphene_point_t split_position;
+    graphene_rect_t split_bounds;
 
     if (timer->game->split_count == 0)
         return;
@@ -874,10 +875,15 @@ static void splits_scroll_to_split(LSComponent* self_, const ls_timer* timer)
         }
     }
     min_scroll = split_position.y + curr_scroll - scroller_h + split_h;
-    max_scroll = split_position.y + curr_scroll;
-    bool scroll_up = curr_scroll > max_scroll;
-    if (scroll_up || curr_scroll < min_scroll) {
-        double target = scroll_up ? 0 : gtk_adjustment_get_upper(self->split_adjust);
+    if (!gtk_widget_compute_bounds(self->split_rows[curr], self->splits, &split_bounds)) {
+        return;
+    }
+
+    max_scroll = curr == 0 ? 0 : split_bounds.origin.y;
+    if (curr_scroll > max_scroll) {
+        gtk_adjustment_set_value(self->split_adjust, max_scroll);
+    } else if (curr_scroll < min_scroll) {
+        double target = gtk_adjustment_get_upper(self->split_adjust);
         GtkWidget* first = gtk_widget_get_first_child(self->splits);
         for (GtkWidget* row = first; row; row = gtk_widget_get_next_sibling(row)) {
             graphene_rect_t bounds;
@@ -886,13 +892,7 @@ static void splits_scroll_to_split(LSComponent* self_, const ls_timer* timer)
             }
 
             double top = row == first ? 0 : bounds.origin.y;
-            if (scroll_up) {
-                if (top > max_scroll) {
-                    break;
-                }
-
-                target = top;
-            } else if (top >= min_scroll) {
+            if (top >= min_scroll) {
                 target = top;
                 break;
             }
