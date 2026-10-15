@@ -116,6 +116,26 @@ void ls_timer_string(char* string, char* fraction, long long time, LSTimerDigits
     }
 }
 
+void ls_timer_set_text(GtkWidget* seconds, GtkWidget* fraction, const char* text, const char* fraction_text)
+{
+    PangoAttrList* attributes = NULL;
+    size_t length = strlen(text);
+    // Keep longer displays close to the width of MM:SS.
+    if (length > 5) {
+        attributes = pango_attr_list_new();
+        pango_attr_list_insert(attributes, pango_attr_scale_new(5.0 / length));
+    }
+
+    gtk_label_set_attributes(GTK_LABEL(seconds), attributes);
+    gtk_label_set_attributes(GTK_LABEL(fraction), attributes);
+    if (attributes) {
+        pango_attr_list_unref(attributes);
+    }
+
+    gtk_label_set_text(GTK_LABEL(seconds), text);
+    gtk_label_set_text(GTK_LABEL(fraction), fraction_text);
+}
+
 /**
  * @brief The Timer component itself.
  */
@@ -192,8 +212,7 @@ static GtkWidget* timer_widget(LSComponent* self)
 static void timer_clear_game(LSComponent* self_)
 {
     LSTimer* self = (LSTimer*)self_;
-    gtk_label_set_text(GTK_LABEL(self->time_seconds), "");
-    gtk_label_set_text(GTK_LABEL(self->time_millis), "");
+    ls_timer_set_text(self->time_seconds, self->time_millis, "", "");
     ls_timer_set_style(self->time, LS_TIMER_IDLE);
 }
 
@@ -216,8 +235,7 @@ static void timer_draw(LSComponent* self_, const ls_game* game, const ls_timer* 
                                    : ls_time_get_by_method(ls_timer_get_time(timer, false), method);
     ls_timer_set_style(self->time, ls_timer_get_status(timer, method));
     ls_timer_string(str, millis, time, digits_format, accuracy);
-    gtk_label_set_text(GTK_LABEL(self->time_seconds), str);
-    gtk_label_set_text(GTK_LABEL(self->time_millis), millis);
+    ls_timer_set_text(self->time_seconds, self->time_millis, str, millis);
 }
 
 LSComponentOps ls_timer_operations = {

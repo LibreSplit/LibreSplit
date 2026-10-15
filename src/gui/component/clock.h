@@ -20,3 +20,5 @@ ls_time_method ls_component_timer_method(LSComponent* component, ls_time_method 
 void ls_timer_set_style(GtkWidget* widget, ls_timer_status status);
 
 void ls_timer_string(char* string, char* fraction, long long time, LSTimerDigitsFormat digits_format, LSTimeAccuracy accuracy);
+
+void ls_timer_set_text(GtkWidget* seconds, GtkWidget* fraction, const char* text, const char* fraction_text);

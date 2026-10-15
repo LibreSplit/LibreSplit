@@ -134,10 +134,8 @@ static GtkWidget* detailed_timer_widget(LSComponent* self)
 static void detailed_timer_clear_game(LSComponent* self_)
 {
     LSDetailedTimer* self = (LSDetailedTimer*)self_;
-    gtk_label_set_text(GTK_LABEL(self->time_seconds), "");
-    gtk_label_set_text(GTK_LABEL(self->time_millis), "");
-    gtk_label_set_text(GTK_LABEL(self->segment_seconds), "");
-    gtk_label_set_text(GTK_LABEL(self->segment_millis), "");
+    ls_timer_set_text(self->time_seconds, self->time_millis, "", "");
+    ls_timer_set_text(self->segment_seconds, self->segment_millis, "", "");
 
     gtk_label_set_text(GTK_LABEL(self->segment_pb), "");
     gtk_label_set_text(GTK_LABEL(self->segment_best), "");
@@ -169,12 +167,10 @@ static void detailed_timer_draw(LSComponent* self_, const ls_game* game, const l
     ls_timer_status status = ls_timer_get_status(timer, method);
     ls_timer_set_style(self->detailed_time, status);
     ls_timer_string(str, millis, ls_time_get_by_method(ls_timer_get_time(timer, false), method), digits_format, accuracy);
-    gtk_label_set_text(GTK_LABEL(self->time_seconds), str);
-    gtk_label_set_text(GTK_LABEL(self->time_millis), millis);
+    ls_timer_set_text(self->time_seconds, self->time_millis, str, millis);
 
     ls_timer_string(seg, seg_millis, ls_timer_get_segment_time(timer, method), digits_format, accuracy);
-    gtk_label_set_text(GTK_LABEL(self->segment_seconds), seg);
-    gtk_label_set_text(GTK_LABEL(self->segment_millis), seg_millis);
+    ls_timer_set_text(self->segment_seconds, self->segment_millis, seg, seg_millis);
 
     ls_time_string(&pb[6], curr < game->split_count ? ls_time_get_by_method(game->segment_times[curr], method) : LLONG_MAX);
     gtk_label_set_text(GTK_LABEL(self->segment_pb), pb);
