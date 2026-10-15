@@ -2,13 +2,14 @@
  *
  * Implementation of the "Detailed timer" component.
  */
-#include "clock.h"
+#include "timer.h"
 #include <limits.h>
 
 static const LSComponentSetting detailed_timer_settings[] = {
     { .key = "timing_method", .label = "Timing Method", .options = ls_timer_timing_method_options, .val = { .type = LS_COMPONENT_SETTING_OPTIONS, .int_val = LS_COMPONENT_COMPARISON_DEFAULT } },
     { .key = "digits_format", .label = "Digits Format", .options = ls_timer_digits_format_options, .val = { .type = LS_COMPONENT_SETTING_OPTIONS, .int_val = LS_TIMER_DIGITS_SINGLE_SECONDS } },
     { .key = "accuracy", .label = "Accuracy", .options = ls_timer_accuracy_options, .val = { .type = LS_COMPONENT_SETTING_OPTIONS, .int_val = LS_TIME_ACCURACY_DEFAULT } },
+    { .key = "gradient_colors", .label = "Gradient Colors", .val = { .type = LS_COMPONENT_SETTING_BOOLEAN, .bool_val = false } },
     { NULL }
 };
 
@@ -66,7 +67,7 @@ LSComponent* ls_component_detailed_timer_new(void)
     gtk_widget_set_hexpand(self->detailed_time, TRUE);
     gtk_box_append(GTK_BOX(self->detailed_timer), self->detailed_time);
 
-    self->time = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+    self->time = ls_timer_box_new();
     gtk_box_append(GTK_BOX(self->detailed_time), self->time);
 
     spacer = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
@@ -83,7 +84,7 @@ LSComponent* ls_component_detailed_timer_new(void)
     gtk_widget_set_valign(self->time_millis, GTK_ALIGN_BASELINE_FILL);
     gtk_box_append(GTK_BOX(self->time), self->time_millis);
 
-    self->segment = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+    self->segment = ls_timer_box_new();
     add_class(self->segment, "segment");
     gtk_box_append(GTK_BOX(self->detailed_time), self->segment);
 
@@ -171,6 +172,9 @@ static void detailed_timer_draw(LSComponent* self_, const ls_game* game, const l
 
     ls_timer_string(seg, seg_millis, ls_timer_get_segment_time(timer, method), digits_format, accuracy);
     ls_timer_set_text(self->segment_seconds, self->segment_millis, seg, seg_millis);
+    bool gradient = ls_component_settings_get(self_, "gradient_colors")->bool_val;
+    ls_timer_set_gradient(self->time, gradient);
+    ls_timer_set_gradient(self->segment, gradient);
 
     ls_time_string(&pb[6], curr < game->split_count ? ls_time_get_by_method(game->segment_times[curr], method) : LLONG_MAX);
     gtk_label_set_text(GTK_LABEL(self->segment_pb), pb);

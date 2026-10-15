@@ -2,7 +2,7 @@
  *
  * Implementation of the splits component.
  */
-#include "clock.h"
+#include "timer.h"
 #include <gtk/gtk.h>
 #include <limits.h>
 
