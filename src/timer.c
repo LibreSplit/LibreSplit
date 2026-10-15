@@ -1754,6 +1754,7 @@ int ls_timer_unsplit(ls_timer* timer)
     if (timer->curr_split == timer->game->split_count) {
         timer->comparison_time = timer->game->split_times[timer->curr_split - 1];
     }
+
     unsigned int curr = --timer->curr_split;
     for (unsigned int i = curr; i < timer->game->split_count; ++i) {
         timer->split_times[i] = timer->game->split_times[i];
@@ -1761,12 +1762,17 @@ int ls_timer_unsplit(ls_timer* timer)
         timer->split_info[i] = 0;
         timer->segment_times[i] = timer->game->segment_times[i];
         ls_time_clear(&timer->segment_deltas[i]);
+        timer->best_segments[i] = timer->game->best_segments[i];
     }
+
+    timer->sum_of_bests.game_time = ls_sum_of_bests(timer, LS_GAME_TIME);
+    timer->sum_of_bests.real_time = ls_sum_of_bests(timer, LS_REAL_TIME);
     if (timer->curr_split + 1 == timer->game->split_count) {
         timer->started = 1;
         timer->running = true;
         atomic_store(&run_running, true);
     }
+
     lasr_event_requests |= TIMER_EVT_UNSPLIT;
     return timer->curr_split;
 }
