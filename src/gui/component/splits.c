@@ -259,6 +259,7 @@ static void splits_update_opacity(GdkFrameClock* clock, GtkWidget* viewport)
     // Scroll coordinates change during allocation, not when the adjustment changes.
     g_object_set_data(G_OBJECT(viewport), "splits-allocated-scroll", GINT_TO_POINTER(allocated_scroll));
     double scroll_end = gtk_adjustment_get_upper(adjustment) - gtk_adjustment_get_page_size(adjustment);
+    double target = allocated_scroll;
     bool align = allocated_scroll > 0 && allocated_scroll < scroll_end - SCROLL_TOLERANCE;
     bool clipped = false;
     GtkWidget* list = gtk_viewport_get_child(GTK_VIEWPORT(viewport));
@@ -272,7 +273,7 @@ static void splits_update_opacity(GdkFrameClock* clock, GtkWidget* viewport)
 
             double bottom = bounds.origin.y + bounds.size.height;
             if (align && bounds.origin.y < 0 && bottom > 0) {
-                gtk_adjustment_set_value(adjustment, allocated_scroll + bounds.origin.y);
+                target = allocated_scroll + bounds.origin.y;
                 align = false;
             }
 
@@ -280,6 +281,24 @@ static void splits_update_opacity(GdkFrameClock* clock, GtkWidget* viewport)
         }
 
         gtk_widget_set_opacity(row, clipped ? 0.0 : 1.0);
+    }
+
+    // Keep the active row visible through later layouts until the user scrolls.
+    GtkWidget* active = g_object_get_data(G_OBJECT(viewport), "splits-active-scroll");
+    if (active) {
+        graphene_rect_t bounds;
+        if (gtk_widget_get_parent(active) == list && gtk_widget_compute_bounds(active, viewport, &bounds)) {
+            double top = allocated_scroll + bounds.origin.y;
+            double bottom = top + bounds.size.height;
+            if (bottom > target + height
+                || (top < target && (target < scroll_end - SCROLL_TOLERANCE || bottom <= target))) {
+                target = top;
+            }
+        }
+    }
+
+    if (target != allocated_scroll) {
+        gtk_adjustment_set_value(adjustment, target);
     }
 }
 
@@ -304,6 +323,7 @@ static gboolean splits_scroll_rows(GtkEventControllerScroll* controller, double 
         return FALSE;
     }
 
+    g_object_set_data(G_OBJECT(viewport), "splits-active-scroll", NULL);
     GtkWidget* list = gtk_viewport_get_child(GTK_VIEWPORT(viewport));
     GtkWidget* first = gtk_widget_get_first_child(list);
     GtkAdjustment* adjustment = gtk_scrollable_get_vadjustment(GTK_SCROLLABLE(viewport));
@@ -670,6 +690,7 @@ static void splits_show_game(LSComponent* self_, const ls_game* game, const ls_t
 static void splits_clear_game(LSComponent* self_)
 {
     LSSplits* self = (LSSplits*)self_;
+    g_object_set_data(G_OBJECT(self->split_viewport), "splits-active-scroll", NULL);
     g_clear_signal_handler(&self->scroll_changed_handler, self->split_adjust);
     gtk_widget_set_visible(self->splits, FALSE);
     gtk_widget_set_visible(self->split_last, FALSE);
@@ -877,6 +898,8 @@ static void splits_scroll_to_split(LSComponent* self_, const ls_timer* timer)
         next = self->split_count - 1;
     }
 
+    g_object_set_data_full(G_OBJECT(self->split_viewport), "splits-active-scroll",
+        g_object_ref(self->split_rows[curr]), g_object_unref);
     curr_scroll = gtk_adjustment_get_value(self->split_adjust);
     double allocated_scroll = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(self->split_viewport), "splits-allocated-scroll"));
     if (!gtk_widget_compute_point(
