@@ -559,6 +559,11 @@ void ls_game_user_settings_get(UserSetting*** settings, size_t* count)
 static void find_duplicate_ids(uint32_t* ids, unsigned int count)
 {
     GHashTable* all_ids = g_hash_table_new_full(g_int_hash, g_int_equal, free, free);
+    if (!all_ids) {
+        // this operation is not critical.
+        return;
+    }
+
     for (size_t i = 0; i < count; ++i) {
         if (g_hash_table_contains(all_ids, &ids[i])) {
             uint32_t* times_found = g_hash_table_lookup(all_ids, &ids[i]);
