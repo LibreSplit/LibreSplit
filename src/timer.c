@@ -550,6 +550,37 @@ void ls_game_user_settings_get(UserSetting*** settings, size_t* count)
     *count = auto_splitter_user_settings_count != NULL ? *auto_splitter_user_settings_count : 0;
 }
 
+/**
+ * @brief Checks for duplicate ids and warns the users on any duplicate.
+ *
+ * @param ids The array of split ids.
+ * @param count The array count.
+ */
+static void find_duplicate_ids(uint32_t* ids, unsigned int count)
+{
+    GHashTable* all_ids = g_hash_table_new_full(g_int_hash, g_int_equal, free, free);
+    for (size_t i = 0; i < count; ++i) {
+        if (g_hash_table_contains(all_ids, &ids[i])) {
+            uint32_t* times_found = g_hash_table_lookup(all_ids, &ids[i]);
+            if (*times_found == 1) {
+                // only log the warning once per duplicate.
+                LOG_WARNF("Duplicate split id: %u detected", ids[i]);
+            }
+
+            ++(*times_found);
+        } else {
+            int* key = malloc(sizeof(int));
+            int* val = malloc(sizeof(int));
+            *key = ids[i];
+            *val = 1;
+
+            g_hash_table_insert(all_ids, key, val);
+        }
+    }
+
+    g_hash_table_unref(all_ids);
+}
+
 int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
 {
     LOG_DEBUG("Creating game...");
@@ -876,6 +907,8 @@ int ls_game_create(ls_game** game_ptr, const char* path, char** error_msg)
                 game->best_segments[i].game_time = LLONG_MAX;
             }
         }
+
+        find_duplicate_ids(game->split_ids, game->split_count);
     }
 
     atomic_init(&game->has_unsaved_pb, false);
