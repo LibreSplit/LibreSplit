@@ -185,6 +185,9 @@ LSComponent* ls_component_run_predict_new(json_t* settings)
     self->time = gtk_label_new(NULL);
     gtk_widget_set_halign(self->time, GTK_ALIGN_END);
     gtk_box_append(GTK_BOX(self->container), self->time);
+    add_class(self->container, "run-predict-container");
+    add_class(label, "run-predict-label");
+    add_class(self->time, "run-predict-time");
 
     switch (type) {
         case LS_BEST_POSSIBLE_TIME:

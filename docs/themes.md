@@ -53,6 +53,7 @@ See the [GTK 4 CSS properties documentation](https://docs.gtk.org/gtk4/css-prope
 | `.sum-of-bests-container`       | The container for the "sum of bests" label and timer                                                                                                     |
 | `.best-possible-time-container` | The container for the "best possible time" label and timer                                                                                               |
 | `.current-pace-container`       | The container for the "current pace" label and timer                                                                                                     |
+| `.run-predict-container`        | The container for either "current pace" and/or "best possible time" label and timer                                                                      |
 | `.personal-best-container`      | The container for the "personal best" label and timer                                                                                                    |
 | `.prev-segment-container`       | The container for the "previous segment" label and timer                                                                                                 |
 | `.world-record-container`       | The container for the "world record" label and timer                                                                                                     |
@@ -69,6 +70,8 @@ See the [GTK 4 CSS properties documentation](https://docs.gtk.org/gtk4/css-prope
 | `.best-possible-time`           | Time for Best Possible Time                                                                                                                              |
 | `.current-pace-label`           | Text that says "Current Pace"                                                                                                                            |
 | `.current-pace`                 | Time for Current Pace                                                                                                                                    |
+| `.run-predict-label`            | Text that says "Current Pace" and/or "Best Possible Time"                                                                                                |
+| `.run-predict-pace`             | Time for Current Pace and/or Best Possible Time                                                                                                          |
 | `.personal-best-label`          | Text that says "Personal Best"                                                                                                                           |
 | `.personal-best`                | Time for Personal Best                                                                                                                                   |
 | `.world-record-label`           | Text that says "World Record"                                                                                                                            |
