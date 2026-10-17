@@ -294,9 +294,9 @@ static void ls_app_window_dispose(GObject* object)
         win->step_source_id = 0;
     }
 
-    if (win->draw_source_id) {
-        g_source_remove(win->draw_source_id);
-        win->draw_source_id = 0;
+    if (win->draw_tick_id) {
+        gtk_widget_remove_tick_callback(GTK_WIDGET(win), win->draw_tick_id);
+        win->draw_tick_id = 0;
     }
 
     if (win->global_hotkeys_initialized) {
@@ -470,8 +470,8 @@ gboolean ls_app_window_step(gpointer data)
                 timer_split(win);
                 atomic_store(&call_split, 0);
             }
-            if (atomic_load(&toggle_loading)) {
-                win->timer->loading = !win->timer->loading;
+            if (atomic_exchange(&toggle_loading, false)) {
+                win->timer->loading = atomic_load(&prev_is_loading);
 
                 if (win->timer->running) {
                     if (win->timer->loading) {
@@ -480,7 +480,6 @@ gboolean ls_app_window_step(gpointer data)
                         timer_unpause(win);
                     }
                 }
-                atomic_store(&toggle_loading, 0);
             }
             if (atomic_load(&call_reset)) {
                 timer_stop_and_reset(win);
@@ -530,6 +529,9 @@ gboolean ls_app_window_draw(gpointer data)
 {
     LSAppWindow* win = data;
     if (win->timer) {
+        // perform a step before the next component draws
+        ls_timer_step(win->timer);
+
         GList* l;
         for (l = win->components; l != NULL; l = l->next) {
             LSComponent* component = l->data;
@@ -537,11 +539,18 @@ gboolean ls_app_window_draw(gpointer data)
                 component->ops->draw(component, win->game, win->timer);
             }
         }
-    } else {
-        gtk_widget_queue_draw(GTK_WIDGET(win));
     }
 
     return TRUE;
+}
+
+static gboolean ls_app_window_tick(GtkWidget* widget, GdkFrameClock* clock, gpointer data)
+{
+    if (gtk_widget_get_mapped(widget)) {
+        ls_app_window_draw(data);
+    }
+
+    return G_SOURCE_CONTINUE;
 }
 
 static void ls_app_window_init(LSAppWindow* win)
@@ -553,7 +562,7 @@ static void ls_app_window_init(LSAppWindow* win)
     win->style = NULL;
     win->style_variant = NULL;
     win->step_source_id = 0;
-    win->draw_source_id = 0;
+    win->draw_tick_id = 0;
     win->global_hotkeys_initialized = false;
     win->context_menu = NULL;
     win->resize_cursor_hover = false;
@@ -608,8 +617,6 @@ static void ls_app_window_init(LSAppWindow* win)
     LOG_DEBUG("Creating the main window...");
     win->container = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     add_class(win->container, "libresplit-content");
-    gtk_widget_set_margin_top(win->container, WINDOW_PAD);
-    gtk_widget_set_margin_bottom(win->container, WINDOW_PAD);
     gtk_widget_set_vexpand(win->container, TRUE);
     gtk_window_set_child(GTK_WINDOW(win), win->container);
 
@@ -636,13 +643,12 @@ static void ls_app_window_init(LSAppWindow* win)
     LOG_DEBUG("Creating window footer...");
     win->footer = gtk_grid_new();
     add_class(win->footer, "footer");
-    gtk_widget_set_margin_start(win->footer, WINDOW_PAD);
-    gtk_widget_set_margin_end(win->footer, WINDOW_PAD);
+    add_class(win->footer, "layout-component");
     gtk_box_append(GTK_BOX(win->box), win->footer);
 
     LOG_DEBUG("Setting up timers for updating and drawing the window...");
     // Update the internal state every millisecond
     win->step_source_id = g_timeout_add(1, ls_app_window_step, win);
-    // Draw the window at 30 FPS
-    win->draw_source_id = g_timeout_add((int)(1000 / 30.), ls_app_window_draw, win);
+    // Refresh the display before each frame, independently of the run clock.
+    win->draw_tick_id = gtk_widget_add_tick_callback(GTK_WIDGET(win), ls_app_window_tick, win, NULL);
 }

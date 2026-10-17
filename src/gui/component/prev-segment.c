@@ -15,13 +15,13 @@ typedef struct LSPrevSegment {
 } LSPrevSegment;
 extern LSComponentOps ls_prev_segment_operations;
 
-#define PREVIOUS_SEGMENT "Previous segment"
-#define LIVE_SEGMENT "Live segment"
+#define PREVIOUS_SEGMENT "Previous Segment"
+#define LIVE_SEGMENT "Live Segment"
 
 /**
  * Constructor
  */
-LSComponent* ls_component_prev_segment_new(void)
+LSComponent* ls_component_prev_segment_new(json_t* settings)
 {
     LSPrevSegment* self;
 
@@ -29,7 +29,9 @@ LSComponent* ls_component_prev_segment_new(void)
     if (!self) {
         return NULL;
     }
+
     self->base.ops = &ls_prev_segment_operations;
+    ls_component_settings_load((LSComponent*)self, settings);
 
     self->container = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
     add_class(self->container, "footer");

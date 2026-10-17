@@ -14,12 +14,12 @@ typedef struct LSBestSum {
 } LSBestSum;
 extern LSComponentOps ls_best_sum_operations;
 
-#define SUM_OF_BEST_SEGMENTS "Sum of best segments"
+#define SUM_OF_BEST_SEGMENTS "Sum of Best Segments"
 
 /**
  * Constructor
  */
-LSComponent* ls_component_best_sum_new(void)
+LSComponent* ls_component_best_sum_new(json_t* settings)
 {
     LSBestSum* self;
     GtkWidget* label;
@@ -28,7 +28,9 @@ LSComponent* ls_component_best_sum_new(void)
     if (!self) {
         return NULL;
     }
+
     self->base.ops = &ls_best_sum_operations;
+    ls_component_settings_load((LSComponent*)self, settings);
 
     self->container = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
     add_class(self->container, "footer"); /* hack */

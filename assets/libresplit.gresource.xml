@@ -2,6 +2,7 @@
 <gresources>
     <gresource prefix="/org/libresplit/LibreSplit">
         <file>layouts/default.json</file>
-        <file>themes/fallback.css</file>
+        <file compressed="true">themes/base.css</file>
+        <file compressed="true">themes/fallback.css</file>
     </gresource>
 </gresources>

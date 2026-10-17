@@ -55,7 +55,9 @@ libresplit_sources = files(
     'src/gui/component/detailed-timer.c',
     'src/gui/component/pb.c',
     'src/gui/component/prev-segment.c',
+    'src/gui/component/run-predict.c',
     'src/gui/component/splits.c',
+    'src/gui/component/timer.c',
     'src/gui/component/title.c',
     'src/gui/component/wr.c',
     'src/gui/context_menu.c',
@@ -101,7 +103,6 @@ libresplit_sources = files(
     'src/main.c',
     'src/runs.c',
     'src/server.c',
-    'src/utils.c',
 
     # Settings
     'src/settings/definitions.c',
@@ -109,6 +110,7 @@ libresplit_sources = files(
     'src/settings/utils.c',
     'src/shared.c',
     'src/timer.c',
+    'src/utils.c',
 )
 
 libresplit_ctl_sources = files(

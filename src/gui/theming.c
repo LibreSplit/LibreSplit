@@ -7,10 +7,6 @@
 #include <string.h>
 #include <sys/stat.h>
 
-static const char reset_rules[] = ".window.main-window{ all: unset; }\n"
-                                  ".window.main-window .libresplit-content,\n"
-                                  ".window.main-window .libresplit-content * { all: unset; }";
-
 /**
  * Captures CSS loading errors the same way GTK 3's GError parameter did.
  *
@@ -88,7 +84,7 @@ int ls_app_window_find_theme(const LSAppWindow* win,
 }
 
 /**
- * Applies the reset rules to avoid Desktop Themes messing with LibreSplit
+ * Applies desktop-theme resets and overridable layout defaults for every theme.
  *
  * @param win The LibreSplit window
  * @param gerror A GTK gerror pointer
@@ -103,7 +99,7 @@ static void apply_reset_rules(LSAppWindow* win, GError** gerror)
         GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
     gulong error_handler = g_signal_connect(win->reset_style,
         "parsing-error", G_CALLBACK(capture_css_error), gerror);
-    gtk_css_provider_load_from_string(GTK_CSS_PROVIDER(win->reset_style), reset_rules);
+    gtk_css_provider_load_from_resource(GTK_CSS_PROVIDER(win->reset_style), LIBRESPLIT_RESOURCES_PREFIX "themes/base.css");
     g_signal_handler_disconnect(win->reset_style, error_handler);
 }
 
