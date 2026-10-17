@@ -569,8 +569,8 @@ static void find_duplicate_ids(uint32_t* ids, unsigned int count)
 
             ++(*times_found);
         } else {
-            int* key = malloc(sizeof(int));
-            int* val = malloc(sizeof(int));
+            uint32_t* key = malloc(sizeof(uint32_t));
+            uint32_t* val = malloc(sizeof(uint32_t));
             *key = ids[i];
             *val = 1;
 
