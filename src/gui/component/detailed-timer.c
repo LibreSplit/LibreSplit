@@ -66,11 +66,12 @@ LSComponent* ls_component_detailed_timer_new(json_t* settings)
     //
     self->detailed_time = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     add_class(self->detailed_time, "timer");
-    add_class(self->detailed_time, "time");
     gtk_widget_set_hexpand(self->detailed_time, TRUE);
     gtk_box_append(GTK_BOX(self->detailed_timer), self->detailed_time);
 
     self->time = ls_timer_box_new();
+    add_class(self->time, "timer");
+    add_class(self->time, "time");
     gtk_box_append(GTK_BOX(self->detailed_time), self->time);
 
     spacer = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
@@ -143,7 +144,7 @@ static void detailed_timer_clear_game(LSComponent* self_)
 
     gtk_label_set_text(GTK_LABEL(self->segment_pb), "");
     gtk_label_set_text(GTK_LABEL(self->segment_best), "");
-    ls_timer_set_style(self->detailed_time, LS_TIMER_IDLE);
+    ls_timer_set_style(self->time, LS_TIMER_IDLE);
 }
 
 /**
@@ -169,7 +170,7 @@ static void detailed_timer_draw(LSComponent* self_, const ls_game* game, const l
     }
 
     ls_timer_status status = ls_timer_get_status(timer, method);
-    ls_timer_set_style(self->detailed_time, status);
+    ls_timer_set_style(self->time, status);
     ls_timer_string(str, millis, ls_time_get_by_method(ls_timer_get_time(timer, false), method), digits_format, accuracy);
     ls_timer_set_text(self->time_seconds, self->time_millis, str, millis);
 
