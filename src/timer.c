@@ -570,14 +570,23 @@ static void find_duplicate_ids(uint32_t* ids, unsigned int count)
             ++(*times_found);
         } else {
             uint32_t* key = malloc(sizeof(uint32_t));
-            uint32_t* val = malloc(sizeof(uint32_t));
-            *key = ids[i];
-            *val = 1;
+            if (!key) {
+                goto find_duplicate_ids_cleanup;
+            }
 
+            uint32_t* val = malloc(sizeof(uint32_t));
+            if (!val) {
+                free(key);
+                goto find_duplicate_ids_cleanup;
+            }
+
+            *val = 1;
+            *key = ids[i];
             g_hash_table_insert(all_ids, key, val);
         }
     }
 
+find_duplicate_ids_cleanup:
     g_hash_table_unref(all_ids);
 }
 
