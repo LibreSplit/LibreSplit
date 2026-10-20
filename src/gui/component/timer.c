@@ -282,6 +282,16 @@ void ls_timer_set_gradient(GtkWidget* box, bool enabled)
     }
 }
 
+static void set_scale_attributes(GtkLabel* label, PangoAttrList* attributes)
+{
+    PangoAttrList* current = gtk_label_get_attributes(label);
+    if (current == attributes || (current && attributes && pango_attr_list_equal(current, attributes))) {
+        return;
+    }
+
+    gtk_label_set_attributes(label, attributes);
+}
+
 void ls_timer_set_text(GtkWidget* seconds, GtkWidget* fraction, const char* text, const char* fraction_text)
 {
     PangoAttrList* attributes = NULL;
@@ -292,8 +302,8 @@ void ls_timer_set_text(GtkWidget* seconds, GtkWidget* fraction, const char* text
         pango_attr_list_insert(attributes, pango_attr_scale_new(5.0 / length));
     }
 
-    gtk_label_set_attributes(GTK_LABEL(seconds), attributes);
-    gtk_label_set_attributes(GTK_LABEL(fraction), attributes);
+    set_scale_attributes(GTK_LABEL(seconds), attributes);
+    set_scale_attributes(GTK_LABEL(fraction), attributes);
     if (attributes) {
         pango_attr_list_unref(attributes);
     }
