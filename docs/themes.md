@@ -27,7 +27,7 @@ See the [GTK 4 CSS properties documentation](https://docs.gtk.org/gtk4/css-prope
 | `.title-icon`                   | Game Icon for the title                                                                                                                                  |
 | `.attempt-count`                | Counter for attempts in top right corner (#attempts_finished / attempts_total)                                                                           |
 | `.delta`                        | Difference between current time and PB, appears at -30s to PB. Should be overwritten by .behind, .losing, .behind.losing, .best-split, and .best-segment |
-| `.time`                         | All time fields from the main big timer, the splits times, and the times of personal best and sum of bests and other things in the footer                |
+| `.time`                         | All time fields from the main big timer, the splits times, and the times of personal best and sum of bests and other stats components with a time field  |
 | `.timer`                        | The large main timer                                                                                                                                     |
 | `.timer-container`              | Container for both the detailed and normal timer                                                                                                         |
 | `.detailed-timer`               | Container for the `segment-pb` and `segment-best` classes                                                                                                |
