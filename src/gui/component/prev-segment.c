@@ -34,7 +34,7 @@ LSComponent* ls_component_prev_segment_new(json_t* settings)
     ls_component_settings_load((LSComponent*)self, settings);
 
     self->container = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-    add_class(self->container, "footer");
+    add_class(self->container, "statistics");
     add_class(self->container, "prev-segment-container");
 
     self->previous_segment_label = gtk_label_new(PREVIOUS_SEGMENT);

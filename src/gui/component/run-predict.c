@@ -175,7 +175,7 @@ LSComponent* ls_component_run_predict_new(json_t* settings)
     LSRunPredictType type = ls_component_settings_get((LSComponent*)self, "type")->int_val;
 
     self->container = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-    add_class(self->container, "footer");
+    add_class(self->container, "statistics");
 
     GtkWidget* label = gtk_label_new(RUN_PREDICT_LABELS[type]);
     gtk_widget_set_halign(label, GTK_ALIGN_START);

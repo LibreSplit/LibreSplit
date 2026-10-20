@@ -141,7 +141,7 @@
 	background: linear-gradient(#F44336, #B71C1C);
 }
 
-.footer {
+.statistics {
 	font-size: 8pt;
 }
 
@@ -175,16 +175,16 @@
 	padding-bottom: 8px;
 }
 
-.footer>.delta {
+.statistics>.delta {
 	color: #4CAF50;
 }
 
-.footer>.behind {
+.statistics>.behind {
 	color: #F44336;
 }
 
-.footer>.best-segment,
-.footer>.best-segment {
+.statistics>.best-segment,
+.statistics>.best-segment {
 	color: #FFC107;
 }
 

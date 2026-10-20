@@ -49,7 +49,7 @@ See the [GTK 4 CSS properties documentation](https://docs.gtk.org/gtk4/css-prope
 | `.behind.losing`                | (class combination) Behind PB and losing time                                                                                                            |
 | `.best-segment`                 | Fastest time in that segment                                                                                                                             |
 | `.best-split`                   | Fastest pace to that point                                                                                                                               |
-| `.footer`                       | A generic footer that contains sum of bests, prev-segment comparison, world record, and others                                                           |
+| `.statistics`                   | A generic class used for simple one line components like PB, WR, etc. For a complete list of statistics components, see below                            |
 | `.sum-of-bests-container`       | The container for the "sum of bests" label and timer                                                                                                     |
 | `.best-possible-time-container` | The container for the "best possible time" label and timer                                                                                               |
 | `.current-pace-container`       | The container for the "current pace" label and timer                                                                                                     |
@@ -84,6 +84,18 @@ Specifically, the title is lowercase and all non-alphanumeric characters are rep
 For instance, if your split is titled "First split", it can be styled by targeting the CSS class `.split-title-first-split`.
 
 A more complex example: if your split is named "Space Station (Part 1)", the CSS class will be `.split-title-space-station--part-1-` (because the parentheses will become hyphens).
+
+### Statistics
+
+Components that have the `.statistics` class applied to them are:
+
+- Sum of Best Segments
+- Personal Best
+- Previous Segment
+- Run Predict
+  - Best Possible Time
+  - Current Pace
+- World Record
 
 ## Theme Variants
 

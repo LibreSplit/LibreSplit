@@ -53,7 +53,6 @@ typedef struct _LSAppWindow {
     bool resize_cursor_hover; /*!< True when the user is mousing over the resize edge of an undecorated window */
     GdkSurfaceEdge resize_cursor_edge; /*!< The edge the user is mousing over */
     GList* components;
-    GtkWidget* footer;
     GtkCssProvider* reset_style; /*!< The "reset rules" provider, will remove desktop theme rules */
     GtkCssProvider* style; /*!< Current style provider, there can be only one */
     GtkCssProvider* style_variant; /*!< Current style variant provider based on the main style, there can only be one*/

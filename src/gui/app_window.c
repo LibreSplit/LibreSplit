@@ -638,14 +638,6 @@ static void ls_app_window_init(LSAppWindow* win)
     gtk_widget_set_vexpand(win->box, TRUE);
     gtk_box_append(GTK_BOX(win->container), win->box);
 
-    // NOTE: This always creates an empty footer, no matter how many
-    //  ^ "footers" are available, which may give issues with theming
-    LOG_DEBUG("Creating window footer...");
-    win->footer = gtk_grid_new();
-    add_class(win->footer, "footer");
-    add_class(win->footer, "layout-component");
-    gtk_box_append(GTK_BOX(win->box), win->footer);
-
     LOG_DEBUG("Setting up timers for updating and drawing the window...");
     // Update the internal state every millisecond
     win->step_source_id = g_timeout_add(1, ls_app_window_step, win);
