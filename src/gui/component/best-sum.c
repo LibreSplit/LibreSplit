@@ -33,7 +33,7 @@ LSComponent* ls_component_best_sum_new(json_t* settings)
     ls_component_settings_load((LSComponent*)self, settings);
 
     self->container = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-    add_class(self->container, "statistics"); /* hack */
+    add_class(self->container, "statistics");
     add_class(self->container, "sum-of-bests-container");
 
     label = gtk_label_new(SUM_OF_BEST_SEGMENTS);

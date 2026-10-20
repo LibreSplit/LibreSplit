@@ -1535,7 +1535,8 @@ void ls_timer_step(ls_timer* timer)
                 if (timer->curr_split) {
                     timer->segment_times[timer->curr_split] = ls_time_subtract(timer->segment_times[timer->curr_split], timer->split_times[timer->curr_split - 1]);
                 }
-                // For previous segment in footer
+
+                // For previous segment
                 timer->segment_deltas[timer->curr_split] = ls_time_subtract(timer->segment_times[timer->curr_split], timer->game->segment_times[timer->curr_split]);
             }
         }
