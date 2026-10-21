@@ -122,6 +122,13 @@ static int luaopen_os_safe(lua_State* L)
     }
 
     lua_remove(L, -2);
+    static const luaL_Reg custom_functions[] = {
+        { "time_us", time_us },
+        { "difftime_us", difftime_us },
+        { NULL, NULL }
+    };
+
+    luaL_setfuncs(L, custom_functions, 0);
     return 1;
 }
 

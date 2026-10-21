@@ -94,6 +94,7 @@ libresplit_sources = files(
     'src/lasr/functions/signature.c',
     'src/lasr/functions/sizeOf.c',
     'src/lasr/functions/strtoida.c',
+    'src/lasr/functions/time.c',
     'src/lasr/game.c',
     'src/lasr/maps/maps.c',
     'src/lasr/memory_iter/memory_iterator.c',
