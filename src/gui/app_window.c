@@ -383,6 +383,7 @@ void ls_app_window_destroy(GtkWidget* widget, gpointer data)
 {
     LOG_INFO("Exiting LibreSplit. GG!");
     LSAppWindow* win = (LSAppWindow*)widget;
+    stop_auto_splitter();
     if (main_win == win) {
         main_win = NULL;
     }

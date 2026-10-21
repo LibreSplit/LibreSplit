@@ -6,6 +6,7 @@
 
 #include "./maps/maps.h"
 #include "functions.h"
+#include "game.h"
 #include "settings.h"
 #include "src/logging.h"
 #include "utils.h"
@@ -110,6 +111,20 @@ static int process_exists(void)
     return result == 0;
 }
 
+static int luaopen_os_safe(lua_State* L)
+{
+    static const char* const allowed_functions[] = { "clock", "date", "difftime", "time", NULL };
+    luaopen_os(L);
+    lua_newtable(L);
+    for (size_t i = 0; allowed_functions[i] != NULL; ++i) {
+        lua_getfield(L, -2, allowed_functions[i]);
+        lua_setfield(L, -2, allowed_functions[i]);
+    }
+
+    lua_remove(L, -2);
+    return 1;
+}
+
 /**
  * Lua libraries to enable in LASR
  */
@@ -119,6 +134,7 @@ static const luaL_Reg lj_lib_load[] = {
     { LUA_TABLIBNAME, luaopen_table },
     { LUA_STRLIBNAME, luaopen_string },
     { LUA_MATHLIBNAME, luaopen_math },
+    { LUA_OSLIBNAME, luaopen_os_safe },
     { NULL, NULL }
 };
 
@@ -633,6 +649,7 @@ void run_auto_splitter(void)
     disable_functions(L, disabled_functions);
     push_lasr_functions(L, luac_functions);
     push_lasr_globals(L);
+    lasr_game_register(L);
     lasr_settings_register(L);
 
     char current_file[PATH_MAX];
@@ -663,6 +680,7 @@ void run_auto_splitter(void)
                 err = "(error object is not a string)";
             fprintf(stderr, "%s\n", err);
         }
+
         lua_pop(L, 1);
         lua_close(L);
         clear_process();
