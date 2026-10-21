@@ -708,6 +708,8 @@ However you have access to the following:
   - https://www.lua.org/manual/5.4/manual.html#pdf-os.time
 - `os.time_us`
   - This is a custom function that works similar to os.time but with microsecond level precision.
+  - Unlike `os.time` which returns the number of seconds since the unix epoch, os.time_us returns
+    elapsed time from the system's monotonic clock.
 - `os.difftime_us`
   - This is a custom function that works similar to os.difftime but with microsecond level precision.
   - It should be used with output from `os.time_us`
