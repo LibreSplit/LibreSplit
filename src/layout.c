@@ -56,8 +56,28 @@ static bool validate_layout(json_t* root)
         json_t* val;
         json_object_foreach(settings, key, val)
         {
-            if (!json_is_string(val) && !json_is_boolean(val) && !json_is_number(val)) {
-                LOG_ERRF(VALIDATION_PREFIX "Invalid entry at %zu invalid settings entry %s must be primitive and not null", index, key);
+            if (json_is_array(val)) {
+                size_t setting_index;
+                json_t* setting_entry;
+                json_array_foreach(val, setting_index, setting_entry)
+                {
+                    if (!json_is_object(setting_entry)) {
+                        LOG_ERRF(VALIDATION_PREFIX "Invalid entry at %zu invalid settings entry %s[%zu] must be an object of settings", index, key, setting_index);
+                        return false;
+                    }
+
+                    const char* setting_key;
+                    json_t* setting_val;
+                    json_object_foreach(setting_entry, setting_key, setting_val)
+                    {
+                        if (!json_is_string(setting_val) && !json_is_boolean(setting_val) && !json_is_number(setting_val)) {
+                            LOG_ERRF(VALIDATION_PREFIX "Invalid setting at %s[%zu] %s must be primitive and not null or an array of valid primitives", key, setting_index, setting_key);
+                            return false;
+                        }
+                    }
+                }
+            } else if (!json_is_string(val) && !json_is_boolean(val) && !json_is_number(val)) {
+                LOG_ERRF(VALIDATION_PREFIX "Invalid entry at %zu invalid settings entry %s must be primitive and not null or an array of valid primitives", index, key);
                 return false;
             }
         }
@@ -115,12 +135,11 @@ static void init_layout(LSAppWindow* win, json_t* layout)
             continue;
         }
 
-        LSComponent* component = component_entry->new();
+        LSComponent* component = component_entry->new(json_object_get(entry, "settings"));
         if (component) {
             GtkWidget* widget = component->ops->widget(component);
             if (widget) {
-                gtk_widget_set_margin_start(widget, WINDOW_PAD);
-                gtk_widget_set_margin_end(widget, WINDOW_PAD);
+                add_class(widget, "layout-component");
                 gtk_box_append(GTK_BOX(win->box), widget);
             }
 

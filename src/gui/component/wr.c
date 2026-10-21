@@ -15,12 +15,12 @@ typedef struct LSWr {
 } LSWr;
 extern LSComponentOps ls_wr_operations;
 
-#define WORLD_RECORD "World record"
+#define WORLD_RECORD "World Record"
 
 /**
  * Constructor
  */
-LSComponent* ls_component_wr_new(void)
+LSComponent* ls_component_wr_new(json_t* settings)
 {
     LSWr* self;
 
@@ -28,10 +28,12 @@ LSComponent* ls_component_wr_new(void)
     if (!self) {
         return NULL;
     }
+
     self->base.ops = &ls_wr_operations;
+    ls_component_settings_load((LSComponent*)self, settings);
 
     self->container = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-    add_class(self->container, "footer"); /* hack */
+    add_class(self->container, "statistics");
     add_class(self->container, "world-record-container");
 
     self->world_record_label = gtk_label_new(WORLD_RECORD);

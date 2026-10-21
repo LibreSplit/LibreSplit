@@ -2,7 +2,16 @@
  *
  * Implementation of the clock/timer component.
  */
-#include "components.h"
+#include "timer.h"
+
+static const LSComponentSetting timer_settings[] = {
+    { .key = "timing_method", .label = "Timing Method", .options = ls_timer_timing_method_options, .val = { .type = LS_COMPONENT_SETTING_OPTIONS, .int_val = LS_COMPONENT_COMPARISON_DEFAULT } },
+    { .key = "segment_timer", .label = "Segment Timer", .val = { .type = LS_COMPONENT_SETTING_BOOLEAN, .bool_val = false } },
+    { .key = "digits_format", .label = "Digits Format", .options = ls_timer_digits_format_options, .val = { .type = LS_COMPONENT_SETTING_OPTIONS, .int_val = LS_TIMER_DIGITS_SINGLE_SECONDS } },
+    { .key = "accuracy", .label = "Accuracy", .options = ls_timer_accuracy_options, .val = { .type = LS_COMPONENT_SETTING_OPTIONS, .int_val = LS_TIME_ACCURACY_DEFAULT } },
+    { .key = "gradient_colors", .label = "Gradient Colors", .val = { .type = LS_COMPONENT_SETTING_BOOLEAN, .bool_val = false } },
+    { NULL }
+};
 
 /**
  * @brief The Timer component itself.
@@ -18,7 +27,7 @@ extern LSComponentOps ls_timer_operations;
 /**
  * Constructor
  */
-LSComponent* ls_component_timer_new(void)
+LSComponent* ls_component_timer_new(json_t* settings)
 {
     LSTimer* self;
     GtkWidget* spacer;
@@ -27,9 +36,11 @@ LSComponent* ls_component_timer_new(void)
     if (!self) {
         return NULL;
     }
-    self->base.ops = &ls_timer_operations;
 
-    self->time = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+    self->base.ops = &ls_timer_operations;
+    ls_component_settings_load((LSComponent*)self, settings);
+
+    self->time = ls_timer_box_new();
     add_class(self->time, "timer");
     add_class(self->time, "time");
 
@@ -42,14 +53,10 @@ LSComponent* ls_component_timer_new(void)
     gtk_widget_set_valign(self->time_seconds, GTK_ALIGN_BASELINE_FILL);
     gtk_box_append(GTK_BOX(self->time), self->time_seconds);
 
-    spacer = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-    gtk_widget_set_valign(spacer, GTK_ALIGN_END);
-    gtk_box_append(GTK_BOX(self->time), spacer);
-
     self->time_millis = gtk_label_new(NULL);
     add_class(self->time_millis, "timer-millis");
     gtk_widget_set_valign(self->time_millis, GTK_ALIGN_BASELINE_FILL);
-    gtk_box_append(GTK_BOX(spacer), self->time_millis);
+    gtk_box_append(GTK_BOX(self->time), self->time_millis);
 
     return (LSComponent*)self;
 }
@@ -84,10 +91,8 @@ static GtkWidget* timer_widget(LSComponent* self)
 static void timer_clear_game(LSComponent* self_)
 {
     LSTimer* self = (LSTimer*)self_;
-    gtk_label_set_text(GTK_LABEL(self->time_seconds), "");
-    gtk_label_set_text(GTK_LABEL(self->time_millis), "");
-    remove_class(self->time, "behind");
-    remove_class(self->time, "losing");
+    ls_timer_set_text(self->time_seconds, self->time_millis, "", "");
+    ls_timer_set_style(self->time, LS_TIMER_IDLE);
 }
 
 /**
@@ -101,45 +106,20 @@ static void timer_draw(LSComponent* self_, const ls_game* game, const ls_timer* 
 {
     LSTimer* self = (LSTimer*)self_;
     char str[256], millis[256];
-
-    unsigned int curr = timer->curr_split;
-    if (curr && curr == game->split_count) {
-        --curr;
-    }
-
-    remove_class(self->time, "delay");
-    remove_class(self->time, "behind");
-    remove_class(self->time, "losing");
-    remove_class(self->time, "best-split");
-
-    if (curr && curr == game->split_count) {
-        curr = game->split_count - 1;
-    }
-    if (ls_time_get_by_method(ls_timer_get_time(timer, true), game->comparison_method) <= 0) {
-        add_class(self->time, "delay");
-    } else {
-        if (timer->curr_split == game->split_count
-            && timer->split_info[curr]
-                & LS_INFO_BEST_SPLIT) {
-            add_class(self->time, "best-split");
-        } else {
-            if (timer->split_info[curr]
-                & LS_INFO_BEHIND_TIME) {
-                add_class(self->time, "behind");
-            }
-            if (timer->split_info[curr]
-                & LS_INFO_LOSING_TIME) {
-                add_class(self->time, "losing");
-            }
-        }
-    }
-    ls_time_millis_string(str, &millis[1], ls_time_get_by_method(ls_timer_get_time(timer, true), game->comparison_method));
-    millis[0] = '.';
-    gtk_label_set_text(GTK_LABEL(self->time_seconds), str);
-    gtk_label_set_text(GTK_LABEL(self->time_millis), millis);
+    bool segment_timer = ls_component_settings_get(self_, "segment_timer")->bool_val;
+    LSTimerDigitsFormat digits_format = ls_component_settings_get(self_, "digits_format")->int_val;
+    LSTimeAccuracy accuracy = ls_component_settings_get(self_, "accuracy")->int_val;
+    ls_time_method method = ls_component_timer_method(self_, game->comparison_method);
+    long long time = segment_timer ? ls_timer_get_segment_time(timer, method)
+                                   : ls_time_get_by_method(ls_timer_get_time(timer, false), method);
+    ls_timer_set_style(self->time, ls_timer_get_status(timer, method));
+    ls_timer_string(str, millis, time, digits_format, accuracy);
+    ls_timer_set_text(self->time_seconds, self->time_millis, str, millis);
+    ls_timer_set_gradient(self->time, ls_component_settings_get(self_, "gradient_colors")->bool_val);
 }
 
 LSComponentOps ls_timer_operations = {
+    .settings = timer_settings,
     .delete = ls_timer_delete,
     .widget = timer_widget,
     .clear_game = timer_clear_game,

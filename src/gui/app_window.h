@@ -53,12 +53,11 @@ typedef struct _LSAppWindow {
     bool resize_cursor_hover; /*!< True when the user is mousing over the resize edge of an undecorated window */
     GdkSurfaceEdge resize_cursor_edge; /*!< The edge the user is mousing over */
     GList* components;
-    GtkWidget* footer;
     GtkCssProvider* reset_style; /*!< The "reset rules" provider, will remove desktop theme rules */
     GtkCssProvider* style; /*!< Current style provider, there can be only one */
     GtkCssProvider* style_variant; /*!< Current style variant provider based on the main style, there can only be one*/
     guint step_source_id; /*!< Source ID for the run clock callback */
-    guint draw_source_id; /*!< Source ID for the gui draw callback */
+    guint draw_tick_id; /*!< GTK tick callback ID for refreshing the display */
     bool global_hotkeys_initialized; /*!< Whether global hotkeys have been binded */
     LSKeybinds keybinds; /*!< The keybinds related to this application window */
     LSOpts opts; /*!< The window options */

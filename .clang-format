@@ -2,3 +2,4 @@
 BasedOnStyle: WebKit
 IndentCaseBlocks: true
 IndentCaseLabels: true
+AllowShortLoopsOnASingleLine: true

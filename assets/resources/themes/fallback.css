@@ -20,6 +20,12 @@
 	font-size: 11pt;
 }
 
+.title-icon {
+	min-width: 28px;
+	min-height: 28px;
+	margin-right: 4px;
+}
+
 .attempt-count {
 	color: #2196F3;
 	font-size: 9pt;
@@ -135,7 +141,7 @@
 	background: linear-gradient(#F44336, #B71C1C);
 }
 
-.footer {
+.statistics {
 	font-size: 8pt;
 }
 
@@ -146,6 +152,8 @@
 
 .prev-segment-label,
 .sum-of-bests-label,
+.best-possible-time-label,
+.current-pace-label,
 .personal-best-label,
 .world-record-label {
 	padding-left: 8px;
@@ -153,6 +161,8 @@
 
 .prev-segment,
 .sum-of-bests,
+.best-possible-time,
+.current-pace,
 .personal-best,
 .world-record {
 	padding-right: 8px;
@@ -165,16 +175,16 @@
 	padding-bottom: 8px;
 }
 
-.footer>.delta {
+.statistics>.delta {
 	color: #4CAF50;
 }
 
-.footer>.behind {
+.statistics>.behind {
 	color: #F44336;
 }
 
-.footer>.best-segment,
-.footer>.best-segment {
+.statistics>.best-segment,
+.statistics>.best-segment {
 	color: #FFC107;
 }
 
