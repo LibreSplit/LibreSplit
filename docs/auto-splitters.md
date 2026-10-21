@@ -682,3 +682,32 @@ The following functions are event handlers that will be called on certain events
 - `onUnpause()`
 
 These functions are run at the end of each Lua runtime loop, if the related event has been triggered.
+
+## Game Object
+
+LASR exposes a global `game` object which gives you read access to some useful game fields from the currently loaded splits file. These fields are:
+
+- `name`
+- `category`
+- `start_delay`
+
+See the split-files doc for more info on these fields. The `game` object is read-only.
+
+## Date & Time
+
+LASR enables access to Lua's date & time functions via the `os` global. The full `os` functionality is not available for security reasons.
+However you have access to the following:
+
+- `os.clock`
+  - https://www.lua.org/manual/5.4/manual.html#pdf-os.clock
+- `os.date`
+  - https://www.lua.org/manual/5.4/manual.html#pdf-os.date
+- `os.difftime`
+  - https://www.lua.org/manual/5.4/manual.html#pdf-os.difftime
+- `os.time`
+  - https://www.lua.org/manual/5.4/manual.html#pdf-os.time
+- `os.time_us`
+  - This is a custom function that works similar to os.time but with microsecond level precision.
+- `os.difftime_us`
+  - This is a custom function that works similar to os.difftime but with microsecond level precision.
+  - It should be used with output from `os.time_us`
