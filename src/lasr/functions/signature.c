@@ -444,6 +444,11 @@ static bool find_signature_in_buffer(
  */
 int perform_sig_scan(lua_State* L)
 {
+    if (!process.pid) {
+        lua_pushnil(L);
+        return 1;
+    }
+
     int ret = 1;
     MemoryIterator* mem_iter = NULL;
     SigByte* pattern = NULL;

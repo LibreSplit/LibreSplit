@@ -100,9 +100,6 @@ void timer_stop_or_reset(LSAppWindow* win)
     if (win->timer->running) {
         ls_timer_stop(win->timer);
     } else {
-        // Restart LASR on reset
-        restart_auto_splitter();
-
         if (ls_timer_reset(win->timer, win->game)) {
             ls_app_window_clear_game(win);
             ls_app_window_show_game(win);

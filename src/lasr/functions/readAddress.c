@@ -103,6 +103,11 @@ char* read_memory_string(uint64_t mem_address, int buffer_size, int32_t* err)
  */
 int readAddress(lua_State* L)
 {
+    if (!process.pid) {
+        lua_pushnil(L);
+        return 1;
+    }
+
     PointerSize psize = POINTER_SIZE_UNKNOWN;
     int nargs = lua_gettop(L);
     if (nargs > 2 && lua_istable(L, nargs)) {
