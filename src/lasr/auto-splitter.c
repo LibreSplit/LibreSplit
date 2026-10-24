@@ -15,7 +15,7 @@
 #include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
-#include <signal.h>
+#include <poll.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -108,8 +108,13 @@ void init_auto_splitter(void)
  */
 static int process_exists(void)
 {
-    int result = kill(process.pid, 0);
-    return result == 0 || errno != ESRCH;
+    struct pollfd status = { .fd = process.pidfd, .events = POLLIN };
+    int result = poll(&status, 1, 0);
+    if (result < 0 && errno != EINTR) {
+        LOG_ERRF("Cannot check game process exit: %s", strerror(errno));
+    }
+
+    return result <= 0;
 }
 
 static int luaopen_os_safe(lua_State* L)

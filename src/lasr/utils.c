@@ -22,7 +22,7 @@ static const char pe_signature[] = { 'P', 'E', '\0', '\0' };
 #define PE32_MAGIC_BYTE 0x10b
 #define PE32_PLUS_MAGIC_BYTE 0x20b
 
-game_process process;
+game_process process = { .pidfd = -1 };
 
 /**
  * Restarts the auto splitter by disabling it and re-enabling it again

@@ -9,10 +9,12 @@
 #include <fcntl.h>
 #include <lauxlib.h>
 #include <limits.h>
+#include <poll.h>
 #include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/pidfd.h>
 #include <unistd.h>
 
 extern atomic_bool auto_splitter_enabled;
@@ -29,7 +31,12 @@ void set_process_selection(bool allowed)
 
 void detach_process(void)
 {
+    if (process.pidfd >= 0) {
+        close(process.pidfd);
+    }
+
     process.pid = 0;
+    process.pidfd = -1;
     process.base_address = 0;
     process.dll_address = 0;
     maps_clearCache();
@@ -37,8 +44,12 @@ void detach_process(void)
 
 void clear_process(void)
 {
+    if (process.pidfd >= 0) {
+        close(process.pidfd);
+    }
+
     free(process.name);
-    process = (game_process) { 0 };
+    process = (game_process) { .pidfd = -1 };
     can_select_process = false;
 }
 
@@ -106,7 +117,23 @@ static const char* process_basename(const char* path, bool allow_backslash)
     return name;
 }
 
-static pid_t get_pid(const char* name, bool last)
+static bool process_matches(int directory, const char* name, char* buffer)
+{
+    errno = 0;
+    ssize_t exe_length = read_exe(directory, buffer);
+    if (exe_length < 0 && resource_error(errno)) {
+        return false;
+    }
+
+    if (exe_length > 0 && strcmp(process_basename(buffer, false), name) == 0) {
+        return true;
+    }
+
+    ssize_t argv0_length = read_argv0(directory, buffer);
+    return argv0_length > 0 && strcmp(process_basename(buffer, true), name) == 0;
+}
+
+static pid_t get_pid(const char* name, bool last, char* buffer)
 {
     DIR* proc = opendir("/proc");
     if (!proc) {
@@ -116,8 +143,7 @@ static pid_t get_pid(const char* name, bool last)
 
     pid_t* pids = NULL;
     size_t count = 0;
-    char* buffer = malloc(PROCESS_FIELD_LIMIT + 1);
-    int error = buffer ? 0 : ENOMEM;
+    int error = 0;
     while (!error) {
         errno = 0;
         struct dirent* entry = readdir(proc);
@@ -149,19 +175,9 @@ static pid_t get_pid(const char* name, bool last)
             break;
         }
 
-        ssize_t exe_length = read_exe(directory, buffer);
-        if (exe_length < 0 && resource_error(errno)) {
+        bool matches = process_matches(directory, name, buffer);
+        if (!matches && resource_error(errno)) {
             error = errno;
-        }
-
-        bool matches = exe_length > 0 && strcmp(process_basename(buffer, false), name) == 0;
-        if (!matches && !error) {
-            ssize_t argv0_length = read_argv0(directory, buffer);
-            if (argv0_length < 0 && resource_error(errno)) {
-                error = errno;
-            }
-
-            matches = argv0_length > 0 && strcmp(process_basename(buffer, true), name) == 0;
         }
 
         close(directory);
@@ -198,7 +214,6 @@ static pid_t get_pid(const char* name, bool last)
     }
 
     free(pids);
-    free(buffer);
     if (error) {
         LOG_ERRF("Cannot discover game process: %s", strerror(error));
         return -1;
@@ -213,8 +228,15 @@ bool attach_process(void)
         return false;
     }
 
-    pid_t pid = get_pid(process.name, select_last);
+    char* buffer = malloc(PROCESS_FIELD_LIMIT + 1);
+    if (!buffer) {
+        LOG_ERRF("Unable to allocate memory for process discovery: %s", strerror(errno));
+        return false;
+    }
+
+    pid_t pid = get_pid(process.name, select_last, buffer);
     if (pid <= 0) {
+        free(buffer);
         if (pid == 0) {
             printf("%s isn't running.\n", process.name);
         }
@@ -222,8 +244,56 @@ bool attach_process(void)
         return false;
     }
 
+    char path[32];
+    snprintf(path, sizeof(path), "/proc/%d", pid);
+    int directory = open(path, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+    if (directory < 0) {
+        if (resource_error(errno)) {
+            LOG_ERRF("Cannot open game process: %s", strerror(errno));
+        }
+
+        free(buffer);
+        return false;
+    }
+
+    int pidfd = pidfd_open(pid, 0);
+    if (pidfd < 0) {
+        if (errno != ESRCH && errno != EINTR) {
+            LOG_ERRF("Cannot obtain game process handle: %s", strerror(errno));
+        }
+
+        close(directory);
+        free(buffer);
+        return false;
+    }
+
+    // Ensure the process opened still matches (i.e. did not close and become something else)
+    bool matches = process_matches(directory, process.name, buffer);
+    if (!matches && resource_error(errno)) {
+        LOG_ERRF("Cannot validate game process: %s", strerror(errno));
+    }
+
+    free(buffer);
+    close(directory);
+    if (!matches) {
+        close(pidfd);
+        return false;
+    }
+
+    struct pollfd status = { .fd = pidfd, .events = POLLIN };
+    int ready = poll(&status, 1, 0);
+    if (ready != 0) {
+        if (ready < 0 && errno != EINTR) {
+            LOG_ERRF("Cannot check game process exit: %s", strerror(errno));
+        }
+
+        close(pidfd);
+        return false;
+    }
+
     maps_clearCache();
     process.pid = (unsigned int)pid;
+    process.pidfd = pidfd;
     process.base_address = find_base_address(NULL);
     process.dll_address = process.base_address;
     printf("Process: %s\nPID: %u\n", process.name, process.pid);
