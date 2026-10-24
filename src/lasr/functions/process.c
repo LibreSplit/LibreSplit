@@ -141,6 +141,13 @@ static pid_t get_pid(const char* name, bool last, char* buffer)
         return -1;
     }
 
+    int procfd = dirfd(proc);
+    if (procfd < 0) {
+        LOG_ERRF("Cannot read process directory: %s", strerror(errno));
+        closedir(proc);
+        return -1;
+    }
+
     pid_t* pids = NULL;
     size_t count = 0;
     int error = 0;
@@ -165,7 +172,7 @@ static pid_t get_pid(const char* name, bool last, char* buffer)
         }
 
         pid_t pid = (pid_t)number;
-        int directory = openat(dirfd(proc), text, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+        int directory = openat(procfd, text, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
         if (directory < 0) {
             if (!resource_error(errno)) {
                 continue;
