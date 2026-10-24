@@ -323,6 +323,11 @@ static size_t maps_getAll_init(void)
  */
 size_t maps_getAll(void)
 {
+    if (!process.pid) {
+        maps_clearCache();
+        return 0;
+    }
+
     return (*maps_getAll_var)();
 }
 

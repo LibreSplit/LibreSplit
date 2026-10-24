@@ -48,13 +48,17 @@ bool restart_auto_splitter(void)
  */
 uintptr_t find_base_address(const char* module)
 {
-    const char* module_to_grep = module == 0 ? process.name : module;
+    const char* module_name = module ? module : process.name;
+    if (!process.pid || !module_name) {
+        return 0;
+    }
 
     ProcessMap map;
-    const bool found = maps_findMapByName(module_to_grep, &map);
+    const bool found = maps_findMapByName(module_name, &map);
     if (found) {
         return map.start;
     }
+
     return 0;
 }
 

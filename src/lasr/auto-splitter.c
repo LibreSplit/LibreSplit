@@ -11,6 +11,7 @@
 #include "src/logging.h"
 #include "utils.h"
 
+#include <errno.h>
 #include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
@@ -108,7 +109,7 @@ void init_auto_splitter(void)
 static int process_exists(void)
 {
     int result = kill(process.pid, 0);
-    return result == 0;
+    return result == 0 || errno != ESRCH;
 }
 
 static int luaopen_os_safe(lua_State* L)
@@ -152,7 +153,6 @@ static const luaL_Reg lj_lib_load[] = {
  */
 static const lasr_function luac_functions[] = {
     { "process", find_process_id },
-    { "cmdline", find_cmdline_id },
     { "getBaseAddress", getBaseAddress },
     { "readAddress", readAddress },
     { "sizeOf", size_of },
@@ -652,6 +652,7 @@ void run_auto_splitter(void)
 {
     LOG_DEBUG("Starting new Lua State")
     lua_State* L = luaL_newstate();
+    atomic_store(&lasr_event_requests, 0);
     sandboxed_openlibs(L);
     disable_functions(L, disabled_functions);
     push_lasr_functions(L, luac_functions);
@@ -679,7 +680,10 @@ void run_auto_splitter(void)
     }
 
     // Execute the Lua file
-    if (lua_pcall(L, 0, LUA_MULTRET, base) != LUA_OK || lasr_settings_load(L) != LUA_OK) {
+    set_process_selection(true);
+    int status = lua_pcall(L, 0, LUA_MULTRET, base);
+    set_process_selection(false);
+    if (status != LUA_OK || lasr_settings_load(L) != LUA_OK) {
         // Error executing the file
         if (!lua_isnil(L, -1)) {
             const char* err = lua_tostring(L, -1);
@@ -704,6 +708,8 @@ void run_auto_splitter(void)
     bool split_exists = has_lua_function(L, "split");
     bool is_loading_exists = has_lua_function(L, "isLoading");
     bool startup_exists = has_lua_function(L, "startup");
+    bool init_exists = has_lua_function(L, "init");
+    bool exit_exists = has_lua_function(L, "exit");
     bool reset_exists = has_lua_function(L, "reset");
     bool update_exists = has_lua_function(L, "update");
     bool gameTime_exists = has_lua_function(L, "gameTime");
@@ -725,41 +731,65 @@ void run_auto_splitter(void)
 
     printf("Refresh rate: %d\n", refresh_rate);
     int rate = 1000000 / refresh_rate;
+    bool initialized = false;
 
     while (1) {
         struct timespec clock_start;
         clock_gettime(CLOCK_MONOTONIC, &clock_start);
 
-        if (!atomic_load(&auto_splitter_enabled) || strcmp(current_file, auto_splitter_file) != 0 || !process_exists() || process.pid == 0) {
+        if (!atomic_load(&auto_splitter_enabled) || strcmp(current_file, auto_splitter_file) != 0) {
             break;
         }
 
-        if (state_exists) {
-            state(L);
-        }
+        int delay = rate;
+        if (process.pid && !process_exists()) {
+            detach_process();
+            maps_cache_cycles_value = maps_cache_cycles;
+            initialized = false;
+            if (exit_exists) {
+                call_va(L, "exit", "");
+            }
+        } else if (!process.pid) {
+            delay = 100000;
+            bool attached = attach_process();
+            if (!atomic_load(&auto_splitter_enabled) || strcmp(current_file, auto_splitter_file) != 0) {
+                break;
+            }
 
-        if (update_exists) {
-            update(L);
-        }
+            if (attached) {
+                maps_cache_cycles_value = maps_cache_cycles;
+                initialized = !init_exists || call_va(L, "init", "");
+            }
+        } else if (!initialized) {
+            initialized = !init_exists || call_va(L, "init", "");
+        } else {
+            if (state_exists) {
+                state(L);
+            }
 
-        if (gameTime_exists && use_game_time && atomic_load(&run_started) && atomic_load(&run_running)) {
-            gameTime(L);
-        }
+            if (update_exists) {
+                update(L);
+            }
 
-        if (start_exists && !atomic_load(&run_started) && !atomic_load(&run_running) && !atomic_load(&call_reset)) {
-            start(L);
-        }
+            if (gameTime_exists && use_game_time && atomic_load(&run_started) && atomic_load(&run_running)) {
+                gameTime(L);
+            }
 
-        if (split_exists && atomic_load(&run_started)) {
-            split(L);
-        }
+            if (start_exists && !atomic_load(&run_started) && !atomic_load(&run_running) && !atomic_load(&call_reset)) {
+                start(L);
+            }
 
-        if (is_loading_exists) {
-            is_loading(L);
-        }
+            if (split_exists && atomic_load(&run_started)) {
+                split(L);
+            }
 
-        if (reset_exists && atomic_load(&run_running)) {
-            reset(L);
+            if (is_loading_exists) {
+                is_loading(L);
+            }
+
+            if (reset_exists && atomic_load(&run_running)) {
+                reset(L);
+            }
         }
 
         if (onStart_exists) {
@@ -830,12 +860,13 @@ void run_auto_splitter(void)
         clock_gettime(CLOCK_MONOTONIC, &clock_end);
         long long duration = (clock_end.tv_sec - clock_start.tv_sec) * 1000000 + (clock_end.tv_nsec - clock_start.tv_nsec) / 1000;
         // printf("duration: %llu\n", duration);
-        if (duration < rate) {
-            usleep(rate - duration);
+        if (duration < delay) {
+            usleep(delay - duration);
         }
     }
 
 run_auto_splitter_cleanup:
+    atomic_store(&lasr_event_requests, 0);
     lua_close(L);
     clear_process();
     maps_clearCache();

@@ -20,16 +20,9 @@
 ```lua
 process('GameBlaBlaBla.exe')
 ```
-* With this line, LibreSplit will repeatedly attempt to find this process and will not continue script execution until it is found. This is limited to 15 characters in length (the ones present in `/proc/<pid>/stat`).
-
-If you want to use longer names or check the entire command line use the `cmdline` function:
-
-```lua
-cmdline('MyGameHasAVeryLongName.exe')
-```
-
-* Next we have to define the basic functions. Not all are required and the ones that are required may change depending on the game or end goal, like if loading screens are included or not.
-    * The order at which these run is the same as they are documented below.
+- With this line, LibreSplit will repeatedly attempt to find this process and will not continue script execution until it is found.
+- Next we have to define the basic functions. Not all are required and the ones that are required may change depending on the game or end goal, like if loading screens are included or not.
+  - The order at which these run is the same as they are documented below.
 
 ### `define_settings`
 The purpose of this optional function is to specify settings that your script make take along with their default values. LASR provides a global `settings` object that should contain all of your settings for the lifetime of your script. LibreSplit handles updating these settings for you as the user interacts with them. Currently, the following setting types are available:
@@ -101,6 +94,7 @@ local var = settings.get("is_emulator") -- defaults to false per our earlier exa
 ```
 
 ### `startup`
+
  The purpose of this function is to specify how many times LibreSplit checks memory values and executes functions each second, the default is 60Hz. Usually, 60Hz is fine and this function can remain undefined. However, it's there if you need it. Its also useful to change other configuration about the script.
 ```lua
 process('GameBlaBlaBla.exe')
@@ -110,6 +104,12 @@ function startup()
     useGameTime = true
 end
 ```
+
+Although the intention of startup is to be called only once at the very beginning of the LASR life-cycle regardless of game state, due to the way Lua works, startup will not
+truly be called until `process` returns. This means `startup` will run shortly before the first `init` call and after `process` attaches to a game as opposed to at the very beginning.
+
+For normal scripts this should be irrelevant, however, if you need to define any script variables or setup anything in your script prior to the LASR attaching to the game process, you should
+perform that setup as top level code before calling the `process` function instead of doing it in the `startup` function.
 
 ### `state`
  The main purpose of this function is to assign memory values to Lua variables.
@@ -411,7 +411,6 @@ function gameTime()
 end
 ```
 
-
 ## readAddress
 * `readAddress` is the second function that LibreSplit defines for us and its globally available, its job is to read the memory value of a specified address.
 * The first value defines what kind of value we will read:
@@ -682,6 +681,18 @@ The following functions are event handlers that will be called on certain events
 - `onUnpause()`
 
 These functions are run at the end of each Lua runtime loop, if the related event has been triggered.
+
+### Init function
+
+Aside from those reactive functions we have 2 more important functions that are also optional event notifications. The first one is `init`
+
+Unlike startup, which only happens once at the very start of LASR, the `init` function is called after the LASR attaches to your game's process.
+This happens any number of times as the user closes and opens the game.
+
+### Exit function
+
+Similar to the `init` function we also provide `exit` which happens any time the game process is closed. This allows you to handle any situations where a game must be closed
+and then re-opened during the course of a run.
 
 ## Game Object
 
