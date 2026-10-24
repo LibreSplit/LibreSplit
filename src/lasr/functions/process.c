@@ -301,8 +301,27 @@ bool attach_process(void)
     maps_clearCache();
     process.pid = (unsigned int)pid;
     process.pidfd = pidfd;
-    process.base_address = find_base_address(NULL);
-    process.dll_address = process.base_address;
+
+    int tries = 5;
+    uintptr_t base_address = 0;
+
+    do {
+        base_address = find_base_address(NULL);
+        if (base_address) {
+            break;
+        }
+
+        usleep(50000);
+    } while (--tries > 0);
+
+    if (!base_address) {
+        LOG_ERR("Unable to find process base address");
+        detach_process();
+        return false;
+    }
+
+    process.base_address = base_address;
+    process.dll_address = base_address;
     printf("Process: %s\nPID: %u\n", process.name, process.pid);
     return true;
 }
