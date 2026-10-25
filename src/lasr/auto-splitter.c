@@ -960,6 +960,10 @@ run_auto_splitter_cleanup:
     atomic_store(&call_start, false);
     atomic_store(&call_split, false);
     atomic_store(&call_reset, false);
+    if (has_lua_function(L, "shutdown")) {
+        call_va(L, "shutdown", "");
+    }
+
     lua_close(L);
     clear_process();
     maps_clearCache();
