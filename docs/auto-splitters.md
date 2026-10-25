@@ -694,6 +694,11 @@ This happens any number of times as the user closes and opens the game.
 Similar to the `init` function we also provide `exit` which happens any time the game process is closed. This allows you to handle any situations where a game must be closed
 and then re-opened during the course of a run.
 
+### Shutdown function
+
+Similar to the `startup` function, we also provide `shutdown` which happens once at the end of the LASR lifecycle before the Lua runtime is closed. This happens for example
+if the user reloads their autosplitter, disabled autosplitting, reloads their splits file, closes LibreSplit etc.
+
 ## Game Object
 
 LASR exposes a global `game` object which gives you read access to some useful game fields from the currently loaded splits file. These fields are:
