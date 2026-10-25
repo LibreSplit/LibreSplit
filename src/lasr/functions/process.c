@@ -1,5 +1,6 @@
 #include "process.h"
 
+#include "../auto-splitter.h"
 #include "../utils.h"
 #include "src/lasr/maps/maps.h"
 #include "src/logging.h"
@@ -298,30 +299,35 @@ bool attach_process(void)
         return false;
     }
 
-    maps_clearCache();
-    process.pid = (unsigned int)pid;
-    process.pidfd = pidfd;
-
     int tries = 5;
     uintptr_t base_address = 0;
 
     do {
+        // Keep discovery outside of lua sync to prevent access to detached process.
+        lasr_lock();
+        maps_clearCache();
+        process.pid = (unsigned int)pid;
         base_address = find_base_address(NULL);
         if (base_address) {
+            process.pidfd = pidfd;
+            process.base_address = base_address;
+            process.dll_address = base_address;
+            lasr_unlock();
             break;
         }
 
+        process.pid = 0;
+        maps_clearCache();
+        lasr_unlock();
         usleep(50000);
     } while (--tries > 0);
 
     if (!base_address) {
         LOG_ERR("Unable to find process base address");
-        detach_process();
+        close(pidfd);
         return false;
     }
 
-    process.base_address = base_address;
-    process.dll_address = base_address;
     printf("Process: %s\nPID: %u\n", process.name, process.pid);
     return true;
 }

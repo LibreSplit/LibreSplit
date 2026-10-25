@@ -30,7 +30,7 @@ static size_t* auto_splitter_user_settings_count = 0;
  *
  * @return The current time, in microseconds
  */
-static long long ls_time_now(void)
+long long ls_time_now(void)
 {
     struct timespec timespec;
     clock_gettime(CLOCK_MONOTONIC, &timespec);
@@ -1443,6 +1443,9 @@ static void reset_timer(ls_timer* timer)
 {
     LOG_DEBUG("Resetting timer...");
     atomic_store(&call_start, false);
+    atomic_store(&call_split, false);
+    atomic_store(&call_reset, false);
+    atomic_store(&update_game_time, false);
     timer->started = 0;
     atomic_store(&run_started, false);
     timer->running = 0;
@@ -1455,9 +1458,10 @@ static void reset_timer(ls_timer* timer)
     timer->gameTime = 0;
     timer->usingGameTime = false;
     atomic_store(&run_using_game_time_call, true);
-    timer->loading = atomic_load(&auto_splitter_enabled) && atomic_load(&prev_is_loading);
+    timer->loading = lasr_reset_loading();
     timer->loadingTime = 0;
     timer->last_tick = 0;
+    timer->last_loading_time = 0;
     int size = timer->game->split_count * sizeof(ls_time);
     memcpy(timer->split_times, timer->game->split_times, size);
     memset(timer->split_deltas, 0, size);
@@ -1556,13 +1560,14 @@ timer_create_error:
  */
 void ls_timer_step(ls_timer* timer)
 {
-    long long now = ls_time_now();
+    long long now;
+    long long loading_time = lasr_loading_time(&now);
     if (timer->running) {
         long long delta = timer->last_tick ? now - timer->last_tick : 0;
         timer->realTime += delta; // Accumulate the elapsed time
-        if (timer->loading) {
-            timer->loadingTime += delta; // Accumulate loading time if currently loading
-        }
+        // LASR measures loading at sample time, independently of delayed hooks.
+        // Both clocks cover the same interval, excluding stopped/idle time.
+        timer->loadingTime += timer->last_tick ? loading_time - timer->last_loading_time : 0;
         // if there's no gameTime then gameTime should mirror LRT
         if (!timer->usingGameTime) {
             timer->gameTime = timer->realTime - timer->loadingTime;
@@ -1588,7 +1593,9 @@ void ls_timer_step(ls_timer* timer)
             }
         }
     }
+
     timer->last_tick = now; // Update the start time for the next iteration
+    timer->last_loading_time = loading_time;
 }
 
 /**
@@ -1608,6 +1615,8 @@ int ls_timer_start(ls_timer* timer)
     LOG_DEBUG("Starting timer...");
     // TODO: Allow starting when split_count is 0 for splitless runs, other stuff has to change for this to work (components, timer logic, etc)
     if (timer->curr_split < timer->game->split_count) {
+        lasr_lock();
+        bool new_attempt = !timer->started;
         if (!timer->started) {
             ++*timer->attempt_count;
             timer->started = 1;
@@ -1616,8 +1625,13 @@ int ls_timer_start(ls_timer* timer)
         }
         timer->running = true;
         atomic_store(&run_running, true);
+        if (new_attempt) {
+            lasr_event("onStart", NULL);
+        }
+
+        lasr_unlock();
     }
-    lasr_event_requests |= TIMER_EVT_START;
+
     return timer->running;
 }
 
@@ -1696,6 +1710,7 @@ int ls_timer_split(ls_timer* timer)
         return 0;
     }
 
+    lasr_lock();
     // check for best split and segment - game time
     if (!ls_time_get_by_method(timer->best_splits[timer->curr_split], LS_GAME_TIME)
         || ls_time_get_by_method(timer->split_times[timer->curr_split], LS_GAME_TIME)
@@ -1738,11 +1753,14 @@ int ls_timer_split(ls_timer* timer)
 
     ++timer->curr_split;
     // stop timer if last split
-    if (timer->curr_split == timer->game->split_count) {
+    bool finished = timer->curr_split == timer->game->split_count;
+    if (finished) {
         // Increment finished_count
         ++*timer->finished_count;
         timer->started = 0;
-        ls_timer_stop(timer);
+        timer->running = false;
+        atomic_store(&run_running, false);
+        atomic_store(&update_game_time, false);
         ls_game_update_splits((ls_game*)timer->game, timer);
         if (cfg.libresplit.save_run_history.value.b) {
             ls_run_record(timer, "FINISHED");
@@ -1752,7 +1770,10 @@ int ls_timer_split(ls_timer* timer)
             save_game((ls_game*)timer->game);
         }
     }
-    lasr_event_requests |= TIMER_EVT_SPLIT;
+
+    lasr_event("onSplit", finished ? "onStop" : NULL);
+    lasr_unlock();
+
     return timer->curr_split;
 }
 
@@ -1777,13 +1798,16 @@ int ls_timer_skip(ls_timer* timer)
         return 0;
     }
 
+    lasr_lock();
     ls_time_clear(&timer->split_times[timer->curr_split]);
     ls_time_clear(&timer->split_deltas[timer->curr_split]);
     timer->split_info[timer->curr_split] = 0;
     ls_time_clear(&timer->segment_times[timer->curr_split]);
     ls_time_clear(&timer->segment_deltas[timer->curr_split]);
-    lasr_event_requests |= TIMER_EVT_SKIP;
-    return ++timer->curr_split;
+    ++timer->curr_split;
+    lasr_event("onSkip", NULL);
+    lasr_unlock();
+    return timer->curr_split;
 }
 
 /**
@@ -1799,6 +1823,7 @@ int ls_timer_unsplit(ls_timer* timer)
     }
 
     LOG_DEBUG("Undoing a split...");
+    lasr_lock();
     if (timer->curr_split == timer->game->split_count) {
         timer->comparison_time = timer->game->split_times[timer->curr_split - 1];
     }
@@ -1821,7 +1846,8 @@ int ls_timer_unsplit(ls_timer* timer)
         atomic_store(&run_running, true);
     }
 
-    lasr_event_requests |= TIMER_EVT_UNSPLIT;
+    lasr_event("onUnsplit", NULL);
+    lasr_unlock();
     return timer->curr_split;
 }
 
@@ -1832,9 +1858,15 @@ int ls_timer_unsplit(ls_timer* timer)
  */
 void ls_timer_pause(ls_timer* timer)
 {
+    if (timer->loading) {
+        return;
+    }
+
+    lasr_lock();
     LOG_DEBUG("Pausing timer...");
     timer->loading = 1;
-    lasr_event_requests |= TIMER_EVT_PAUSE;
+    lasr_event("onPause", NULL);
+    lasr_unlock();
 }
 
 /**
@@ -1844,9 +1876,15 @@ void ls_timer_pause(ls_timer* timer)
  */
 void ls_timer_unpause(ls_timer* timer)
 {
+    if (!timer->loading) {
+        return;
+    }
+
+    lasr_lock();
     LOG_DEBUG("Unpausing timer...");
     timer->loading = 0;
-    lasr_event_requests |= TIMER_EVT_UNPAUSE;
+    lasr_event("onUnpause", NULL);
+    lasr_unlock();
 }
 
 /**
@@ -1856,10 +1894,17 @@ void ls_timer_unpause(ls_timer* timer)
  */
 void ls_timer_stop(ls_timer* timer)
 {
+    if (!timer->running) {
+        return;
+    }
+
+    lasr_lock();
     LOG_DEBUG("Stopping timer...");
     timer->running = false;
     atomic_store(&run_running, false);
-    lasr_event_requests |= TIMER_EVT_STOP;
+    atomic_store(&update_game_time, false);
+    lasr_event("onStop", NULL);
+    lasr_unlock();
 }
 
 /**
@@ -1885,6 +1930,8 @@ int ls_timer_reset(ls_timer* timer, ls_game* game)
         return 1;
     }
 
+    lasr_lock();
+    bool had_attempt = timer->started || timer->curr_split > 0;
     if (timer->curr_split < timer->game->split_count) {
         if (cfg.libresplit.save_run_history.value.b) {
             ls_run_record(timer, "RESET");
@@ -1894,7 +1941,11 @@ int ls_timer_reset(ls_timer* timer, ls_game* game)
     // Save best times/segments before resetting timer.
     ls_game_update_splits(game, timer);
     reset_timer(timer);
-    lasr_event_requests |= TIMER_EVT_RESET;
+    if (had_attempt) {
+        lasr_event("onReset", NULL);
+    }
+
+    lasr_unlock();
     return 1;
 }
 
@@ -1914,6 +1965,8 @@ void ls_timer_cancel(ls_timer* timer)
         return;
     }
 
+    lasr_lock();
+    bool had_attempt = timer->started || timer->curr_split > 0;
     if (timer->started) {
         if (*timer->attempt_count > 0) {
             --*timer->attempt_count;
@@ -1921,7 +1974,11 @@ void ls_timer_cancel(ls_timer* timer)
     }
 
     reset_timer(timer);
-    lasr_event_requests |= TIMER_EVT_CANCEL;
+    if (had_attempt) {
+        lasr_event("onReset", "onCancel");
+    }
+
+    lasr_unlock();
 }
 
 /**
