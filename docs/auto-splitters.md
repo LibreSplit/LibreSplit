@@ -459,18 +459,18 @@ if you need to perform operations on really large addresses (for example) you ca
 so long as they remain integers throughout. The following operations should all also work correctly, preserving the bits meaning the values
 can be properly represented when LibreSplit works with them internally:
 
-- + (addition)
-- - (subtraction)
-- * (multiplication)
-- -x (negative value)
-- & (bitwise AND)
-- | (bitwise OR)
-- ~ (bitwise XOR)
-- ~x (bitwise NOT)
-- << (left shift)
-- >> (right shift)
-- == (equality compares bits)
-- -= (not equals compares bits)
+- `+` (addition)
+- `-` (subtraction)
+- `*` (multiplication)
+- `-x` (negative value)
+- `&` (bitwise AND)
+- `|` (bitwise OR)
+- `~` (bitwise XOR)
+- `~x` (bitwise NOT)
+- `<<` (left shift)
+- `>>` (right shift)
+- `==` (equality compares bits)
+- `-=` (not equals compares bits)
 
 The following will not work:
 - / (division)
@@ -546,7 +546,6 @@ end
 ## getPID
 * Returns the current PID
 
-# Experimental stuff
 ## `mapsCacheCycles`
 
 * When a `readAddress` that uses a memory map the biggest bottleneck is reading every line of `/proc/pid/maps` and checking if that line is the corresponding module. This option allows you to set for how many cycles the cache of that file should be used. The cache is global so it gets reset every x number of cycles.
