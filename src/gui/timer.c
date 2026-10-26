@@ -24,9 +24,8 @@ void timer_update_time(LSAppWindow* win)
             atomic_store(&run_using_game_time_call, false);
         }
 
-        if (atomic_load(&update_game_time)) {
+        if (atomic_exchange(&update_game_time, false)) {
             win->timer->gameTime = atomic_load(&game_time_value);
-            atomic_store(&update_game_time, false);
         }
     }
 

@@ -1698,7 +1698,7 @@ static void ls_run_record(ls_timer* timer, const char* reason)
 int ls_timer_split(ls_timer* timer)
 {
     LOG_DEBUG("Splitting...");
-    if (ls_time_lte_zero(ls_timer_get_time(timer, true))) {
+    if (timer->realTime <= 0) {
         return 0;
     }
 

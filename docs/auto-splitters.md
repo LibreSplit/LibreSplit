@@ -159,6 +159,20 @@ end
 ```
 * We now have 3 variables, one represents the current state while the other the old state of isLoading, we also have loadCount getting updated in the `update` function which will store how many times we've entered the loading screen
 
+The `update` function may also prevent the `gameTime`, `start`, `isLoading`, `reset`, and `split` actions from being run by explicitly returning false.
+
+```lua
+function update()
+    if myCondition then
+        return false -- no other actions will run while `myCondition` is true
+    end
+
+    if not current.isLoading and old.isLoading then
+        loadCount = loadCount + 1;
+    end
+end
+```
+
 ### `start`
 This tells LibreSplit when to start the timer.\
 _Note: LibreSplit will ignore any start calls if the timer is running._
