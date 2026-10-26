@@ -545,10 +545,13 @@ void state(lua_State* L)
  * Executes the code in the update() function of the auto splitter.
  *
  * @param L The Lua State
+ * @return The should update response from the script or true if none
  */
-void update(lua_State* L)
+bool update(lua_State* L)
 {
-    call_va(L, "update", "");
+    bool should_update = true;
+    call_va(L, "update", ">b", &should_update);
+    return should_update;
 }
 
 /**
@@ -909,28 +912,26 @@ void run_auto_splitter(void)
                 state(L);
             }
 
-            if (update_exists) {
-                update(L);
-            }
+            if (!update_exists || update(L)) {
+                if (gameTime_exists && use_game_time && atomic_load(&run_started) && atomic_load(&run_running) && !atomic_load(&call_reset)) {
+                    gameTime(L);
+                }
 
-            if (gameTime_exists && use_game_time && atomic_load(&run_started) && atomic_load(&run_running)) {
-                gameTime(L);
-            }
+                if (start_exists && !atomic_load(&run_started) && !atomic_load(&run_running) && !atomic_load(&call_start) && !atomic_load(&call_reset)) {
+                    start(L);
+                }
 
-            if (start_exists && !atomic_load(&run_started) && !atomic_load(&run_running) && !atomic_load(&call_start) && !atomic_load(&call_reset)) {
-                start(L);
-            }
+                if (is_loading_exists) {
+                    is_loading(L);
+                }
 
-            if (split_exists && atomic_load(&run_started) && !atomic_load(&call_split) && !atomic_load(&call_reset)) {
-                split(L);
-            }
+                if (reset_exists && atomic_load(&run_running) && !atomic_load(&call_reset)) {
+                    reset(L);
+                }
 
-            if (is_loading_exists) {
-                is_loading(L);
-            }
-
-            if (reset_exists && atomic_load(&run_running) && !atomic_load(&call_reset)) {
-                reset(L);
+                if (split_exists && atomic_load(&run_started) && !atomic_load(&call_split) && !atomic_load(&call_reset)) {
+                    split(L);
+                }
             }
         }
 
