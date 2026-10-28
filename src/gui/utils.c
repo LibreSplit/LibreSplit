@@ -1,5 +1,42 @@
 #include <gtk/gtk.h>
 
+static gpointer cancel_icon_load(gpointer data)
+{
+    g_usleep(G_USEC_PER_SEC);
+    g_cancellable_cancel(data);
+    g_object_unref(data);
+    return NULL;
+}
+
+/**
+ * @brief GTK's CSS image loader does not have a timeout. To prevent network hangs
+ * fetch the resource ourselves first and then replace with embedded bytes to prevent
+ * later network retries or network hangs from hanging the UI.
+ *
+ * @param file The resource file to load
+ * @return char* The uri contents
+ */
+static char* remote_icon_uri(GFile* file)
+{
+    GCancellable* cancellable = g_cancellable_new();
+    GThread* timeout = g_thread_new("icon-timeout", cancel_icon_load, g_object_ref(cancellable));
+    GBytes* contents = g_file_load_bytes(file, cancellable, NULL, NULL);
+    g_thread_unref(timeout);
+    g_object_unref(cancellable);
+
+    if (!contents) {
+        return NULL;
+    }
+
+    gsize size;
+    const guchar* bytes = g_bytes_get_data(contents, &size);
+    char* encoded = g_base64_encode(bytes, size);
+    char* uri = g_strconcat("data:application/octet-stream;base64,", encoded, NULL);
+    g_free(encoded);
+    g_bytes_unref(contents);
+    return uri;
+}
+
 /**
  * Adds a styling class to a GTK Widget.
  *
@@ -27,6 +64,7 @@ void remove_class(GtkWidget* widget, const char* class)
  * This handles converting full/relative file paths to the user's system
  * so that it can be converted to a usable file:// URI
  * while retaining already valid URI's for web urls, data-urls etc.
+ * Remote icons are fetched with a one-second timeout and returned as embedded data, or NULL on failure.
  *
  * If you use this, you must g_free the result if it is not NULL after usage.
  *
@@ -41,10 +79,12 @@ char* icon_uri(const char* path, const char* source)
         return NULL;
     }
 
-    // The supplied source is already correctly formatted.
-    // Duplicate it so the followup free doesn't kill the source path.
     if (g_uri_peek_scheme(source)) {
-        return g_strdup(source);
+        GFile* file = g_file_new_for_uri(source);
+        gboolean local = g_file_is_native(file) || g_file_has_uri_scheme(file, "data") || g_file_has_uri_scheme(file, "resource");
+        char* uri = local ? g_strdup(source) : remote_icon_uri(file);
+        g_object_unref(file);
+        return uri;
     }
 
     GFile* icon;
