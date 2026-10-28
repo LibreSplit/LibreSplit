@@ -684,13 +684,13 @@ local md5_to_compare = md5sum("path/to/my/awesome/game")
 Returns an integer representing the current timer state. The int value corresponds to an internal enum of potential states. These may be compared against the following
 globals that we provide that correspond to the enum values:
 
-- LASR_NOT_STARTED
+- `LASR_NOT_STARTED`
   - The timer has not yet started. I.e. the initial state or state after a reset
-- LASR_RUNNING
+- `LASR_RUNNING`
   - The timer has started and is ticking
-- LASR_PAUSED
+- `LASR_PAUSED`
   - The timer is paused but no reset has occurred
-- LASR_FINISHED
+- `LASR_FINISHED`
   - The timer has been stopped because the run has been completed
 
 Usage:
