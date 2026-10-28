@@ -67,7 +67,7 @@ void timer_stop_and_reset(LSAppWindow* win)
 }
 
 /**
- * Starts the timer, if it's not already running. If the timer is already running, it does a split.
+ * Starts or resumes the timer. If the timer is already running, it does a split.
  *
  * @param win The LibreSplit window
  */
@@ -78,7 +78,7 @@ void timer_start_split(LSAppWindow* win)
     }
 
     timer_update_time(win);
-    if (!win->timer->started) { // To start again a reset needs to happen
+    if (!win->timer->running) {
         if (!ls_timer_start(win->timer)) {
             return;
         }

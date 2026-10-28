@@ -64,6 +64,7 @@ atomic_bool run_using_game_time_call; /*!< True if startup has run and a new val
 atomic_bool run_using_game_time; /*!< True if the auto splitter is requesting to use game time, false for real time */
 atomic_bool run_started = false; /*!< Wheter a run was started or not, same as timer->started but accessible from the auto splitter thread */
 atomic_bool run_running = false; /*!< Wheter we are running or not, same as timer->running but accessible from the auto splitter thread */
+atomic_int run_state = LASR_NOT_STARTED; /*!< Last completed timer state */
 atomic_bool prev_is_loading = false; /*!< The previous frame "is_loading" state */
 
 /**
@@ -169,6 +170,15 @@ static const luaL_Reg lj_lib_load[] = {
 };
 
 /**
+ * @brief Return the current timer phase
+ */
+static int get_timer_state(lua_State* L)
+{
+    lua_pushinteger(L, (lua_Integer)atomic_load(&run_state));
+    return 1;
+}
+
+/**
  * Additional functions for the Lua Auto Split Runtime
  *
  * Must be NULL-terminated.
@@ -176,6 +186,7 @@ static const luaL_Reg lj_lib_load[] = {
 static const lasr_function luac_functions[] = {
     { "process", find_process_id },
     { "getBaseAddress", getBaseAddress },
+    { "getTimerState", get_timer_state },
     { "readAddress", readAddress },
     { "sizeOf", size_of },
     { "sig_scan", perform_sig_scan },
@@ -210,6 +221,37 @@ static void push_lasr_globals(lua_State* L)
 
     lua_pushinteger(L, POINTER_SIZE_64);
     lua_setglobal(L, "POINTER_SIZE_64");
+
+    // LASR timer states
+    for (LSTimerState state = 0; state < LASR_INVALID; ++state) {
+        // The switch is unnecessary, but it adds a compile-time guard that will force us to update this
+        // if we add/change values in the enum so that we don't forget. Do not add a default or the compile time guard breaks.
+        switch (state) {
+            case LASR_NOT_STARTED:
+                lua_pushinteger(L, LASR_NOT_STARTED);
+                lua_setglobal(L, "LASR_NOT_STARTED");
+                break;
+
+            case LASR_RUNNING:
+                lua_pushinteger(L, LASR_RUNNING);
+                lua_setglobal(L, "LASR_RUNNING");
+                break;
+
+            case LASR_PAUSED:
+                lua_pushinteger(L, LASR_PAUSED);
+                lua_setglobal(L, "LASR_PAUSED");
+                break;
+
+            case LASR_FINISHED:
+                lua_pushinteger(L, LASR_FINISHED);
+                lua_setglobal(L, "LASR_FINISHED");
+                break;
+
+            // Script authors don't need this.
+            case LASR_INVALID:
+                break;
+        }
+    }
 }
 
 /**
@@ -583,7 +625,8 @@ void split(lua_State* L)
 {
     bool ret;
     if (call_va(L, "split", ">b", &ret)) {
-        atomic_store(&call_split, ret);
+        // Don't split unless the timer is running
+        atomic_store(&call_split, ret && atomic_load(&run_running));
     }
 }
 
@@ -921,7 +964,9 @@ void run_auto_splitter(void)
             }
 
             if (!update_exists || update(L)) {
-                if (gameTime_exists && use_game_time && atomic_load(&run_started) && atomic_load(&run_running) && !atomic_load(&call_reset)) {
+                LSTimerState state = atomic_load(&run_state);
+                bool active_attempt = state == LASR_RUNNING || state == LASR_PAUSED;
+                if (gameTime_exists && use_game_time && active_attempt && !atomic_load(&call_reset)) {
                     gameTime(L);
                 }
 
@@ -933,11 +978,11 @@ void run_auto_splitter(void)
                     is_loading(L);
                 }
 
-                if (reset_exists && atomic_load(&run_running) && !atomic_load(&call_reset)) {
+                if (reset_exists && active_attempt && !atomic_load(&call_reset)) {
                     reset(L);
                 }
 
-                if (split_exists && atomic_load(&run_started) && !atomic_load(&call_split) && !atomic_load(&call_reset)) {
+                if (split_exists && active_attempt && !atomic_load(&call_split) && !atomic_load(&call_reset)) {
                     split(L);
                 }
             }
