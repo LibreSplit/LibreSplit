@@ -27,10 +27,11 @@ static gpointer cancel_icon_load(gpointer data)
 static char* remote_icon_uri(GFile* file)
 {
     GCancellable* cancellable = g_cancellable_new();
-    GThread* timeout = g_thread_new("icon-timeout", cancel_icon_load, g_object_ref(cancellable));
+    GThread* timeout = g_thread_new("icon-timeout", cancel_icon_load, cancellable);
     GBytes* contents = g_file_load_bytes(file, cancellable, NULL, NULL);
     g_cancellable_cancel(cancellable);
-    g_thread_join(timeout);
+    g_thread_join(g_thread_ref(timeout));
+    g_thread_unref(timeout);
     g_object_unref(cancellable);
 
     if (!contents) {
