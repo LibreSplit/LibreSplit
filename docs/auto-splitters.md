@@ -638,7 +638,7 @@ local main_module_size = getModuleSize();
 local main_module_size_2 = getModuleSize(nil);
 local other_module_size = getModuleSize("other_module");
 ```
-## getMaps
+## `getMaps`
 
 Returns an array-like table that contains other tables: one for each of the process's memory maps.
 
@@ -669,7 +669,7 @@ Usage:
 local maps = getMaps()
 ```
 
-## md5sum
+## `md5sum`
 
 Returns a hex-digest of the file pointed by the path passed as argument, as a string. Mostly used for detecting different game versions.
 
@@ -677,6 +677,32 @@ Usage:
 
 ```lua
 local md5_to_compare = md5sum("path/to/my/awesome/game")
+```
+
+## `getTimerState`
+
+Returns an integer representing the current timer state. The int value corresponds to an internal enum of potential states. These may be compared against the following
+globals that we provide that correspond to the enum values:
+
+- LASR_NOT_STARTED
+  - The timer has not yet started. I.e. the initial state or state after a reset
+- LASR_RUNNING
+  - The timer has started and is ticking
+- LASR_PAUSED
+  - The timer is paused but no reset has occurred
+- LASR_FINISHED
+  - The timer has been stopped because the run has been completed
+
+Usage:
+```lua
+local state = getTimerState()
+if state == LASR_NOT_STARTED
+    -- do something before the timer starts
+elseif state == LASR_RUNNING
+    -- do something while the timer is running
+elseif state == LASR_PAUSED
+    -- do something while the timer is paused
+end
 ```
 
 ## Reactive Functions

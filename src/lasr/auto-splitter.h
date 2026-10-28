@@ -22,6 +22,16 @@ extern atomic_bool run_started;
 extern atomic_bool run_running;
 extern atomic_bool prev_is_loading;
 
+typedef enum LSTimerState {
+    LASR_NOT_STARTED, /*!< The timer has not yet started. I.e. the initial state or state after a reset */
+    LASR_RUNNING, /*!< The timer has started and is ticking */
+    LASR_PAUSED, /*!< The timer is paused but no reset has occurred  */
+    LASR_FINISHED, /*!< The timer has been stopped because the run has been completed */
+    LASR_INVALID, /*!< Unused invalid state as a max value helper. Make sure this state is always last */
+} LSTimerState;
+
+extern atomic_int run_state;
+
 /**
  * Defines a Lua Auto Splitter Runtime Function.
  */

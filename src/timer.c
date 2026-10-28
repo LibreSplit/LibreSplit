@@ -1450,6 +1450,7 @@ static void reset_timer(ls_timer* timer)
     atomic_store(&run_started, false);
     timer->running = 0;
     atomic_store(&run_running, false);
+    atomic_store(&run_state, LASR_NOT_STARTED);
     timer->curr_split = 0;
     timer->comparison_time = timer->game->split_count
         ? timer->game->split_times[timer->game->split_count - 1]
@@ -1572,25 +1573,27 @@ void ls_timer_step(ls_timer* timer)
         if (!timer->usingGameTime) {
             timer->gameTime = timer->realTime - timer->loadingTime;
         }
-        if (timer->curr_split < timer->game->split_count) {
-            timer->split_times[timer->curr_split].real_time = timer->realTime;
-            timer->split_times[timer->curr_split].game_time = timer->usingGameTime ? timer->gameTime : timer->realTime - timer->loadingTime;
-            // calc delta and check it's not an error of LLONG_MAX
-            timer->split_deltas[timer->curr_split] = ls_time_subtract(timer->split_times[timer->curr_split], timer->game->split_times[timer->curr_split]);
+    }
 
-            int pace_mask = LS_INFO_BEHIND_TIME | LS_INFO_LOSING_TIME;
-            timer->split_info[timer->curr_split] = (timer->split_info[timer->curr_split] & ~pace_mask)
-                | ls_timer_get_split_pace(timer, timer->curr_split, timer->game->comparison_method);
-            if (!timer->curr_split || timer->split_times[timer->curr_split - 1].real_time) {
-                // calc segment time and delta
-                timer->segment_times[timer->curr_split] = timer->split_times[timer->curr_split];
-                if (timer->curr_split) {
-                    timer->segment_times[timer->curr_split] = ls_time_subtract(timer->segment_times[timer->curr_split], timer->split_times[timer->curr_split - 1]);
-                }
+    // Game time from an auto-splitter can change while the timer is paused.
+    if ((timer->running || (timer->started && timer->usingGameTime)) && timer->curr_split < timer->game->split_count) {
+        timer->split_times[timer->curr_split].real_time = timer->realTime;
+        timer->split_times[timer->curr_split].game_time = timer->usingGameTime ? timer->gameTime : timer->realTime - timer->loadingTime;
+        // calc delta and check it's not an error of LLONG_MAX
+        timer->split_deltas[timer->curr_split] = ls_time_subtract(timer->split_times[timer->curr_split], timer->game->split_times[timer->curr_split]);
 
-                // For previous segment
-                timer->segment_deltas[timer->curr_split] = ls_time_subtract(timer->segment_times[timer->curr_split], timer->game->segment_times[timer->curr_split]);
+        int pace_mask = LS_INFO_BEHIND_TIME | LS_INFO_LOSING_TIME;
+        timer->split_info[timer->curr_split] = (timer->split_info[timer->curr_split] & ~pace_mask)
+            | ls_timer_get_split_pace(timer, timer->curr_split, timer->game->comparison_method);
+        if (!timer->curr_split || timer->split_times[timer->curr_split - 1].real_time) {
+            // calc segment time and delta
+            timer->segment_times[timer->curr_split] = timer->split_times[timer->curr_split];
+            if (timer->curr_split) {
+                timer->segment_times[timer->curr_split] = ls_time_subtract(timer->segment_times[timer->curr_split], timer->split_times[timer->curr_split - 1]);
             }
+
+            // For previous segment
+            timer->segment_deltas[timer->curr_split] = ls_time_subtract(timer->segment_times[timer->curr_split], timer->game->segment_times[timer->curr_split]);
         }
     }
 
@@ -1625,6 +1628,7 @@ int ls_timer_start(ls_timer* timer)
         }
         timer->running = true;
         atomic_store(&run_running, true);
+        atomic_store(&run_state, LASR_RUNNING);
         if (new_attempt) {
             lasr_event("onStart", NULL);
         }
@@ -1761,6 +1765,7 @@ int ls_timer_split(ls_timer* timer)
         timer->running = false;
         atomic_store(&run_running, false);
         atomic_store(&update_game_time, false);
+        atomic_store(&run_state, LASR_FINISHED);
         ls_game_update_splits((ls_game*)timer->game, timer);
         if (cfg.libresplit.save_run_history.value.b) {
             ls_run_record(timer, "FINISHED");
@@ -1844,6 +1849,7 @@ int ls_timer_unsplit(ls_timer* timer)
         timer->started = 1;
         timer->running = true;
         atomic_store(&run_running, true);
+        atomic_store(&run_state, LASR_RUNNING);
     }
 
     lasr_event("onUnsplit", NULL);
@@ -1903,6 +1909,8 @@ void ls_timer_stop(ls_timer* timer)
     timer->running = false;
     atomic_store(&run_running, false);
     atomic_store(&update_game_time, false);
+    atomic_store(&run_state, LASR_PAUSED);
+    atomic_store(&call_split, false);
     lasr_event("onStop", NULL);
     lasr_unlock();
 }
