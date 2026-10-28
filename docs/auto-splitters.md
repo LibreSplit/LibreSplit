@@ -696,11 +696,11 @@ globals that we provide that correspond to the enum values:
 Usage:
 ```lua
 local state = getTimerState()
-if state == LASR_NOT_STARTED
+if state == LASR_NOT_STARTED then
     -- do something before the timer starts
-elseif state == LASR_RUNNING
+elseif state == LASR_RUNNING then
     -- do something while the timer is running
-elseif state == LASR_PAUSED
+elseif state == LASR_PAUSED then
     -- do something while the timer is paused
 end
 ```
