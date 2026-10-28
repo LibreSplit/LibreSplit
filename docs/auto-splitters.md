@@ -693,8 +693,6 @@ The following functions are event handlers that will be called on certain events
 - `onPause()`
 - `onUnpause()`
 
-These functions are run at the end of each Lua runtime loop, if the related event has been triggered.
-
 ### Init function
 
 Aside from those reactive functions we have 2 more important functions that are also optional event notifications. The first one is `init`

@@ -768,6 +768,13 @@ void lasr_unlock(void)
     g_rec_mutex_unlock(&lasr_mutex);
 }
 
+static void call_shutdown(lua_State* L)
+{
+    if (has_lua_function(L, "shutdown")) {
+        call_va(L, "shutdown", "");
+    }
+}
+
 /**
  * @brief Call a Lua event hook and an optional second hook synchronously.
  *
@@ -814,7 +821,7 @@ void run_auto_splitter(void)
         const char* error_msg = lua_tostring(L, -1);
         fprintf(stderr, "Lua syntax error: %s\n", error_msg);
         lua_pop(L, 1); // Remove the error message from the stack
-        lua_close(L);
+        lua_close(L); // No shutdown since the file itself was bad
         clear_process();
         maps_clearCache();
         lasr_settings_clear();
@@ -836,6 +843,7 @@ void run_auto_splitter(void)
         }
 
         lua_pop(L, 1);
+        call_shutdown(L);
         lua_close(L);
         clear_process();
         maps_clearCache();
@@ -961,10 +969,7 @@ run_auto_splitter_cleanup:
     atomic_store(&call_start, false);
     atomic_store(&call_split, false);
     atomic_store(&call_reset, false);
-    if (has_lua_function(L, "shutdown")) {
-        call_va(L, "shutdown", "");
-    }
-
+    call_shutdown(L);
     lua_close(L);
     clear_process();
     maps_clearCache();
