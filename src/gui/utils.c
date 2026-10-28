@@ -2,9 +2,17 @@
 
 static gpointer cancel_icon_load(gpointer data)
 {
-    g_usleep(G_USEC_PER_SEC);
-    g_cancellable_cancel(data);
-    g_object_unref(data);
+    GPollFD pollfd;
+    if (g_cancellable_make_pollfd(data, &pollfd)) {
+        if (g_poll(&pollfd, 1, 1000) <= 0) {
+            g_cancellable_cancel(data);
+        }
+
+        g_cancellable_release_fd(data);
+    } else {
+        g_cancellable_cancel(data);
+    }
+
     return NULL;
 }
 
@@ -21,7 +29,8 @@ static char* remote_icon_uri(GFile* file)
     GCancellable* cancellable = g_cancellable_new();
     GThread* timeout = g_thread_new("icon-timeout", cancel_icon_load, g_object_ref(cancellable));
     GBytes* contents = g_file_load_bytes(file, cancellable, NULL, NULL);
-    g_thread_unref(timeout);
+    g_cancellable_cancel(cancellable);
+    g_thread_join(timeout);
     g_object_unref(cancellable);
 
     if (!contents) {
