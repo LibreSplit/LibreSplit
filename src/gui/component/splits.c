@@ -41,7 +41,7 @@ typedef struct LSSplits {
     ls_time* comparison_times; /*!< Comparison times retained until the attempt is reset */
     LSSplitsColumn* columns;
     size_t column_count;
-    GtkCssProvider* icons_css_provider;
+    LSIcon* icons;
     gulong scroll_changed_handler;
 } LSSplits;
 extern LSComponentOps ls_splits_operations;
@@ -400,7 +400,7 @@ LSComponent* ls_component_splits_new(json_t* settings)
     gtk_widget_set_hexpand(self->splits, TRUE);
     gtk_viewport_set_child(GTK_VIEWPORT(self->split_viewport), self->splits);
 
-    self->icons_css_provider = NULL;
+    self->icons = NULL;
     self->scroll_changed_handler = 0;
 
     self->split_last = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
@@ -427,12 +427,7 @@ static void splits_delete(LSComponent* self)
     LSSplits* splits = (LSSplits*)self;
     g_clear_signal_handler(&splits->scroll_changed_handler, splits->split_adjust);
     free_all(splits);
-    if (splits->icons_css_provider) {
-        gtk_style_context_remove_provider_for_display(
-            gtk_widget_get_display(splits->container),
-            GTK_STYLE_PROVIDER(splits->icons_css_provider));
-        g_clear_object(&splits->icons_css_provider);
-    }
+    g_clear_pointer(&splits->icons, ls_icon_free);
     free(self);
 }
 
@@ -578,7 +573,8 @@ static void splits_show_game(LSComponent* self_, const ls_game* game, const ls_t
         }
     }
 
-    GString* icons_css_src = g_string_new(".split-icon { background-repeat: no-repeat; background-position: center; min-width: 20px; min-height: 20px; background-size: contain; margin-right: 4px; }");
+    g_clear_pointer(&self->icons, ls_icon_free);
+    self->icons = ls_icon_new(gtk_widget_get_display(self->container), ".split-icon { background-repeat: no-repeat; background-position: center; min-width: 20px; min-height: 20px; background-size: contain; margin-right: 4px; }");
 
     for (unsigned int i = 0; i < self->split_count; ++i) {
         self->split_rows[i] = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
@@ -607,14 +603,11 @@ static void splits_show_game(LSComponent* self_, const ls_game* game, const ls_t
 
         if (game->contains_icons) {
             if (game->split_icon_paths[i] && split_title_class) {
-                char* icon = icon_uri(game->path, game->split_icon_paths[i]);
-                if (icon) {
-                    g_string_append_printf(icons_css_src, ".%s .split-icon { background-image: url(", split_title_class);
-                    append_quoted_uri(icons_css_src, icon);
-                    g_string_append(icons_css_src, "); }");
-                    g_free(icon);
-                }
+                char* selector = g_strdup_printf(".%s .split-icon", split_title_class);
+                ls_icon_add(self->icons, game->path, game->split_icon_paths[i], selector);
+                g_free(selector);
             }
+
             self->split_icons[i] = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
             add_class(self->split_icons[i], "split-icon");
             // set size but allow to dinamically change it from css with min-width and min-height
@@ -655,28 +648,6 @@ static void splits_show_game(LSComponent* self_, const ls_game* game, const ls_t
         }
     }
 
-    if (self->icons_css_provider) {
-        // remove old css provider
-        gtk_style_context_remove_provider_for_display(
-            gtk_widget_get_display(self->container),
-            GTK_STYLE_PROVIDER(self->icons_css_provider));
-        g_object_unref(self->icons_css_provider);
-        self->icons_css_provider = NULL;
-    }
-
-    if (icons_css_src && icons_css_src->len > 0) {
-        self->icons_css_provider = gtk_css_provider_new();
-        gtk_css_provider_load_from_string(
-            self->icons_css_provider,
-            icons_css_src->str);
-        // add new css provider
-        gtk_style_context_add_provider_for_display(
-            gtk_widget_get_display(self->container),
-            GTK_STYLE_PROVIDER(self->icons_css_provider),
-            GTK_STYLE_PROVIDER_PRIORITY_USER);
-        g_string_free(icons_css_src, TRUE);
-    }
-
     gtk_widget_set_visible(self->splits, TRUE);
     if (self->split_count) {
         splits_trailer(self_);
@@ -691,6 +662,7 @@ static void splits_show_game(LSComponent* self_, const ls_game* game, const ls_t
 static void splits_clear_game(LSComponent* self_)
 {
     LSSplits* self = (LSSplits*)self_;
+    g_clear_pointer(&self->icons, ls_icon_free);
     g_object_set_data(G_OBJECT(self->split_viewport), "splits-active-scroll", NULL);
     g_clear_signal_handler(&self->scroll_changed_handler, self->split_adjust);
     gtk_widget_set_visible(self->splits, FALSE);

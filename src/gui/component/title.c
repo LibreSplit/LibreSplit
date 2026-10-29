@@ -13,11 +13,11 @@ typedef struct LSTitle {
     LSComponent base; /*!< The base struct that is extended */
     GtkWidget* header; /*!< The container for the title */
     GtkWidget* start; /*!< Container for the icon and left/right aligned title */
-    GtkWidget* icon; /*!< The container for the icon */
+    GtkWidget* icon_container; /*!< The container for the icon */
     GtkWidget* title; /*!< The label containing the title itself */
     GtkWidget* attempt_count; /*!< The label containing the number of attempts. */
     GtkWidget* finished_count; /*<! The label containing the number of finished runs. */
-    GtkCssProvider* icon_css_provider; /*<! CSS provider for displaying the game icon. */
+    LSIcon* icon; /*<! The icon resource for the game icon. */
 } LSTitle;
 extern LSComponentOps ls_title_operations; // defined at the end of the file
 
@@ -104,16 +104,11 @@ LSComponent* ls_component_title_new(json_t* settings)
 static void title_clear_game(LSComponent* self_)
 {
     LSTitle* self = (LSTitle*)self_;
-    if (self->icon_css_provider) {
-        gtk_style_context_remove_provider_for_display(
-            gtk_widget_get_display(self->header),
-            GTK_STYLE_PROVIDER(self->icon_css_provider));
-        g_clear_object(&self->icon_css_provider);
-    }
+    g_clear_pointer(&self->icon, ls_icon_free);
 
-    if (self->icon) {
-        gtk_box_remove(GTK_BOX(self->start), self->icon);
-        self->icon = NULL;
+    if (self->icon_container) {
+        gtk_box_remove(GTK_BOX(self->start), self->icon_container);
+        self->icon_container = NULL;
     }
 }
 
@@ -197,37 +192,20 @@ static void title_draw(LSComponent* self_, const ls_game* game, const ls_timer* 
     gtk_widget_set_visible(gtk_widget_get_parent(self->attempt_count), show_attempts || show_finished);
 
     if (show_icon) {
-        if (game->icon_path && !self->icon) {
-            GString* icon_css_src = g_string_new(".title-icon { background-repeat: no-repeat; background-position: center; min-width: 20px; min-height: 20px; background-size: contain; margin-right: 4px;");
-            char* icon = icon_uri(game->path, game->icon_path);
-            if (icon) {
-                g_string_append(icon_css_src, " background-image: url(");
-                append_quoted_uri(icon_css_src, icon);
-                g_string_append(icon_css_src, ");");
-                g_free(icon);
-            }
-
-            g_string_append(icon_css_src, " }");
-
-            self->icon_css_provider = gtk_css_provider_new();
-            gtk_css_provider_load_from_string(self->icon_css_provider, icon_css_src->str);
-            gtk_style_context_add_provider_for_display(
-                gtk_widget_get_display(self->header),
-                GTK_STYLE_PROVIDER(self->icon_css_provider),
-                GTK_STYLE_PROVIDER_PRIORITY_USER);
-            g_string_free(icon_css_src, TRUE);
-
-            self->icon = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-            add_class(self->icon, "title-icon");
-            gtk_widget_set_valign(self->icon, GTK_ALIGN_CENTER);
-            gtk_box_prepend(GTK_BOX(self->start), self->icon);
+        if (game->icon_path && !self->icon_container) {
+            self->icon = ls_icon_new(gtk_widget_get_display(self->header), ".title-icon { background-repeat: no-repeat; background-position: center; min-width: 20px; min-height: 20px; background-size: contain; margin-right: 4px; }");
+            ls_icon_add(self->icon, game->path, game->icon_path, ".title-icon");
+            self->icon_container = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+            add_class(self->icon_container, "title-icon");
+            gtk_widget_set_valign(self->icon_container, GTK_ALIGN_CENTER);
+            gtk_box_prepend(GTK_BOX(self->start), self->icon_container);
         }
-    } else if (self->icon) {
+    } else if (self->icon_container) {
         title_clear_game(self_);
     }
 
     LSTextAlignment alignment = ls_component_settings_get(self_, "text_alignment")->int_val;
-    bool align_left = alignment == LS_TEXT_ALIGN_LEFT || (alignment == LS_TEXT_ALIGN_LEFT_WITH_ICON && self->icon);
+    bool align_left = alignment == LS_TEXT_ALIGN_LEFT || (alignment == LS_TEXT_ALIGN_LEFT_WITH_ICON && self->icon_container);
     bool align_right = alignment == LS_TEXT_ALIGN_RIGHT;
 
     if ((align_left || align_right) && gtk_widget_get_parent(self->title) == self->header) {
