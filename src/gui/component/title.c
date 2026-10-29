@@ -193,7 +193,7 @@ static void title_draw(LSComponent* self_, const ls_game* game, const ls_timer* 
 
     if (show_icon) {
         if (game->icon_path && !self->icon_container) {
-            self->icon = ls_icon_new(gtk_widget_get_display(self->header), ".title-icon { background-repeat: no-repeat; background-position: center; min-width: 20px; min-height: 20px; background-size: contain; margin-right: 4px;");
+            self->icon = ls_icon_new(gtk_widget_get_display(self->header), ".title-icon { background-repeat: no-repeat; background-position: center; min-width: 20px; min-height: 20px; background-size: contain; margin-right: 4px; }");
             ls_icon_add(self->icon, game->path, game->icon_path, ".title-icon");
             self->icon_container = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
             add_class(self->icon_container, "title-icon");
