@@ -236,6 +236,13 @@ static GtkCssProvider* icon_provider_new(LSIcon* group)
     return provider;
 }
 
+/**
+ * @brief Creates an icon group and applies its base CSS.
+ *
+ * @param display The display to style.
+ * @param base_css The base styles for the icon widgets.
+ * @return The new group, to be released with ls_icon_free.
+ */
 LSIcon* ls_icon_new(GdkDisplay* display, const char* base_css)
 {
     LSIcon* group = g_new0(LSIcon, 1);
@@ -246,10 +253,18 @@ LSIcon* ls_icon_new(GdkDisplay* display, const char* base_css)
     return group;
 }
 
+/**
+ * @brief Queues an icon to load asynchronously and display through CSS.
+ *
+ * @param group The icon group.
+ * @param path The split file path, used to resolve relative icon paths.
+ * @param source The icon path, URL or data URL.
+ * @param selector The CSS selector for the icon widgets.
+ */
 void ls_icon_add(LSIcon* group, const char* path, const char* source, const char* selector)
 {
     IconRequest* request = g_new0(IconRequest, 1);
-    // Reserve cascade order now, before any completion callbacks can run.
+    // Reserve css order now, before any completion callbacks can run.
     request->provider = g_object_ref(icon_provider_new(group));
     request->cancellable = g_object_ref(group->cancellable);
     request->input = g_new0(IconInput, 1);
@@ -260,6 +275,11 @@ void ls_icon_add(LSIcon* group, const char* path, const char* source, const char
     icon_start_queued();
 }
 
+/**
+ * @brief Cancels icon loads, removes their CSS and frees the group.
+ *
+ * @param group The icon group to release, or NULL.
+ */
 void ls_icon_free(LSIcon* group)
 {
     if (!group) {
