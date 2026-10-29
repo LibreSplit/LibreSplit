@@ -1,51 +1,19 @@
-#include <gtk/gtk.h>
+#include "utils.h"
 
-static gpointer cancel_icon_load(gpointer data)
-{
-    GPollFD pollfd;
-    if (g_cancellable_make_pollfd(data, &pollfd)) {
-        if (g_poll(&pollfd, 1, 1000) <= 0) {
-            g_cancellable_cancel(data);
-        }
+typedef struct IconInput {
+    char* path;
+    char* source;
+    char* selector;
+} IconInput;
 
-        g_cancellable_release_fd(data);
-    } else {
-        g_cancellable_cancel(data);
-    }
+typedef struct IconRequest {
+    IconInput* input;
+    GtkCssProvider* provider;
+    GCancellable* cancellable;
+} IconRequest;
 
-    return NULL;
-}
-
-/**
- * @brief GTK's CSS image loader does not have a timeout. To prevent network hangs
- * fetch the resource ourselves first and then replace with embedded bytes to prevent
- * later network retries or network hangs from hanging the UI.
- *
- * @param file The resource file to load
- * @return char* The uri contents
- */
-static char* remote_icon_uri(GFile* file)
-{
-    GCancellable* cancellable = g_cancellable_new();
-    GThread* timeout = g_thread_new("icon-timeout", cancel_icon_load, cancellable);
-    GBytes* contents = g_file_load_bytes(file, cancellable, NULL, NULL);
-    g_cancellable_cancel(cancellable);
-    g_thread_join(g_thread_ref(timeout));
-    g_thread_unref(timeout);
-    g_object_unref(cancellable);
-
-    if (!contents) {
-        return NULL;
-    }
-
-    gsize size;
-    const guchar* bytes = g_bytes_get_data(contents, &size);
-    char* encoded = g_base64_encode(bytes, size);
-    char* uri = g_strconcat("data:application/octet-stream;base64,", encoded, NULL);
-    g_free(encoded);
-    g_bytes_unref(contents);
-    return uri;
-}
+static GQueue icon_queue = G_QUEUE_INIT;
+static unsigned int icon_active;
 
 /**
  * Adds a styling class to a GTK Widget.
@@ -74,7 +42,6 @@ void remove_class(GtkWidget* widget, const char* class)
  * This handles converting full/relative file paths to the user's system
  * so that it can be converted to a usable file:// URI
  * while retaining already valid URI's for web urls, data-urls etc.
- * Remote icons are fetched with a one-second timeout and returned as embedded data, or NULL on failure.
  *
  * If you use this, you must g_free the result if it is not NULL after usage.
  *
@@ -89,12 +56,10 @@ char* icon_uri(const char* path, const char* source)
         return NULL;
     }
 
+    // The supplied source is already correctly formatted.
+    // Duplicate it so the followup free doesn't kill the source path.
     if (g_uri_peek_scheme(source)) {
-        GFile* file = g_file_new_for_uri(source);
-        gboolean local = g_file_is_native(file) || g_file_has_uri_scheme(file, "data") || g_file_has_uri_scheme(file, "resource");
-        char* uri = local ? g_strdup(source) : remote_icon_uri(file);
-        g_object_unref(file);
-        return uri;
+        return g_strdup(source);
     }
 
     GFile* icon;
@@ -157,4 +122,168 @@ void append_quoted_uri(GString* str, const char* value)
     }
 
     g_string_append_c(str, '"');
+}
+
+static void icon_input_free(gpointer data)
+{
+    IconInput* input = data;
+    g_free(input->path);
+    g_free(input->source);
+    g_free(input->selector);
+    g_free(input);
+}
+
+static void icon_request_free(IconRequest* request)
+{
+    if (request->input) {
+        icon_input_free(request->input);
+    }
+
+    g_object_unref(request->provider);
+    g_object_unref(request->cancellable);
+    g_free(request);
+}
+
+static void icon_load(GTask* task, gpointer source_object, gpointer task_data, GCancellable* cancellable)
+{
+    IconInput* input = task_data;
+    if (g_task_return_error_if_cancelled(task)) {
+        return;
+    }
+
+    // Even path resolution can block in GVfs, so it belongs in the worker.
+    char* uri = icon_uri(input->path, input->source);
+    if (!uri) {
+        g_task_return_pointer(task, NULL, NULL);
+        return;
+    }
+
+    if (g_ascii_strncasecmp(uri, "data:", 5) != 0) {
+        GFile* file = g_file_new_for_uri(uri);
+        GBytes* bytes = g_file_load_bytes(file, cancellable, NULL, NULL);
+        g_object_unref(file);
+        g_free(uri);
+        uri = NULL;
+
+        if (bytes) {
+            gsize size;
+            const guchar* data = g_bytes_get_data(bytes, &size);
+            char* base64 = g_base64_encode(data, size);
+            uri = g_strconcat("data:application/octet-stream;base64,", base64, NULL);
+            g_free(base64);
+            g_bytes_unref(bytes);
+        }
+    }
+
+    if (g_task_return_error_if_cancelled(task)) {
+        g_free(uri);
+        return;
+    }
+
+    GString* css = g_string_new(input->selector);
+    g_string_append(css, " { background-image: ");
+    if (uri) {
+        g_string_append(css, "url(");
+        append_quoted_uri(css, uri);
+        g_string_append_c(css, ')');
+    } else {
+        // If loading fails, just show nothing at least so the load doesn't fail.
+        g_string_append(css, "none");
+    }
+
+    g_string_append(css, "; }");
+    g_free(uri);
+
+    char* result = g_string_free(css, FALSE);
+    g_task_return_pointer(task, result, g_free);
+}
+
+static void icon_loaded(GObject* source_object, GAsyncResult* result, gpointer data);
+
+static void icon_start_queued(void)
+{
+    while (icon_active < 4 && !g_queue_is_empty(&icon_queue)) {
+        IconRequest* request = g_queue_pop_head(&icon_queue);
+        GTask* task = g_task_new(NULL, request->cancellable, icon_loaded, request);
+        g_task_set_task_data(task, request->input, icon_input_free);
+        request->input = NULL;
+        ++icon_active;
+        g_task_run_in_thread(task, icon_load);
+        g_object_unref(task);
+    }
+}
+
+static void icon_loaded(GObject* source_object, GAsyncResult* result, gpointer data)
+{
+    IconRequest* request = data;
+    char* css = g_task_propagate_pointer(G_TASK(result), NULL);
+    if (css && !g_cancellable_is_cancelled(request->cancellable)) {
+        gtk_css_provider_load_from_string(request->provider, css);
+    }
+
+    g_free(css);
+    icon_request_free(request);
+
+    --icon_active;
+    icon_start_queued();
+}
+
+static GtkCssProvider* icon_provider_new(LSIcon* group)
+{
+    GtkCssProvider* provider = gtk_css_provider_new();
+    g_ptr_array_add(group->providers, provider);
+    gtk_style_context_add_provider_for_display(group->display, GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_USER);
+    return provider;
+}
+
+LSIcon* ls_icon_new(GdkDisplay* display, const char* base_css)
+{
+    LSIcon* group = g_new0(LSIcon, 1);
+    group->display = g_object_ref(display);
+    group->cancellable = g_cancellable_new();
+    group->providers = g_ptr_array_new_with_free_func(g_object_unref);
+    gtk_css_provider_load_from_string(icon_provider_new(group), base_css);
+    return group;
+}
+
+void ls_icon_add(LSIcon* group, const char* path, const char* source, const char* selector)
+{
+    IconRequest* request = g_new0(IconRequest, 1);
+    // Reserve cascade order now, before any completion callbacks can run.
+    request->provider = g_object_ref(icon_provider_new(group));
+    request->cancellable = g_object_ref(group->cancellable);
+    request->input = g_new0(IconInput, 1);
+    request->input->path = g_strdup(path);
+    request->input->source = g_strdup(source);
+    request->input->selector = g_strdup(selector);
+    g_queue_push_tail(&icon_queue, request);
+    icon_start_queued();
+}
+
+void ls_icon_free(LSIcon* group)
+{
+    if (!group) {
+        return;
+    }
+
+    g_cancellable_cancel(group->cancellable);
+    for (GList* link = icon_queue.head; link;) {
+        GList* next = link->next;
+        IconRequest* request = link->data;
+        if (request->cancellable == group->cancellable) {
+            g_queue_delete_link(&icon_queue, link);
+            icon_request_free(request);
+        }
+
+        link = next;
+    }
+
+    for (guint i = 0; i < group->providers->len; ++i) {
+        gtk_style_context_remove_provider_for_display(group->display, GTK_STYLE_PROVIDER(g_ptr_array_index(group->providers, i)));
+    }
+
+    g_ptr_array_unref(group->providers);
+    g_object_unref(group->cancellable);
+    g_object_unref(group->display);
+    g_free(group);
 }
