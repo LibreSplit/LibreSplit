@@ -17,7 +17,7 @@ typedef struct LSTitle {
     GtkWidget* title; /*!< The label containing the title itself */
     GtkWidget* attempt_count; /*!< The label containing the number of attempts. */
     GtkWidget* finished_count; /*<! The label containing the number of finished runs. */
-    LSIcon* icon; /*<! CSS provider for displaying the game icon. */
+    LSIcon* icon; /*<! The icon resource for the game icon. */
 } LSTitle;
 extern LSComponentOps ls_title_operations; // defined at the end of the file
 
