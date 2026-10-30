@@ -183,6 +183,11 @@ function define_settings()
 end
 ```
 
+In the example above, a user would be able to configure 1 or more "routes" in the route setting. Each entry would need to be an object which itself would have
+an option for the level id, and another nested object containing further settings for that level itself. Each nest level can be any of the defined SETTING_* types.
+
+These settings can then be accessed as normal with `settings.get` See the examples below.
+
 Although arrays and object settings support nesting, we limit the amount of nested definitions you may supply to 64 nested entries as a reasonable limit.
 
 #### `get`
@@ -198,6 +203,13 @@ The `get` method is available to any of the other lifetime global functions, but
 Example usage:
 ```lua
 local var = settings.get("is_emulator") -- defaults to false per our earlier example definition
+local route = settings.get("route") -- using our route setting as defined above
+for index, level in ipairs(route) do
+    print("Route entry:", index)
+    print("Level:", level.level_id)
+    print("Enabled:", level.options.enabled)
+    print("Split on exit:", level.options.split_on_exit)
+end
 ```
 
 ### `startup`
