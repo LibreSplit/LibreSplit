@@ -43,6 +43,11 @@ static void free_setting(gpointer data)
         g_free(setting->val.string_val);
     }
 
+    for (size_t i = 0; i < setting->config.options_count; ++i) {
+        g_free(setting->config.options[i].desc);
+    }
+
+    g_free(setting->config.options);
     g_free(setting);
 }
 
@@ -115,6 +120,7 @@ static const char* setting_set_val(lua_State* L, int index, SettingType type, Se
             val->bool_val = lua_toboolean(L, index);
             break;
 
+        case SETTING_OPTION:
         case SETTING_INTEGER:
             {
                 if (!lua_isinteger(L, index)) {
@@ -146,11 +152,80 @@ static const char* setting_set_val(lua_State* L, int index, SettingType type, Se
             val->string_val = (char*)lua_tostring(L, index);
             break;
 
+        case SETTING_ARRAY:
+        case SETTING_OBJECT:
         case SETTING_INVALID:
             return "invalid setting type";
     }
 
     return NULL;
+}
+
+static const char* validate_options(lua_State* L, int index, size_t* count)
+{
+    *count = 0;
+
+    if (!lua_istable(L, index)) {
+        return "options must be an array of tables";
+    }
+
+    size_t length = lua_rawlen(L, index);
+    if (length == 0) {
+        return "options must contain at least one valid entry";
+    }
+
+    index = lua_absindex(L, index);
+    int top = lua_gettop(L);
+    size_t entries = 0;
+    const char* error = NULL;
+    luaL_checkstack(L, 4, "unable to validate setting options");
+    lua_pushnil(L);
+    while (lua_next(L, index)) {
+        if (!lua_isinteger(L, -2) || lua_tointeger(L, -2) < 1 || (lua_Unsigned)lua_tointeger(L, -2) > length) {
+            error = "options must be a consecutive array";
+            goto validate_options_done;
+        }
+
+        if (!lua_istable(L, -1)) {
+            error = "each option must be a table";
+            goto validate_options_done;
+        }
+
+        lua_pushliteral(L, "value");
+        lua_rawget(L, -2);
+        if (!lua_isinteger(L, -1)) {
+            error = "each option must have an integer value";
+            goto validate_options_done;
+        }
+
+        lua_Integer value = lua_tointeger(L, -1);
+        if (value < LONG_MIN || value > LONG_MAX) {
+            error = "option value is outside the supported integer range";
+            goto validate_options_done;
+        }
+
+        lua_pop(L, 1);
+        lua_pushliteral(L, "desc");
+        lua_rawget(L, -2);
+        if (!is_valid_string(L, -1)) {
+            error = "each option must have a string desc without NUL bytes";
+            goto validate_options_done;
+        }
+
+        lua_pop(L, 2);
+        ++entries;
+    }
+
+    if (entries != length) {
+        error = "options must be a consecutive array starting at index 1";
+        goto validate_options_done;
+    }
+
+    *count = length;
+
+validate_options_done:
+    lua_settop(L, top);
+    return error;
 }
 
 /**
@@ -231,6 +306,20 @@ static int define_setting(lua_State* L)
     }
 
     const char* desc = lua_tostring(L, -1);
+    size_t options_count = 0;
+    int options_index = 0;
+
+    // options must be defined
+    if (type == SETTING_OPTION) {
+        lua_pushliteral(L, "options");
+        lua_rawget(L, 2);
+        options_index = lua_gettop(L);
+        error = validate_options(L, options_index, &options_count);
+        if (error) {
+            return luaL_error(L, "[settings.define] %s", error);
+        }
+    }
+
     Setting* setting = g_new0(Setting, 1);
     setting->config.key = g_strdup(key);
     setting->config.name = g_strdup(name);
@@ -239,6 +328,32 @@ static int define_setting(lua_State* L)
     setting->config.desc = g_strdup(desc);
     if (type == SETTING_STRING) {
         setting->config.default_val.string_val = g_strdup(default_val.string_val);
+    }
+
+    setting->config.options_count = options_count;
+    if (options_count > 0) {
+        bool valid_default = false;
+        setting->config.options = g_malloc0_n(options_count, sizeof(*setting->config.options));
+        for (size_t i = 0; i < options_count; ++i) {
+            lua_rawgeti(L, options_index, (lua_Integer)(i + 1));
+            lua_pushliteral(L, "value");
+            lua_rawget(L, -2);
+            setting->config.options[i].value = (long)lua_tointeger(L, -1);
+            lua_pop(L, 1);
+            lua_pushliteral(L, "desc");
+            lua_rawget(L, -2);
+            setting->config.options[i].desc = g_strdup(lua_tostring(L, -1));
+            lua_pop(L, 2);
+
+            if (setting->config.options[i].value == default_val.int_val) {
+                valid_default = true;
+            }
+        }
+
+        if (!valid_default) {
+            free_setting(setting);
+            return luaL_error(L, "[settings.define] Invalid default value for setting \"%s\"", key);
+        }
     }
 
     g_hash_table_insert(settings, setting->config.key, setting);
@@ -286,6 +401,7 @@ static int get_setting(lua_State* L)
             lua_pushboolean(L, value->bool_val);
             break;
 
+        case SETTING_OPTION:
         case SETTING_INTEGER:
             lua_pushinteger(L, value->int_val);
             break;
@@ -298,6 +414,8 @@ static int get_setting(lua_State* L)
             lua_pushstring(L, value->string_val);
             break;
 
+        case SETTING_ARRAY:
+        case SETTING_OBJECT:
         case SETTING_INVALID:
             // given earlier validation, this should be impossible
             LOG_WARN("Invalid setting type found in settings");
@@ -357,6 +475,9 @@ void lasr_settings_register(lua_State* L)
         [SETTING_INTEGER] = "SETTING_INTEGER",
         [SETTING_NUMBER] = "SETTING_NUMBER",
         [SETTING_STRING] = "SETTING_STRING",
+        [SETTING_OPTION] = "SETTING_OPTION",
+        [SETTING_ARRAY] = "SETTING_ARRAY",
+        [SETTING_OBJECT] = "SETTING_OBJECT",
     };
 
     for (lua_Integer type = SETTING_BOOLEAN; type < SETTING_INVALID; ++type) {
@@ -403,6 +524,25 @@ static void lasr_user_settings_load(void)
             user_setting->type = SETTING_NUMBER;
             double new_val = (double)user_setting->val.int_val;
             user_setting->val.num_val = new_val;
+        }
+
+        // fix option type
+        if (setting->config.type == SETTING_OPTION && (user_setting->type == SETTING_INTEGER || user_setting->type == SETTING_OPTION)) {
+            // validate the value for options
+            bool valid = false;
+            for (size_t i = 0; i < setting->config.options_count; ++i) {
+                if (setting->config.options[i].value == user_setting->val.int_val) {
+                    valid = true;
+                    break;
+                }
+            }
+
+            if (!valid) {
+                LOG_WARNF("Invalid setting value for \"%s\"", user_setting->key);
+                continue;
+            }
+
+            user_setting->type = SETTING_OPTION;
         }
 
         if (user_setting->type != setting->config.type) {

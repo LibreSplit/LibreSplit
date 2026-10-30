@@ -2,6 +2,7 @@
 
 #include <lua.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 /**
  * @brief Indicates the type of the value.
@@ -14,6 +15,9 @@ typedef enum SettingType {
     SETTING_INTEGER,
     SETTING_NUMBER,
     SETTING_STRING,
+    SETTING_OPTION,
+    SETTING_ARRAY,
+    SETTING_OBJECT,
     SETTING_INVALID, // Easy way to compare a value >= this is invalid. Keep this last
 } SettingType;
 
@@ -22,6 +26,21 @@ typedef union SettingVal {
     long int_val;
     double num_val;
     char* string_val;
+    struct {
+        struct {
+            SettingType type;
+            union SettingVal* val;
+        }* values;
+        size_t count;
+    } array_val;
+    struct {
+        struct {
+            char* key;
+            SettingType type;
+            union SettingVal* val;
+        }* values;
+        size_t count;
+    } object_val;
 } SettingVal;
 
 typedef struct SettingDefinition {
@@ -30,6 +49,11 @@ typedef struct SettingDefinition {
     SettingType type;
     SettingVal default_val;
     char* desc;
+    struct {
+        long value;
+        char* desc;
+    }* options;
+    size_t options_count;
 } SettingDefinition;
 
 typedef struct Setting {
