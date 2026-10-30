@@ -109,8 +109,8 @@ static ls_game* create_snapshot(const ls_game* game)
         }
     }
 
+    lock_user_settings();
     if (game->auto_splitter_settings_count) {
-        lock_user_settings();
         snapshot->auto_splitter_settings = calloc(game->auto_splitter_settings_count, sizeof(UserSetting*));
         if (!snapshot->auto_splitter_settings) {
             LOG_ERR("snapshot creation: unable to allocate memory for `auto_splitter_settings`");
@@ -135,20 +135,15 @@ static ls_game* create_snapshot(const ls_game* game)
             }
 
             snapshot->auto_splitter_settings[i]->type = game->auto_splitter_settings[i]->type;
-            snapshot->auto_splitter_settings[i]->val = game->auto_splitter_settings[i]->val;
-            if (snapshot->auto_splitter_settings[i]->type == SETTING_STRING) {
-                snapshot->auto_splitter_settings[i]->val.string_val = strdup(game->auto_splitter_settings[i]->val.string_val);
-                if (!snapshot->auto_splitter_settings[i]->val.string_val) {
-                    LOG_ERRF("snapshot creation: unable to duplicate setting[%zu] string value", i);
-                    unlock_user_settings();
-                    goto create_snapshot_failed;
-                }
+            if (!lasr_setting_value_copy(game->auto_splitter_settings[i]->type, &game->auto_splitter_settings[i]->val, &snapshot->auto_splitter_settings[i]->val)) {
+                LOG_ERRF("snapshot creation: unable to duplicate setting[%zu] value", i);
+                unlock_user_settings();
+                goto create_snapshot_failed;
             }
         }
-
-        unlock_user_settings();
     }
 
+    unlock_user_settings();
     if (!game->split_count) {
         return snapshot;
     }
