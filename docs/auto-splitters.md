@@ -27,10 +27,13 @@ process('GameBlaBlaBla.exe')
 ### `define_settings`
 The purpose of this optional function is to specify settings that your script make take along with their default values. LASR provides a global `settings` object that should contain all of your settings for the lifetime of your script. LibreSplit handles updating these settings for you as the user interacts with them. Currently, the following setting types are available:
 
-* `SETTING_BOOLEAN`
-* `SETTING_INTEGER`
-* `SETTING_NUMBER`
-* `SETTING_STRING`
+- `SETTING_BOOLEAN`
+- `SETTING_INTEGER`
+- `SETTING_NUMBER`
+- `SETTING_STRING`
+- `SETTING_OPTION`
+- `SETTING_ARRAY`
+- `SETTING_OBJECT`
 
 If provided, LibreSplit will run your `define_settings` function exactly once when your script is loaded before anything else to define your settings. This is the only time when settings may be defined.
 
@@ -39,17 +42,27 @@ The `settings` object has 2 methods associated with it:
 #### `define`
 `settings.define(key, definition)`
 
-* key (string)
-    * the key used for your setting, must be unique (to be used with `get`)
-* definition (object)
-    * name (string REQUIRED)
-        * friendly setting name to display to the user
-    * type (int REQUIRED)
-        * integer value representing your setting type. Use the defined SETTING_* enum values above
-    * default (mixed REQUIRED)
-        * the default value for your setting (must match the setting type provided)
-    * desc (string OPTIONAL)
-        * optional description to show the user what the setting is for
+- key (string)
+  - the key used for your setting, must be unique (to be used with `get`)
+- definition (object)
+  - name (string REQUIRED)
+    - friendly setting name to display to the user
+  - type (int REQUIRED)
+    - integer value representing your setting type. Use the defined SETTING_* enum values above
+  - default (mixed REQUIRED)
+    - the default value for your setting (must match the setting type provided)
+  - desc (string OPTIONAL)
+    - optional description to show the user what the setting is for
+  - options (array)
+    - required when `type == SETTING_OPTION`, otherwise ignored
+    - table of options to for users to select from a dropdown
+    - each entry must be an object with the following required fields
+      - value (int)
+        - The actual value to store the user's selection from the dropdown
+        - Must be an integer
+        - Must be unique in the array
+      - desc (string)
+        - The string the user will see in the dropdown for the setting
 
 This is the main method you will use to actually define each of your settings, their type and default value. Along with an optional description for the user of what the setting is for.
 `define` may ONLY be called within your `define_settings` function. Afterwards, calling `define` is no longer possible and will result in an error.
@@ -75,8 +88,102 @@ function define_settings()
         type = SETTING_INTEGER,
         default = 5
     })
+
+    -- an `option` setting type is a slightly expanded int that allows you to define
+    -- the possible values, and allows a user to make a selection for this setting via
+    -- a dropdown.
+    settings.define("some_option", {
+        name = "Select Something",
+        type = SETTING_OPTION,
+        default = 1, -- MUST correspond to one of the values defined in options
+        options = {
+            {
+                value = 5,
+                desc = "First option in the dropdown"
+            },
+            {
+                value = 2,
+                desc = "Second option in the dropdown"
+            },
+            {
+                value = 1,
+                desc = "Third option in the dropdown"
+            },
+            {
+                value = 100,
+                desc = "Last option in the dropdown"
+            }
+        }
+    })
 end
 ```
+
+#### Nested settings
+
+To allow for more complex setting definitions in LASR we have the `SETTING_ARRAY` and `SETTING_OBJECT` types.
+These allow you to define arbitrary table elements and will change what must be provided in your settings definition
+to account for the added complexity.
+
+- `SETTING_ARRAY`
+  - Requires an extra `items` definition.
+   -This is a separate definition that defines what every element in the array must conform to.
+  - Elements in an array maintain their order and can repeat. The element definition itself can be an array
+    or object.
+- `SETTING_OBJECT`
+  - Requires an extra `fields` definition, which is an ordered array of definitions.
+  - Each field is defined in the same way as a normal setting above with the same required/optional entries.
+
+Every definition, including `items` and each field, requires its own default.
+
+Example usage:
+```lua
+function define_settings()
+    settings.define("route", {
+        name = "Route",
+        type = SETTING_ARRAY,
+        default = {{ level_id = 1 }, { level_id = 2 }},
+        items = {
+            name = "Level",
+            type = SETTING_OBJECT,
+            default = {},
+            fields = {
+                {
+                    key = "level_id",
+                    name = "Level",
+                    type = SETTING_OPTION,
+                    default = 1,
+                    options = {
+                        { value = 1, desc = "Level 1" },
+                        { value = 2, desc = "Level 2" }
+                    }
+                },
+                {
+                    key = "options",
+                    name = "Level Options",
+                    type = SETTING_OBJECT,
+                    default = {},
+                    fields = {
+                        {
+                            key = "enabled",
+                            name = "Enabled",
+                            type = SETTING_BOOLEAN,
+                            default = true
+                        },
+                        {
+                            key = "split_on_exit",
+                            name = "Split on Exit",
+                            type = SETTING_BOOLEAN,
+                            default = true
+                        }
+                    }
+                }
+            }
+        }
+    })
+end
+```
+
+Although arrays and object settings support nesting, we limit the amount of nested definitions you may supply to 64 nested entries as a reasonable limit.
 
 #### `get`
 `settings.get(key)`

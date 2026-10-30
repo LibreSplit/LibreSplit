@@ -1,5 +1,6 @@
 #pragma once
 
+#include <jansson.h>
 #include <lua.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -54,6 +55,11 @@ typedef struct SettingDefinition {
         char* desc;
     }* options;
     size_t options_count;
+    struct SettingDefinition* items;
+    struct {
+        struct SettingDefinition* values;
+        size_t count;
+    } fields;
 } SettingDefinition;
 
 typedef struct Setting {
@@ -74,3 +80,8 @@ void lasr_settings_clear(void);
 void lasr_settings_register(lua_State* L);
 int lasr_settings_load(lua_State* L);
 Setting* lasr_settings_lookup(const char* name);
+void lasr_setting_value_clear(SettingType type, SettingVal* value);
+bool lasr_setting_value_copy(SettingType type, const SettingVal* value, SettingVal* result);
+bool lasr_setting_value_from_json(const json_t* json, SettingType* type, SettingVal* result);
+json_t* lasr_setting_value_to_json(SettingType type, const SettingVal* value);
+bool lasr_setting_validate(const SettingDefinition* definition, SettingType type, const SettingVal* value, SettingVal* result, char** error);
