@@ -383,6 +383,7 @@ void ls_app_window_destroy(GtkWidget* widget, gpointer data)
 {
     LOG_INFO("Exiting LibreSplit. GG!");
     LSAppWindow* win = (LSAppWindow*)widget;
+    stop_auto_splitter();
     if (main_win == win) {
         main_win = NULL;
     }
@@ -438,19 +439,10 @@ gboolean ls_app_window_step(gpointer data)
     }
 
     if (win->timer) {
-        if (atomic_load(&auto_splitter_enabled)) {
-            if (atomic_load(&run_using_game_time_call)) {
-                win->timer->usingGameTime = atomic_load(&run_using_game_time);
-                atomic_store(&run_using_game_time_call, false);
-            }
-            if (atomic_load(&update_game_time)) {
-                // Update the timer with the game time from auto-splitter
-                win->timer->gameTime = atomic_load(&game_time_value);
-                atomic_store(&update_game_time, false);
-            }
-        }
-
-        ls_timer_step(win->timer);
+        bool start_requested = atomic_load(&call_start);
+        bool split_requested = atomic_load(&call_split);
+        bool reset_requested = atomic_load(&call_reset);
+        timer_update_time(win);
 
         // printf("RTA: %llu; LT: %llu; LRT: %llu; GT: %llu; GT?: %d\n",
         //     win->timer->realTime,
@@ -459,32 +451,48 @@ gboolean ls_app_window_step(gpointer data)
         //     win->timer->gameTime,
         //     win->timer->usingGameTime);
 
-        if (atomic_load(&auto_splitter_enabled)) {
-            if (atomic_load(&call_start) && !atomic_load(&call_reset) && !is_saving()) {
+        if (atomic_load(&auto_splitter_enabled) && (start_requested || split_requested || lasr_has_loading_request() || reset_requested)) {
+            lasr_lock();
+            // Ensure autosplitter was not disabled during lock acquisition
+            if (!atomic_load(&auto_splitter_enabled)) {
+                lasr_unlock();
+                return TRUE;
+            }
+
+            if (start_requested && atomic_load(&call_start) && !atomic_load(&call_reset) && !is_saving()) {
                 timer_start(win);
                 if (win->timer->running) {
                     atomic_store(&call_start, 0);
                 }
             }
-            if (atomic_load(&call_split)) {
+
+            if (split_requested && atomic_load(&call_split)) {
                 timer_split(win);
                 atomic_store(&call_split, 0);
             }
-            if (atomic_exchange(&toggle_loading, false)) {
-                win->timer->loading = atomic_load(&prev_is_loading);
 
+            // Process loading change requests
+            int loading = lasr_loading_request_pop();
+            while (loading >= 0) {
                 if (win->timer->running) {
-                    if (win->timer->loading) {
+                    if (loading) {
                         timer_pause(win);
                     } else {
                         timer_unpause(win);
                     }
+                } else {
+                    win->timer->loading = loading;
                 }
+
+                loading = lasr_loading_request_pop();
             }
-            if (atomic_load(&call_reset)) {
+
+            if (reset_requested && atomic_load(&call_reset)) {
                 timer_stop_and_reset(win);
                 atomic_store(&call_reset, 0);
             }
+
+            lasr_unlock();
         }
     }
 

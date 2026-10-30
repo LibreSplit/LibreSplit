@@ -102,6 +102,7 @@ typedef struct ls_timer {
     ls_time* best_segments;
     const ls_game* game;
     long long last_tick; // This NEEDS to be here for resetting
+    long long last_loading_time; /*!< Accumulated loading time since last tick */
     int* attempt_count;
     int* finished_count;
     char start_time[64];
@@ -118,6 +119,8 @@ typedef enum ls_timer_status {
 } ls_timer_status;
 
 extern atomic_bool run_started;
+
+long long ls_time_now(void);
 
 ls_time ls_timer_get_time(const ls_timer* timer, bool load_removed);
 

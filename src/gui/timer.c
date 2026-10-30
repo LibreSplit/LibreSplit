@@ -2,9 +2,35 @@
 #include "game.h"
 #include "src/gui/component/components.h"
 #include "src/gui/dialogs.h"
+#include "src/lasr/auto-splitter.h"
 #include "src/lasr/utils.h"
 #include "src/logging.h"
 #include "src/timer.h"
+
+/**
+ * @brief Performs timing updates for the auto-splitter and timer steps.
+ *
+ * @param win The current main app window.
+ */
+void timer_update_time(LSAppWindow* win)
+{
+    if (!win->timer) {
+        return;
+    }
+
+    if (atomic_load(&auto_splitter_enabled)) {
+        if (atomic_load(&run_using_game_time_call)) {
+            win->timer->usingGameTime = atomic_load(&run_using_game_time);
+            atomic_store(&run_using_game_time_call, false);
+        }
+
+        if (atomic_exchange(&update_game_time, false)) {
+            win->timer->gameTime = atomic_load(&game_time_value);
+        }
+    }
+
+    ls_timer_step(win->timer);
+}
 
 /**
  * Stops the timer if it's running, otherwise resets it. If the timer is reset, the current run will be saved to history if enabled.
@@ -13,14 +39,18 @@
  */
 void timer_stop_and_reset(LSAppWindow* win)
 {
-    if (!win->timer)
+    if (!win->timer) {
         return;
+    }
 
+    lasr_lock();
     if (win->timer->running) {
         ls_timer_stop(win->timer);
     }
 
-    if (ls_timer_reset(win->timer, win->game)) {
+    int was_reset = ls_timer_reset(win->timer, win->game);
+    lasr_unlock();
+    if (was_reset) {
         ls_app_window_clear_game(win);
         ls_app_window_show_game(win);
         if (cfg.libresplit.auto_save.value.b) {
@@ -37,16 +67,18 @@ void timer_stop_and_reset(LSAppWindow* win)
 }
 
 /**
- * Starts the timer, if it's not already running. If the timer is already running, it does a split.
+ * Starts or resumes the timer. If the timer is already running, it does a split.
  *
  * @param win The LibreSplit window
  */
 void timer_start_split(LSAppWindow* win)
 {
-    if (!win->timer)
+    if (!win->timer) {
         return;
+    }
 
-    if (!win->timer->started) { // To start again a reset needs to happen
+    timer_update_time(win);
+    if (!win->timer->running) {
         if (!ls_timer_start(win->timer)) {
             return;
         }
@@ -94,15 +126,14 @@ void timer_start(LSAppWindow* win)
  */
 void timer_stop_or_reset(LSAppWindow* win)
 {
-    if (!win->timer)
+    if (!win->timer) {
         return;
+    }
 
+    timer_update_time(win);
     if (win->timer->running) {
         ls_timer_stop(win->timer);
     } else {
-        // Restart LASR on reset
-        restart_auto_splitter();
-
         if (ls_timer_reset(win->timer, win->game)) {
             ls_app_window_clear_game(win);
             ls_app_window_show_game(win);
@@ -195,9 +226,11 @@ void timer_cancel_run(LSAppWindow* win)
  */
 void timer_skip(LSAppWindow* win)
 {
-    if (!win->timer)
+    if (!win->timer) {
         return;
+    }
 
+    timer_update_time(win);
     ls_timer_skip(win->timer);
     for (GList* l = win->components; l != NULL; l = l->next) {
         LSComponent* component = l->data;
@@ -214,9 +247,11 @@ void timer_skip(LSAppWindow* win)
  */
 void timer_unsplit(LSAppWindow* win)
 {
-    if (!win->timer)
+    if (!win->timer) {
         return;
+    }
 
+    timer_update_time(win);
     ls_timer_unsplit(win->timer);
 
     for (GList* l = win->components; l != NULL; l = l->next) {
@@ -298,9 +333,11 @@ void timer_unpause(LSAppWindow* win)
  */
 void timer_stop(LSAppWindow* win)
 {
-    if (!win->timer)
+    if (!win->timer) {
         return;
+    }
 
+    timer_update_time(win);
     if (win->timer->running) {
         ls_timer_stop(win->timer);
     }

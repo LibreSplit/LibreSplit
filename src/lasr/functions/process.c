@@ -1,298 +1,372 @@
 #include "process.h"
 
+#include "../auto-splitter.h"
 #include "../utils.h"
 #include "src/lasr/maps/maps.h"
 #include "src/logging.h"
 
-#include <ctype.h>
 #include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <lauxlib.h>
+#include <limits.h>
+#include <poll.h>
 #include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/pidfd.h>
 #include <unistd.h>
 
-extern atomic_bool auto_splitter_enabled; /*!< Defines if the auto splitter is enabled */
+extern atomic_bool auto_splitter_enabled;
 
-/**
- * @brief Free the process name which was duplicated in memory and clear the process.
- */
-void clear_process(void)
+#define PROCESS_FIELD_LIMIT (1024U * 1024U)
+
+static bool select_last = true;
+static bool can_select_process = false;
+
+void set_process_selection(bool allowed)
 {
-    free(process.name);
-    process = (game_process) { 0 };
+    can_select_process = allowed;
 }
 
-static void set_process_name(lua_State* L)
+void detach_process(void)
 {
-    char* name = strdup(luaL_checkstring(L, 1));
+    if (process.pidfd >= 0) {
+        close(process.pidfd);
+    }
+
+    process.pid = 0;
+    process.pidfd = -1;
+    process.base_address = 0;
+    process.dll_address = 0;
+    maps_clearCache();
+}
+
+void clear_process(void)
+{
+    if (process.pidfd >= 0) {
+        close(process.pidfd);
+    }
+
+    free(process.name);
+    process = (game_process) { .pidfd = -1 };
+    can_select_process = false;
+}
+
+static bool resource_error(int error)
+{
+    return error == ENOMEM || error == EMFILE || error == ENFILE;
+}
+
+static ssize_t read_exe(int directory, char* path)
+{
+    ssize_t length = readlinkat(directory, "exe", path, PROCESS_FIELD_LIMIT + 1);
+    if (length <= 0) {
+        return length;
+    }
+
+    if (length > PROCESS_FIELD_LIMIT) {
+        // A full buffer may be truncated; never compare its prefix.
+        return 0;
+    }
+
+    path[length] = '\0';
+    return length;
+}
+
+static ssize_t read_argv0(int directory, char* buffer)
+{
+    int fd = openat(directory, "cmdline", O_RDONLY | O_CLOEXEC);
+    if (fd < 0) {
+        return -1;
+    }
+
+    size_t used = 0;
+    ssize_t length = 0;
+    while (used < PROCESS_FIELD_LIMIT + 1) {
+        ssize_t count = read(fd, buffer + used, PROCESS_FIELD_LIMIT + 1 - used);
+        if (count <= 0) {
+            length = count; // EOF before NUL rejects the incomplete field.
+            break;
+        }
+
+        const char* end = memchr(buffer + used, '\0', (size_t)count);
+        if (end) {
+            length = end - buffer;
+            break;
+        }
+
+        used += (size_t)count;
+    }
+
+    int error = length < 0 ? errno : 0;
+    close(fd);
+    errno = error;
+    return length;
+}
+
+static const char* process_basename(const char* path, bool allow_backslash)
+{
+    const char* name = path;
+    for (; *path; ++path) {
+        if (*path == '/' || (allow_backslash && *path == '\\')) {
+            name = path + 1;
+        }
+    }
+
+    return name;
+}
+
+static bool process_matches(int directory, const char* name, char* buffer)
+{
+    errno = 0;
+    ssize_t exe_length = read_exe(directory, buffer);
+    if (exe_length < 0 && resource_error(errno)) {
+        return false;
+    }
+
+    if (exe_length > 0 && strcmp(process_basename(buffer, false), name) == 0) {
+        return true;
+    }
+
+    ssize_t argv0_length = read_argv0(directory, buffer);
+    return argv0_length > 0 && strcmp(process_basename(buffer, true), name) == 0;
+}
+
+static pid_t get_pid(const char* name, bool last, char* buffer)
+{
+    DIR* proc = opendir("/proc");
+    if (!proc) {
+        LOG_ERRF("Cannot discover game process: %s", strerror(errno));
+        return -1;
+    }
+
+    int procfd = dirfd(proc);
+    if (procfd < 0) {
+        LOG_ERRF("Cannot read process directory: %s", strerror(errno));
+        closedir(proc);
+        return -1;
+    }
+
+    pid_t* pids = NULL;
+    size_t count = 0;
+    int error = 0;
+    while (!error) {
+        errno = 0;
+        struct dirent* entry = readdir(proc);
+        if (!entry) {
+            error = errno;
+            break;
+        }
+
+        const char* text = entry->d_name;
+        size_t length = strlen(text);
+        if (!length || strspn(text, "0123456789") != length) {
+            continue;
+        }
+
+        unsigned long number = strtoul(text, NULL, 10);
+        if (errno || number == 0 || number > INT_MAX) {
+            // Linux pid_t is a signed int.
+            continue;
+        }
+
+        pid_t pid = (pid_t)number;
+        int directory = openat(procfd, text, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+        if (directory < 0) {
+            if (!resource_error(errno)) {
+                continue;
+            }
+
+            error = errno;
+            break;
+        }
+
+        bool matches = process_matches(directory, name, buffer);
+        if (!matches && resource_error(errno)) {
+            error = errno;
+        }
+
+        close(directory);
+        if (error) {
+            break;
+        }
+
+        if (!matches) {
+            continue;
+        }
+
+        if (count == SIZE_MAX / sizeof(*pids)) {
+            error = EOVERFLOW;
+            break;
+        }
+
+        pid_t* grown = realloc(pids, (count + 1) * sizeof(*pids));
+        if (!grown) {
+            error = ENOMEM;
+            break;
+        }
+
+        pids = grown;
+        pids[count++] = pid;
+    }
+
+    closedir(proc);
+
+    pid_t result = count ? pids[0] : 0;
+    for (size_t i = 1; i < count; ++i) {
+        if (last ? pids[i] > result : pids[i] < result) {
+            result = pids[i];
+        }
+    }
+
+    free(pids);
+    if (error) {
+        LOG_ERRF("Cannot discover game process: %s", strerror(error));
+        return -1;
+    }
+
+    return result;
+}
+
+bool attach_process(void)
+{
+    if (!process.name) {
+        return false;
+    }
+
+    char* buffer = malloc(PROCESS_FIELD_LIMIT + 1);
+    if (!buffer) {
+        LOG_ERRF("Unable to allocate memory for process discovery: %s", strerror(errno));
+        return false;
+    }
+
+    pid_t pid = get_pid(process.name, select_last, buffer);
+    if (pid <= 0) {
+        free(buffer);
+        if (pid == 0) {
+            printf("%s isn't running.\n", process.name);
+        }
+
+        return false;
+    }
+
+    char path[32];
+    snprintf(path, sizeof(path), "/proc/%d", pid);
+    int directory = open(path, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+    if (directory < 0) {
+        if (resource_error(errno)) {
+            LOG_ERRF("Cannot open game process: %s", strerror(errno));
+        }
+
+        free(buffer);
+        return false;
+    }
+
+    int pidfd = pidfd_open(pid, 0);
+    if (pidfd < 0) {
+        if (errno != ESRCH && errno != EINTR) {
+            LOG_ERRF("Cannot obtain game process handle: %s", strerror(errno));
+        }
+
+        close(directory);
+        free(buffer);
+        return false;
+    }
+
+    // Ensure the process opened still matches (i.e. did not close and become something else)
+    bool matches = process_matches(directory, process.name, buffer);
+    if (!matches && resource_error(errno)) {
+        LOG_ERRF("Cannot validate game process: %s", strerror(errno));
+    }
+
+    free(buffer);
+    close(directory);
+    if (!matches) {
+        close(pidfd);
+        return false;
+    }
+
+    struct pollfd status = { .fd = pidfd, .events = POLLIN };
+    int ready = poll(&status, 1, 0);
+    if (ready != 0) {
+        if (ready < 0 && errno != EINTR) {
+            LOG_ERRF("Cannot check game process exit: %s", strerror(errno));
+        }
+
+        close(pidfd);
+        return false;
+    }
+
+    int tries = 5;
+    uintptr_t base_address = 0;
+
+    do {
+        // Keep discovery outside of lua sync to prevent access to detached process.
+        lasr_lock();
+        maps_clearCache();
+        process.pid = (unsigned int)pid;
+        base_address = find_base_address(NULL);
+        if (base_address) {
+            process.pidfd = pidfd;
+            process.base_address = base_address;
+            process.dll_address = base_address;
+            lasr_unlock();
+            break;
+        }
+
+        process.pid = 0;
+        maps_clearCache();
+        lasr_unlock();
+        usleep(50000);
+    } while (--tries > 0);
+
+    if (!base_address) {
+        LOG_ERR("Unable to find process base address");
+        close(pidfd);
+        return false;
+    }
+
+    printf("Process: %s\nPID: %u\n", process.name, process.pid);
+    return true;
+}
+
+int find_process_id(lua_State* L)
+{
+    if (!can_select_process) {
+        // TODO: Allow eventual definition of multiple game process selection for different version support etc.
+        return luaL_error(L, "process() may only be called once");
+    }
+
+    can_select_process = false;
+    printf("\033[2J\033[1;1H"); // Clear the console
+
+    size_t length;
+    const char* input = luaL_checklstring(L, 1, &length);
+    luaL_argcheck(L, length > 0 && memchr(input, '\0', length) == NULL, 1, "process name must be non-empty and contain no NUL bytes");
+    char* name = strdup(input);
     if (!name) {
-        luaL_error(L, "Unable to allocate the process name");
-        return;
+        return luaL_error(L, "Unable to allocate the process name");
     }
 
     free(process.name);
     process.name = name;
-}
-
-/**
- * Reads the /proc/ directory for all process IDs and tries to identify the searched
- * process by name, depending on the mode.
- *
- * @param[in] mode Can only be "comm" or "cmdline", searches for the /proc/pid/comm or
- *             /proc/pid/cmdline for a match.
- * @param[in] name The name of the process to look for
- * @param[out] output A pointer to an array, to fill with possible PIDs.
- * @param[out] output_count A pointer to a counter, to determine how many PIDs were found.
- *
- * @returns Zero if all goes well, an error code otherwise
- */
-static int get_all_pids_by_name(const char* mode, const char* name, pid_t** output, size_t* output_count)
-{
-    if (strcmp(mode, "comm") != 0 && strcmp(mode, "cmdline") != 0) {
-        LOG_ERRF("Search mode %s not supported", mode);
-        return -1;
-    }
-    *output = NULL;
-    *output_count = 0;
-
-    DIR* proc = opendir("/proc");
-    if (!proc) {
-        LOG_ERR("Cannot open /proc directory");
-        return -1;
+    const char* sort = lua_tostring(L, 2);
+    if (sort && strcmp(sort, "first") != 0 && strcmp(sort, "last") != 0) {
+        printf("[process] Invalid sort argument '%s'. Use 'first' or 'last'. Falling back to last\n", sort);
+        sort = NULL;
     }
 
-    pid_t* pids = NULL;
-    size_t count = 0;
-
-    struct dirent* entry;
-
-    while ((entry = readdir(proc)) != NULL) {
-        const char* dirname = entry->d_name;
-
-        if (*dirname == '\0') {
-            // Dirname is just the null terminator, skip
-            continue;
-        }
-
-        while (*dirname) {
-            if (!isdigit((unsigned char)*dirname)) {
-                // We found a non-numeric char in the directory name, that's enough
-                break;
-            }
-            dirname++;
-        }
-
-        if (*dirname != '\0') {
-            // Dirname didn't reach the null terminator -> non-numeric name -> skip
-            continue;
-        }
-
-        pid_t pid = (pid_t)strtoul(entry->d_name, NULL, 10);
-
-        char path[256];
-        snprintf(path, sizeof(path), "/proc/%u/%s", pid, mode);
-
-        FILE* file = fopen(path, "r");
-        if (!file) {
-            // The process may have exited during the scan, skip
-            continue;
-        }
-
-        char comm[256];
-
-        if (fgets(comm, sizeof(comm), file)) {
-            // Replace \n with a NUL
-            comm[strcspn(comm, "\n")] = '\0';
-
-            // We use a "contains" check to accept the new PID
-            if (strstr(comm, name) != NULL) {
-                pid_t* new_pids = realloc(pids, (count + 1) * sizeof(*output));
-                if (!new_pids) {
-                    // Malloc fail, bail out
-                    free(pids);
-                    fclose(file);
-                    closedir(proc);
-                    return -1;
-                }
-
-                // Malloc ok, switchover time
-                pids = new_pids;
-                pids[count++] = pid;
-            }
-        }
-        fclose(file);
-    }
-    closedir(proc);
-    *output = pids;
-    *output_count = count;
-
-    return 0;
-}
-
-/**
- * Comparison function for the "first" sorting method, used in qsort
- *
- * @param a The first comparison operator
- * @param b The second comparison operator
- *
- * @returns -1,0,1 according to the relative ordering of a and b
- */
-static int compare_pids_ascending(const void* a, const void* b)
-{
-    const pid_t pid_a = *(const pid_t*)a;
-    const pid_t pid_b = *(const pid_t*)b;
-    if (pid_a < pid_b) {
-        return -1;
-    }
-    if (pid_a > pid_b) {
-        return 1;
-    }
-    return 0;
-}
-
-/**
- * Comparison function for the "last" sorting method, used in qsort
- *
- * @param a The first comparison operator
- * @param b The second comparison operator
- *
- * @returns -1,0,1 according to the relative ordering of a and b
- */
-static int compare_pids_descending(const void* a, const void* b)
-{
-    const pid_t pid_a = *(const pid_t*)a;
-    const pid_t pid_b = *(const pid_t*)b;
-    if (pid_a > pid_b) {
-        return -1;
-    }
-    if (pid_a < pid_b) {
-        return 1;
-    }
-    return 0;
-}
-
-/**
- * Searches for the pid of a certain process.
- *
- * @param mode The search mode, can be only "comm" (limited to 15 char) and
- *             "cmdline" (the full command)
- * @param sort The sorting method used to extract the PID, can only be "first"
- *             or "last"
- * @param name The name of the process to look for
- *
- * @returns The PID of the process that is searched for (zero if no process is found)
- */
-static pid_t get_pid(const char* mode, const char* sort, const char* name)
-{
-    if (strcmp(mode, "comm") != 0 && strcmp(mode, "cmdline") != 0) {
-        LOG_ERRF("Search mode %s not supported", mode);
-        return 0;
-    }
-    if (strcmp(sort, "first") != 0 && strcmp(sort, "last") != 0) {
-        LOG_ERRF("Search mode %s not supported", mode);
-        printf("[process] Invalid sort argument '%s'. Use 'first' or 'last'. Falling back to first\n", sort);
-        sort = "first";
-    }
-
-    pid_t* pids = NULL;
-    size_t count = 0;
-    get_all_pids_by_name(mode, name, &pids, &count);
-
-    if (!pids) {
-        return 0;
-    }
-
-    if (strcmp(sort, "first") == 0) {
-        qsort(pids, count, sizeof(pids[0]), compare_pids_ascending);
-    } else if (strcmp(sort, "last") == 0) {
-        qsort(pids, count, sizeof(pids[0]), compare_pids_descending);
-    }
-
-    pid_t result = pids[0];
-    free(pids);
-    pids = NULL;
-    count = 0;
-    return result;
-}
-
-void stock_process_id(const char* mode, const char* sort, const char* name)
-{
-    // We just started a new process monitoring, we may want to clean up a stale cache
+    select_last = !sort || strcmp(sort, "last") == 0;
     maps_clearCache();
-
     while (atomic_load(&auto_splitter_enabled)) {
-        process.pid = get_pid(mode, sort, name);
-        if (!process.pid) {
-            printf("%s isn't running.\n", process.name);
-            usleep(100000); // Sleep for 100ms
-        } else {
+        if (attach_process()) {
             break;
         }
+
+        usleep(100000);
     }
-
-    printf("Process: %s\n", process.name);
-    printf("PID: %u\n", process.pid);
-    process.base_address = find_base_address(NULL);
-    process.dll_address = process.base_address;
-}
-
-/**
- * Finds the ID of the process indicated by the Lua Auto Splitter.
- *
- * @param L The Lua State.
- *
- * @return Always zero.
- */
-int find_process_id(lua_State* L)
-{
-    printf("\033[2J\033[1;1H"); // Clear the console
-
-    set_process_name(L);
-    const char* sort = lua_tostring(L, 2);
-
-    if (!sort) {
-        sort = "first";
-    } else {
-        if (strcmp(sort, "first") != 0 && strcmp(sort, "last") != 0) {
-            printf("[process] Invalid sort argument '%s'. Use 'first' or 'last'. Falling back to first\n", sort);
-            sort = "first";
-        }
-    }
-
-    stock_process_id("comm", sort, process.name);
-
-    return 0;
-}
-
-/**
- * Finds the ID of the process indicated by the Lua Auto Splitter using full commandline grepping.
- *
- *  NOTE: [Penaz] [2026-04-25] This differs from find_process_id only by the -f argument. Consider
- *  ^ merging the command creation into a single function instead of duplicating code.
- *
- * @param L The Lua State.
- *
- * @return Always zero.
- */
-int find_cmdline_id(lua_State* L)
-{
-    printf("\033[2J\033[1;1H"); // Clear the console
-
-    set_process_name(L);
-    const char* sort = lua_tostring(L, 2);
-
-    if (!sort) {
-        sort = "first";
-    } else {
-        if (strcmp(sort, "first") != 0 && strcmp(sort, "last") != 0) {
-            printf("[process] Invalid sort argument '%s'. Use 'first' or 'last'. Falling back to first\n", sort);
-            sort = "first";
-        }
-    }
-
-    stock_process_id("cmdline", sort, process.name);
 
     return 0;
 }

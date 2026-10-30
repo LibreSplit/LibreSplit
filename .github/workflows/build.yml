@@ -116,6 +116,7 @@ jobs:
               env:
                   APPIMAGE_NAME: ${{ steps.artifacts.outputs.appimage }}
                   ARCH: ${{ matrix.arch }}
+                  GITHUB_TOKEN: ${{ github.token }}
                   UPINFO: gh-releases-zsync|${{ github.repository_owner }}|LibreSplit|${{ steps.artifacts.outputs.update_channel }}|LibreSplit-*-${{ matrix.arch }}.AppImage.zsync
                   ZSYNC_NAME: ${{ steps.artifacts.outputs.zsync }}
               run: |

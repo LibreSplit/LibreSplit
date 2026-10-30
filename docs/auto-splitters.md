@@ -20,24 +20,20 @@
 ```lua
 process('GameBlaBlaBla.exe')
 ```
-* With this line, LibreSplit will repeatedly attempt to find this process and will not continue script execution until it is found. This is limited to 15 characters in length (the ones present in `/proc/<pid>/stat`).
-
-If you want to use longer names or check the entire command line use the `cmdline` function:
-
-```lua
-cmdline('MyGameHasAVeryLongName.exe')
-```
-
-* Next we have to define the basic functions. Not all are required and the ones that are required may change depending on the game or end goal, like if loading screens are included or not.
-    * The order at which these run is the same as they are documented below.
+- With this line, LibreSplit will repeatedly attempt to find this process and will not continue script execution until it is found.
+- Next we have to define the basic functions. Not all are required and the ones that are required may change depending on the game or end goal, like if loading screens are included or not.
+  - The order at which these run is the same as they are documented below.
 
 ### `define_settings`
 The purpose of this optional function is to specify settings that your script make take along with their default values. LASR provides a global `settings` object that should contain all of your settings for the lifetime of your script. LibreSplit handles updating these settings for you as the user interacts with them. Currently, the following setting types are available:
 
-* `SETTING_BOOLEAN`
-* `SETTING_INTEGER`
-* `SETTING_NUMBER`
-* `SETTING_STRING`
+- `SETTING_BOOLEAN`
+- `SETTING_INTEGER`
+- `SETTING_NUMBER`
+- `SETTING_STRING`
+- `SETTING_OPTION`
+- `SETTING_ARRAY`
+- `SETTING_OBJECT`
 
 If provided, LibreSplit will run your `define_settings` function exactly once when your script is loaded before anything else to define your settings. This is the only time when settings may be defined.
 
@@ -46,17 +42,27 @@ The `settings` object has 2 methods associated with it:
 #### `define`
 `settings.define(key, definition)`
 
-* key (string)
-    * the key used for your setting, must be unique (to be used with `get`)
-* definition (object)
-    * name (string REQUIRED)
-        * friendly setting name to display to the user
-    * type (int REQUIRED)
-        * integer value representing your setting type. Use the defined SETTING_* enum values above
-    * default (mixed REQUIRED)
-        * the default value for your setting (must match the setting type provided)
-    * desc (string OPTIONAL)
-        * optional description to show the user what the setting is for
+- key (string)
+  - the key used for your setting, must be unique (to be used with `get`)
+- definition (object)
+  - name (string REQUIRED)
+    - friendly setting name to display to the user
+  - type (int REQUIRED)
+    - integer value representing your setting type. Use the defined SETTING_* enum values above
+  - default (mixed REQUIRED)
+    - the default value for your setting (must match the setting type provided)
+  - desc (string OPTIONAL)
+    - optional description to show the user what the setting is for
+  - options (array)
+    - required when `type == SETTING_OPTION`, otherwise ignored
+    - table of options to for users to select from a dropdown
+    - each entry must be an object with the following required fields
+      - value (int)
+        - The actual value to store the user's selection from the dropdown
+        - Must be an integer
+        - Must be unique in the array
+      - desc (string)
+        - The string the user will see in the dropdown for the setting
 
 This is the main method you will use to actually define each of your settings, their type and default value. Along with an optional description for the user of what the setting is for.
 `define` may ONLY be called within your `define_settings` function. Afterwards, calling `define` is no longer possible and will result in an error.
@@ -82,8 +88,107 @@ function define_settings()
         type = SETTING_INTEGER,
         default = 5
     })
+
+    -- an `option` setting type is a slightly expanded int that allows you to define
+    -- the possible values, and allows a user to make a selection for this setting via
+    -- a dropdown.
+    settings.define("some_option", {
+        name = "Select Something",
+        type = SETTING_OPTION,
+        default = 1, -- MUST correspond to one of the values defined in options
+        options = {
+            {
+                value = 5,
+                desc = "First option in the dropdown"
+            },
+            {
+                value = 2,
+                desc = "Second option in the dropdown"
+            },
+            {
+                value = 1,
+                desc = "Third option in the dropdown"
+            },
+            {
+                value = 100,
+                desc = "Last option in the dropdown"
+            }
+        }
+    })
 end
 ```
+
+#### Nested settings
+
+To allow for more complex setting definitions in LASR we have the `SETTING_ARRAY` and `SETTING_OBJECT` types.
+These allow you to define arbitrary table elements and will change what must be provided in your settings definition
+to account for the added complexity.
+
+- `SETTING_ARRAY`
+  - Requires an extra `items` definition.
+   -This is a separate definition that defines what every element in the array must conform to.
+  - Elements in an array maintain their order and can repeat. The element definition itself can be an array
+    or object.
+- `SETTING_OBJECT`
+  - Requires an extra `fields` definition, which is an ordered array of definitions.
+  - Each field is defined in the same way as a normal setting above with the same required/optional entries.
+
+Every definition, including `items` and each field, requires its own default.
+
+Example usage:
+```lua
+function define_settings()
+    settings.define("route", {
+        name = "Route",
+        type = SETTING_ARRAY,
+        default = {{ level_id = 1 }, { level_id = 2 }},
+        items = {
+            name = "Level",
+            type = SETTING_OBJECT,
+            default = {},
+            fields = {
+                {
+                    key = "level_id",
+                    name = "Level",
+                    type = SETTING_OPTION,
+                    default = 1,
+                    options = {
+                        { value = 1, desc = "Level 1" },
+                        { value = 2, desc = "Level 2" }
+                    }
+                },
+                {
+                    key = "options",
+                    name = "Level Options",
+                    type = SETTING_OBJECT,
+                    default = {},
+                    fields = {
+                        {
+                            key = "enabled",
+                            name = "Enabled",
+                            type = SETTING_BOOLEAN,
+                            default = true
+                        },
+                        {
+                            key = "split_on_exit",
+                            name = "Split on Exit",
+                            type = SETTING_BOOLEAN,
+                            default = true
+                        }
+                    }
+                }
+            }
+        }
+    })
+end
+```
+
+In the example above, a user would be able to configure 1 or more "routes" in the route setting. Each entry would need to be an object which itself would have
+an option for the level id, and another nested object containing further settings for that level itself. Each nest level can be any of the defined SETTING_* types.
+
+These settings can then be accessed as normal with `settings.get` See the examples below.
+
+Although arrays and object settings support nesting, we limit the amount of nested definitions you may supply to 64 nested entries as a reasonable limit.
 
 #### `get`
 `settings.get(key)`
@@ -98,9 +203,17 @@ The `get` method is available to any of the other lifetime global functions, but
 Example usage:
 ```lua
 local var = settings.get("is_emulator") -- defaults to false per our earlier example definition
+local route = settings.get("route") -- using our route setting as defined above
+for index, level in ipairs(route) do
+    print("Route entry:", index)
+    print("Level:", level.level_id)
+    print("Enabled:", level.options.enabled)
+    print("Split on exit:", level.options.split_on_exit)
+end
 ```
 
 ### `startup`
+
  The purpose of this function is to specify how many times LibreSplit checks memory values and executes functions each second, the default is 60Hz. Usually, 60Hz is fine and this function can remain undefined. However, it's there if you need it. Its also useful to change other configuration about the script.
 ```lua
 process('GameBlaBlaBla.exe')
@@ -110,6 +223,12 @@ function startup()
     useGameTime = true
 end
 ```
+
+Although the intention of startup is to be called only once at the very beginning of the LASR life-cycle regardless of game state, due to the way Lua works, startup will not
+truly be called until `process` returns. This means `startup` will run shortly before the first `init` call and after `process` attaches to a game as opposed to at the very beginning.
+
+For normal scripts this should be irrelevant, however, if you need to define any script variables or setup anything in your script prior to the LASR attaching to the game process, you should
+perform that setup as top level code before calling the `process` function instead of doing it in the `startup` function.
 
 ### `state`
  The main purpose of this function is to assign memory values to Lua variables.
@@ -158,6 +277,20 @@ function update()
 end
 ```
 * We now have 3 variables, one represents the current state while the other the old state of isLoading, we also have loadCount getting updated in the `update` function which will store how many times we've entered the loading screen
+
+The `update` function may also prevent the `gameTime`, `start`, `isLoading`, `reset`, and `split` actions from being run by explicitly returning false.
+
+```lua
+function update()
+    if myCondition then
+        return false -- no other actions will run while `myCondition` is true
+    end
+
+    if not current.isLoading and old.isLoading then
+        loadCount = loadCount + 1;
+    end
+end
+```
 
 ### `start`
 This tells LibreSplit when to start the timer.\
@@ -411,7 +544,6 @@ function gameTime()
 end
 ```
 
-
 ## readAddress
 * `readAddress` is the second function that LibreSplit defines for us and its globally available, its job is to read the memory value of a specified address.
 * The first value defines what kind of value we will read:
@@ -460,18 +592,18 @@ if you need to perform operations on really large addresses (for example) you ca
 so long as they remain integers throughout. The following operations should all also work correctly, preserving the bits meaning the values
 can be properly represented when LibreSplit works with them internally:
 
-- + (addition)
-- - (subtraction)
-- * (multiplication)
-- -x (negative value)
-- & (bitwise AND)
-- | (bitwise OR)
-- ~ (bitwise XOR)
-- ~x (bitwise NOT)
-- << (left shift)
-- >> (right shift)
-- == (equality compares bits)
-- -= (not equals compares bits)
+- `+` (addition)
+- `-` (subtraction)
+- `*` (multiplication)
+- `-x` (negative value)
+- `&` (bitwise AND)
+- `|` (bitwise OR)
+- `~` (bitwise XOR)
+- `~x` (bitwise NOT)
+- `<<` (left shift)
+- `>>` (right shift)
+- `==` (equality compares bits)
+- `-=` (not equals compares bits)
 
 The following will not work:
 - / (division)
@@ -547,7 +679,6 @@ end
 ## getPID
 * Returns the current PID
 
-# Experimental stuff
 ## `mapsCacheCycles`
 
 * When a `readAddress` that uses a memory map the biggest bottleneck is reading every line of `/proc/pid/maps` and checking if that line is the corresponding module. This option allows you to set for how many cycles the cache of that file should be used. The cache is global so it gets reset every x number of cycles.
@@ -626,7 +757,7 @@ local main_module_size = getModuleSize();
 local main_module_size_2 = getModuleSize(nil);
 local other_module_size = getModuleSize("other_module");
 ```
-## getMaps
+## `getMaps`
 
 Returns an array-like table that contains other tables: one for each of the process's memory maps.
 
@@ -657,7 +788,7 @@ Usage:
 local maps = getMaps()
 ```
 
-## md5sum
+## `md5sum`
 
 Returns a hex-digest of the file pointed by the path passed as argument, as a string. Mostly used for detecting different game versions.
 
@@ -665,6 +796,32 @@ Usage:
 
 ```lua
 local md5_to_compare = md5sum("path/to/my/awesome/game")
+```
+
+## `getTimerState`
+
+Returns an integer representing the current timer state. The int value corresponds to an internal enum of potential states. These may be compared against the following
+globals that we provide that correspond to the enum values:
+
+- `LASR_NOT_STARTED`
+  - The timer has not yet started. I.e. the initial state or state after a reset
+- `LASR_RUNNING`
+  - The timer has started and is ticking
+- `LASR_PAUSED`
+  - The timer is paused but no reset has occurred
+- `LASR_FINISHED`
+  - The timer has been stopped because the run has been completed
+
+Usage:
+```lua
+local state = getTimerState()
+if state == LASR_NOT_STARTED then
+    -- do something before the timer starts
+elseif state == LASR_RUNNING then
+    -- do something while the timer is running
+elseif state == LASR_PAUSED then
+    -- do something while the timer is paused
+end
 ```
 
 ## Reactive Functions
@@ -681,4 +838,50 @@ The following functions are event handlers that will be called on certain events
 - `onPause()`
 - `onUnpause()`
 
-These functions are run at the end of each Lua runtime loop, if the related event has been triggered.
+### Init function
+
+Aside from those reactive functions we have 2 more important functions that are also optional event notifications. The first one is `init`
+
+Unlike startup, which only happens once at the very start of LASR, the `init` function is called after the LASR attaches to your game's process.
+This happens any number of times as the user closes and opens the game.
+
+### Exit function
+
+Similar to the `init` function we also provide `exit` which happens any time the game process is closed. This allows you to handle any situations where a game must be closed
+and then re-opened during the course of a run.
+
+### Shutdown function
+
+Similar to the `startup` function, we also provide `shutdown` which happens once at the end of the LASR lifecycle before the Lua runtime is closed. This happens for example
+if the user reloads their autosplitter, disabled autosplitting, reloads their splits file, closes LibreSplit etc.
+
+## Game Object
+
+LASR exposes a global `game` object which gives you read access to some useful game fields from the currently loaded splits file. These fields are:
+
+- `name`
+- `category`
+- `start_delay`
+
+See the split-files doc for more info on these fields. The `game` object is read-only.
+
+## Date & Time
+
+LASR enables access to Lua's date & time functions via the `os` global. The full `os` functionality is not available for security reasons.
+However you have access to the following:
+
+- `os.clock`
+  - https://www.lua.org/manual/5.4/manual.html#pdf-os.clock
+- `os.date`
+  - https://www.lua.org/manual/5.4/manual.html#pdf-os.date
+- `os.difftime`
+  - https://www.lua.org/manual/5.4/manual.html#pdf-os.difftime
+- `os.time`
+  - https://www.lua.org/manual/5.4/manual.html#pdf-os.time
+- `os.time_us`
+  - This is a custom function that works similar to os.time but with microsecond level precision.
+  - Unlike `os.time` which returns the number of seconds since the unix epoch, os.time_us returns
+    elapsed time from the system's monotonic clock.
+- `os.difftime_us`
+  - This is a custom function that works similar to os.difftime but with microsecond level precision.
+  - It should be used with output from `os.time_us`
