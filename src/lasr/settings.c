@@ -953,6 +953,13 @@ static void read_definition(lua_State* L, int index, SettingDefinition* definiti
             lua_rawgeti(L, options_index, (lua_Integer)(i + 1));
             raw_field(L, -1, "value");
             definition->options[i].value = (long)lua_tointeger(L, -1);
+            // Ensure this new value is unique.
+            for (size_t j = 0; j < i; ++j) {
+                if (definition->options[j].value == definition->options[i].value) {
+                    luaL_error(L, "%s: option values must be unique", reader->path->str);
+                }
+            }
+
             lua_pop(L, 1);
             raw_field(L, -1, "desc");
             definition->options[i].desc = g_strdup(lua_tostring(L, -1));
