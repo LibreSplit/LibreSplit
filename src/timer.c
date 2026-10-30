@@ -1259,6 +1259,7 @@ static void save_auto_splitter_settings(json_t* json, const ls_game* game)
                 setting = json_boolean(game->auto_splitter_settings[i]->val.bool_val);
                 break;
 
+            case SETTING_OPTION:
             case SETTING_INTEGER:
                 setting = json_integer(game->auto_splitter_settings[i]->val.int_val);
                 break;
@@ -1271,6 +1272,8 @@ static void save_auto_splitter_settings(json_t* json, const ls_game* game)
                 setting = json_string(game->auto_splitter_settings[i]->val.string_val);
                 break;
 
+            case SETTING_ARRAY:
+            case SETTING_OBJECT:
             case SETTING_INVALID:
                 // This shouldn't be possible
                 break;
