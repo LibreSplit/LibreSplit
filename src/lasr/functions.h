@@ -12,3 +12,4 @@
 #include "functions/signature.h"
 #include "functions/sizeOf.h"
 #include "functions/strtoida.h"
+#include "functions/time.h"

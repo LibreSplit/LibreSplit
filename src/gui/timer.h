@@ -2,6 +2,7 @@
 
 #include "src/gui/app_window.h"
 
+void timer_update_time(LSAppWindow* win);
 void timer_stop_and_reset(LSAppWindow* win);
 void timer_start_split(LSAppWindow* win);
 void timer_stop_or_reset(LSAppWindow* win);

@@ -282,6 +282,7 @@ void close_activated(GSimpleAction* action,
     }
 
     win = ls_app_window_get_default(LS_APP(app));
+    timer_update_time(win);
     timer_stop_and_reset(win);
     save_game_join(false);
     stop_auto_splitter();

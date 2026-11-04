@@ -22,7 +22,7 @@ static const char pe_signature[] = { 'P', 'E', '\0', '\0' };
 #define PE32_MAGIC_BYTE 0x10b
 #define PE32_PLUS_MAGIC_BYTE 0x20b
 
-game_process process;
+game_process process = { .pidfd = -1 };
 
 /**
  * Restarts the auto splitter by disabling it and re-enabling it again
@@ -48,13 +48,17 @@ bool restart_auto_splitter(void)
  */
 uintptr_t find_base_address(const char* module)
 {
-    const char* module_to_grep = module == 0 ? process.name : module;
+    const char* module_name = module ? module : process.name;
+    if (!process.pid || !module_name) {
+        return 0;
+    }
 
     ProcessMap map;
-    const bool found = maps_findMapByName(module_to_grep, &map);
+    const bool found = maps_findMapByName(module_name, &map);
     if (found) {
         return map.start;
     }
+
     return 0;
 }
 
