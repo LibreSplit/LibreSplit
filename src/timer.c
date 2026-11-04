@@ -1897,7 +1897,7 @@ int ls_timer_reset(ls_timer* timer, ls_game* game)
 
     lasr_lock();
     bool had_attempt = timer->started || timer->curr_split > 0;
-    if (timer->curr_split < timer->game->split_count) {
+    if (had_attempt && timer->curr_split < timer->game->split_count) {
         if (cfg.libresplit.save_run_history.value.b) {
             ls_run_record(timer, "RESET");
         }
