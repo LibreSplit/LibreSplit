@@ -422,6 +422,7 @@ ls_attempt* ls_runs_new_attempt(ls_timer* timer, const char* reason)
         return NULL;
     }
 
+    ls_time final_time = ls_timer_get_time(timer, true);
     ls_attempt* attempt = calloc(1, sizeof(ls_attempt));
     if (attempt == NULL) {
         LOG_WARN("unable to allocate a new attempt");
