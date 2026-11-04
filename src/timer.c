@@ -1636,11 +1636,6 @@ static gboolean ls_dialog_save_game(gpointer data)
 
 static void ls_run_record(ls_timer* timer, const char* reason)
 {
-    ls_time final_time = ls_timer_get_time(timer, true);
-    if (ls_time_lte_zero(final_time)) {
-        return;
-    }
-
     LSAppWindow* win = ls_get_main_app_window();
     ls_attempt* attempt = ls_runs_new_attempt(timer, reason);
     if (attempt == NULL) {
@@ -1879,13 +1874,7 @@ int ls_timer_reset(ls_timer* timer, ls_game* game)
         return 0;
     }
 
-    if (timer->started && ls_time_lte_zero(ls_timer_get_time(timer, true))) {
-        // There will be no time improvements via this path to preserve, so no need to warn the user
-        ls_timer_cancel(timer);
-        return 1;
-    }
-
-    if (timer->curr_split < timer->game->split_count) {
+    if ((timer->started || timer->curr_split > 0) && timer->curr_split < timer->game->split_count) {
         if (cfg.libresplit.save_run_history.value.b) {
             ls_run_record(timer, "RESET");
         }

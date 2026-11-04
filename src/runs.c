@@ -417,16 +417,12 @@ bool ls_runs_clear(ls_runs* self)
  */
 ls_attempt* ls_runs_new_attempt(ls_timer* timer, const char* reason)
 {
-    ls_time final_time = ls_timer_get_time(timer, true);
-    if (ls_time_lte_zero(final_time)) {
-        return NULL;
-    }
-
     if (reason == NULL) {
         LOG_WARN("invalid NULL reason provided");
         return NULL;
     }
 
+    ls_time final_time = ls_timer_get_time(timer, true);
     ls_attempt* attempt = calloc(1, sizeof(ls_attempt));
     if (attempt == NULL) {
         LOG_WARN("unable to allocate a new attempt");
